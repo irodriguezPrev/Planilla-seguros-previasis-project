@@ -1,0 +1,677 @@
+/* ==========================================================================
+   PREVIASIS MEDICINA PREPAGADA S.A. - Sistema de Diseño Visual Corporativo
+   R.I.F. J-412048970 • Sudeaseg ID: MP-000015 • Providencia Nº SAA-09-1585
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Playfair+Display:ital,wght@0,600;1,600&family=Outfit:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap');
+
+:root {
+  /* Paleta Corporativa Oficial de Previasis */
+  --previasis-green: #008B47;       /* Verde Previasís (Pantone 348 C) */
+  --previasis-green-hover: #00733a;
+  --previasis-green-light: rgba(0, 139, 71, 0.1);
+  --previasis-green-glow: rgba(0, 139, 71, 0.25);
+  
+  --previasis-dark-green: #073E23;  /* Verde Bosque / Tipografía y títulos */
+  --previasis-navy: #0B2B40;        /* Azul Corporativo Profundo */
+  --previasis-teal: #1D4B5C;        /* Azul Previasís Secundario */
+  --previasis-lime: #84CC16;        /* Acento Verde Lima / Onda vital */
+  
+  /* Gradientes de Planes */
+  --grad-hero: linear-gradient(135deg, #0B2B40 0%, #153e50 50%, #1D4B5C 100%);
+  --grad-bronce: linear-gradient(135deg, #A05A2C 0%, #C47942 50%, #E6A15C 100%);
+  --grad-plata: linear-gradient(135deg, #5A6978 0%, #8A9BA8 50%, #DCDCDC 100%);
+  --grad-oro: linear-gradient(135deg, #B8860B 0%, #D4AF37 50%, #F3E5AB 100%);
+  --grad-previasis: linear-gradient(135deg, #00733a 0%, #008B47 50%, #10b981 100%);
+  --grad-abuelos: linear-gradient(135deg, #0B2B40 0%, #1D4B5C 100%);
+
+  /* Superficies y Fondos */
+  --bg-app: #f4f6f9;
+  --bg-card: #ffffff;
+  --bg-card-alt: #f8fafc;
+  --border-card: #e5e7eb;
+  --border-focus: #008B47;
+  
+  /* Textos */
+  --text-main: #073E23;
+  --text-body: #334155;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+
+  /* Estados */
+  --status-success: #008B47;
+  --status-warning: #f59e0b;
+  --status-error: #ef4444;
+  --status-info: #0284c7;
+
+  /* Tipografías */
+  --font-sans: 'Outfit', 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-script: 'Caveat', cursive, sans-serif;
+
+  /* Bordes & Sombras */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --radius-full: 9999px;
+
+  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 10px 30px rgba(7, 62, 35, 0.06);
+  --shadow-card-hover: 0 16px 36px rgba(0, 139, 71, 0.12);
+  --shadow-floating: 0 20px 40px rgba(11, 43, 64, 0.15);
+
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset básico */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background-color: var(--bg-app);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input, select, textarea, button {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Compatibilidad para componentes base */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.35rem;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--previasis-green);
+  color: #ffffff;
+  box-shadow: 0 4px 14px var(--previasis-green-glow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--previasis-green-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #ffffff;
+  color: var(--text-body);
+  border-color: var(--border-card);
+  box-shadow: var(--shadow-subtle);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-card-alt);
+  border-color: var(--previasis-green);
+  color: var(--previasis-green);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--previasis-green);
+  border-color: var(--previasis-green);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--previasis-green-light);
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.65rem 0.95rem;
+  background: #ffffff;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: var(--transition);
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: var(--previasis-green);
+  box-shadow: 0 0 0 3.5px var(--previasis-green-glow);
+}
+
+.input-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--previasis-dark-green);
+  margin-bottom: 0.25rem;
+}
+
+.glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+
+/* Contenedor principal */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Tarjetas Limpias Blancas con Sombra Suave */
+.previasis-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  padding: 1.75rem;
+  transition: var(--transition);
+}
+
+.previasis-card:hover {
+  border-color: rgba(0, 139, 71, 0.25);
+}
+
+/* Botones Pill Corporativos */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.35rem;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  outline: none;
+}
+
+.btn-pill-primary {
+  background: var(--previasis-green);
+  color: #ffffff;
+  box-shadow: 0 4px 14px var(--previasis-green-glow);
+}
+
+.btn-pill-primary:hover:not(:disabled) {
+  background: var(--previasis-green-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 139, 71, 0.35);
+}
+
+.btn-pill-secondary {
+  background: #ffffff;
+  color: var(--text-body);
+  border-color: var(--border-card);
+  box-shadow: var(--shadow-subtle);
+}
+
+.btn-pill-secondary:hover:not(:disabled) {
+  background: var(--bg-card-alt);
+  border-color: var(--previasis-green);
+  color: var(--previasis-green);
+}
+
+.btn-pill-outline {
+  background: transparent;
+  color: var(--previasis-green);
+  border-color: var(--previasis-green);
+}
+
+.btn-pill-outline:hover:not(:disabled) {
+  background: var(--previasis-green-light);
+}
+
+/* Inputs con foco en verde corporativo */
+.previasis-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.input-group {
+  min-width: 0;
+}
+
+.previasis-input-group > div,
+.input-group > div {
+  min-width: 0;
+}
+
+.previasis-input-group input,
+.previasis-input-group select,
+.input-group input,
+.input-group select {
+  min-width: 0;
+}
+
+.health-sport-detail-grid {
+  min-width: 0;
+}
+
+.health-question-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.health-question-copy {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.health-question-copy > div {
+  min-width: 0;
+}
+
+.health-question-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.health-beneficiary-picker {
+  display: flex;
+  min-width: 0;
+}
+
+.health-beneficiary-picker select {
+  width: 190px;
+  max-width: 100%;
+}
+
+.health-selected-beneficiaries {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin-left: 2.5rem;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .health-sport-detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .health-question-header {
+    align-items: stretch;
+  }
+
+  .health-question-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .health-beneficiary-picker {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .health-beneficiary-picker select {
+    width: 100%;
+  }
+
+  .health-answer-switch {
+    align-self: flex-start;
+  }
+
+  .health-selected-beneficiaries {
+    margin-left: 0;
+  }
+}
+
+.previasis-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--previasis-dark-green);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.previasis-label-required {
+  color: var(--previasis-green);
+  font-weight: 700;
+}
+
+.previasis-input {
+  width: 100%;
+  padding: 0.65rem 0.95rem;
+  background: #ffffff;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: var(--transition);
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.previasis-input:focus {
+  border-color: var(--previasis-green);
+  box-shadow: 0 0 0 3.5px var(--previasis-green-glow);
+}
+
+.previasis-input::placeholder {
+  color: var(--text-light);
+  font-weight: 400;
+}
+
+/* Selector tipo Switch Táctil */
+.pill-switch {
+  display: inline-flex;
+  background: #f1f5f9;
+  padding: 0.25rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-card);
+  gap: 0.25rem;
+}
+
+.pill-switch-btn {
+  padding: 0.35rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.pill-switch-btn.active {
+  background: var(--previasis-green);
+  color: #ffffff;
+  box-shadow: 0 2px 6px var(--previasis-green-glow);
+}
+
+/* Tarjetas de Planes con Gradientes Metálicos */
+.plan-gradient-card {
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  color: #ffffff;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  border: 2px solid transparent;
+}
+
+.plan-gradient-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+.plan-gradient-card.selected {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px var(--previasis-green), 0 12px 28px rgba(0, 139, 71, 0.25);
+}
+
+.plan-bronce { background: var(--grad-bronce); }
+.plan-plata { background: var(--grad-plata); }
+.plan-oro { background: var(--grad-oro); }
+.plan-diamante { background: linear-gradient(135deg, #c5efd2 0%, #e9fff0 50%, #abd9ba 100%); color: #073E23; }
+.plan-previasis { background: var(--grad-previasis); }
+.plan-abuelos { background: var(--grad-abuelos); }
+
+/* Insignias estilo Plan Abuelos */
+.pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  background: var(--previasis-green-light);
+  color: var(--previasis-green);
+  border: 1px solid rgba(0, 139, 71, 0.2);
+}
+
+/* Decoración curva de onda vital */
+.ecg-line {
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, var(--previasis-lime) 50%, transparent 100%);
+  border-radius: var(--radius-full);
+  width: 100%;
+}
+
+/* Utilidades de Grid */
+.grid { display: grid; }
+.grid > *,
+.step1-form-grid > *,
+.step1-control-grid > *,
+.step1-context-grid > * {
+  min-width: 0;
+}
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.gap-6 { gap: 1.5rem; }
+
+@media (max-width: 768px) {
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Container: reduce padding on mobile */
+  .container {
+    padding: 0 1rem;
+  }
+
+  /* Cards: smaller padding and border-radius on mobile */
+  .previasis-card {
+    padding: 1.25rem 1rem;
+    border-radius: var(--radius-lg);
+  }
+
+  /* Glass cards */
+  .glass-card {
+    border-radius: var(--radius-lg);
+  }
+
+  /* Buttons: slightly smaller on mobile */
+  .btn-pill,
+  .btn {
+    font-size: 0.8125rem;
+    padding: 0.5rem 1rem;
+  }
+
+  /* Inputs: comfortable touch targets */
+  .previasis-input,
+  .input-field {
+    min-width: 0;
+    padding: 0.75rem 0.875rem;
+    font-size: 0.9375rem;
+  }
+
+  /* Plan cards: tighter on mobile */
+  .plan-gradient-card {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+  }
+}
+
+/* Extra small screens (< 480px) */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 0.75rem;
+  }
+
+  .previasis-card {
+    padding: 1rem 0.75rem;
+    border-radius: var(--radius-md);
+  }
+
+  .btn-pill,
+  .btn {
+    font-size: 0.75rem;
+    padding: 0.45rem 0.85rem;
+  }
+}
+
+/* Formulario de afiliacion: densidad legible y columnas fluidas */
+.step1-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.step1-card {
+  padding: 1.25rem 1.5rem;
+}
+
+.step1-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+}
+
+.step1-section-header-large {
+  margin-bottom: 1.25rem;
+}
+
+.step1-control-grid,
+.step1-context-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background-color: #f8fafc;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+}
+
+.step1-form-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.step1-form-grid-2 {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.step1-form-grid-1 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.step1-form-grid-1 > * {
+  grid-column: 1 / -1;
+}
+
+.step1-identity-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+
+.step1-form-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.step1-form-grid-4 {
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+}
+
+.step1-card .previasis-input {
+  padding: 0.55rem 0.8rem;
+}
+
+.step1-context-grid {
+  padding: 1rem;
+}
+
+.step1-field-wide,
+.step1-address-group {
+  margin-bottom: 0.75rem;
+}
+
+.step1-address-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .step1-form-grid-2,
+  .step1-form-grid-3,
+  .step1-form-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .step1-card {
+    padding: 1.1rem 1rem;
+  }
+
+  .step1-control-grid,
+  .step1-context-grid,
+  .step1-form-grid-1,
+  .step1-form-grid-2,
+  .step1-form-grid-3,
+  .step1-form-grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .step1-form-grid-1 > * {
+    grid-column: auto;
+  }
+
+  .step1-card .previasis-input {
+    padding: 0.75rem 0.875rem;
+  }
+}
+

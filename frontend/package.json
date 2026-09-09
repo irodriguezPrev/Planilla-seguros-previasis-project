@@ -1,0 +1,29 @@
+{
+  "name": "previasis-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plataforma oficial de afiliación digital para Previasis Medicina Prepagada S.A.",
+  "scripts": {
+    "dev": "next dev -p 3000 --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "stop": "next stop -p 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^0.475.0",
+    "next": "^16.3.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "typescript": "^5.7.3"
+  }
+}
