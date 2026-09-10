@@ -452,67 +452,75 @@ export const Step2contractor: React.FC<Step2Props> = ({
                   />
                 </div>
 
-                {/* REPRESENTANTE LEGAL */}
-                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-                  <h4 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '0.75rem' }}>
-                    Datos del Representante Legal
-                  </h4>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4" style={{ marginTop: '0.75rem' }}>
-                    
-                    <div className="input-group">
-                      <label className="input-label">C.I. / Pasaporte Representante *</label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <select
-                          className="input-field"
-                          style={{ width: '80px', flex: '0 0 auto' }}
-                          value={rep.tipoDoc}
-                          onChange={(e) => updateTutor({ tipoDoc: e.target.value as any })}
-                        >
-                          <option value="V">V-</option>
-                          <option value="E">E-</option>
-                          <option value="P">P-</option>
-                        </select>
-                        <input
-                          type="text"
-                          className="input-field"
-                          placeholder="12345678"
-                          value={rep.numDoc}
-                          onChange={(e) => updateTutor({ numDoc: e.target.value.replace(/\D/g, '') })}
-                          required
-                        />
-                      </div>
+                {/* REPRESENTANTE LEGAL PERSONA JURIDICA */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <h4>Datos del Representante</h4>  
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="input-group">
+                    <label className="input-label">Cédula / Pasaporte *</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <select
+                        className="input-field"
+                        style={{ width: '80px', flex: '0 0 auto' }}
+                        value={rep.tipoDoc}
+                        onChange={(e) => updateTutor({ tipoDoc: e.target.value as TipoDocumento })}
+                      >
+                        <option value="V">V-</option>
+                        <option value="E">E-</option>
+                        <option value="P">P-</option>
+                      </select>
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="12345678"
+                        value={rep.numDoc}
+                        onChange={(e) => updateTutor({ numDoc: e.target.value.replace(/\D/g, '') })}
+                        required
+                      />
                     </div>
-                    <Input
-                      label="Nombres del Representante *"
-                      value={rep.nombres}
-                      onChange={(e) => updateTutor({ nombres: e.target.value })}
-                      required
-                    />
-                    <Input
-                      label="Apellidos del Representante *"
-                      value={rep.apellidos}
-                      onChange={(e) => updateTutor({ apellidos: e.target.value })}
-                      required
-                    />
                   </div>
+                  <Input
+                    label="Nombres *"
+                    value={rep.nombres}
+                    onChange={(e) => updateTutor({ nombres: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Apellidos *"
+                    value={rep.apellidos}
+                    onChange={(e) => updateTutor({ apellidos: e.target.value })}
+                    required
+                  />    
+                </div>
 
-                  <div className="grid grid-cols-3 gap-4" style={{ marginTop: '0.75rem' }}>
-                                        <div className="input-group">
-                      <label className="input-label">R.I.F. Representante *</label>
+                <div className="previasis-input-group step1-field-wide">
+            <label className="previasis-label">
+              Descripción de la Actividad / Cargo PEP <span className="previasis-label-required">*</span>
+            </label>
+            <input
+              type="text"
+              className="previasis-input"
+              placeholder="Indique cargo o institución"
+              value={rep.pepDescripcion || ''}
+              onChange={(e) => updateTutor({ pepDescripcion: e.target.value })}
+              required
+            />
+          </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="input-group">
+                      <label className="input-label">R.I.F. *</label>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <select
                           className="input-field"
                           style={{ width: '80px', flex: '0 0 auto' }}
                           value={rep.tipoRif}
-                          onChange={(e) => updateTutor({ tipoRif: e.target.value as any })}
+                          onChange={(e) => updateTutor({ tipoRif: e.target.value as TipoRif })}
                         >
                           <option value="V">V-</option>
                           <option value="E">E-</option>
+                          <option value="J">J-</option>
+                          <option value="G">G-</option>
                         </select>
                         <input
                           type="text"
@@ -524,20 +532,105 @@ export const Step2contractor: React.FC<Step2Props> = ({
                         />
                       </div>
                     </div>
-                    <Input
-                      label="Profesión Representante *"
-                      value={rep.profesion}
-                      onChange={(e) => updateTutor({ profesion: e.target.value })}
-                      required
-                    />
-                    <Input
-                      label="Teléfono Móvil Representante *"
-                      value={rep.telefonoMovil}
-                      onChange={(e) => updateTutor({ telefonoMovil: e.target.value })}
-                      required
-                    />
+                  <Input
+                    label="Nacionalidad *"
+                    value={rep.nacionalidad}
+                    onChange={(e) => updateTutor({ nacionalidad: e.target.value })}
+                    required
+                  />
+                  <div className="input-group">
+                    <label className="input-label">Estado Civil *</label>
+                    <select
+                      className="input-field"
+                      value={rep.estadoCivil}
+                      onChange={(e) => updateTutor({ estadoCivil: e.target.value as EstadoCivil })}
+                    >
+                      <option value="Soltero(a)">Soltero(a)</option>
+                      <option value="Casado(a)">Casado(a)</option>
+                      <option value="Divorciado(a)">Divorciado(a)</option>
+                      <option value="Viudo(a)">Viudo(a)</option>
+                      <option value="Concubinato">Concubinato</option>
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Sexo *</label>
+                    <select
+                      className="input-field"
+                      value={rep.sexo}
+                      onChange={(e) => updateTutor({ sexo: e.target.value as Sexo })}
+                    >
+                      <option value="M">Masculino (M)</option>
+                      <option value="F">Femenino (F)</option>
+                    </select>
                   </div>
                 </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <Input
+                    label="Fecha de Nacimiento *"
+                    type="date"
+                    value={rep.fechaNacimiento}
+                    onChange={(e) => updateTutor({ fechaNacimiento: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Profesión *"
+                    value={rep.profesion}
+                    onChange={(e) => updateTutor({ profesion: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Ocupación *"
+                    value={rep.ocupacion}
+                    onChange={(e) => updateTutor({ ocupacion: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Ingreso Anual (Bs.) *"
+                    value={rep.ingresoAnualBs}
+                    onChange={(e) => updateTutor({ ingresoAnualBs: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <Input
+                    label="Lugar de Nacimiento *"
+                    value={rep.lugarNacimiento}
+                    onChange={(e) => updateTutor({ lugarNacimiento: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Teléfono Local *"
+                    value={rep.telefonoHabitacion}
+                    onChange={(e) => updateTutor({ telefonoHabitacion: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Teléfono Móvil *"
+                    value={rep.telefonoMovil}
+                    onChange={(e) => updateTutor({ telefonoMovil: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Correo Electrónico *"
+                    type="email"
+                    value={rep.email}
+                    onChange={(e) => updateTutor({ email: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">Dirección de Habitación *</label>
+                  <textarea
+                    className="input-field"
+                    rows={2}
+                    value={rep.direccionHabitacion}
+                    onChange={(e) => updateTutor({ direccionHabitacion: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
               </div>
             )}
           </div>

@@ -301,22 +301,51 @@ export class PdfGeneratorService {
       drawCell('Teléfonos', `${cnat.telefonoHabitacion} / ${cnat.telefonoMovil}`, margin + halfW, currentY, fourthW);
       drawCell('Correo Electrónico', cnat.email, margin + halfW + fourthW, currentY, fourthW);
       currentY += 10.5;
-    } else {
-      const cjur = cont.personaJuridica;
-      drawCell('Razón Social', cjur.razonSocial, margin, currentY, halfW);
-      drawCell('R.I.F. Jurídico', `${cjur.tipoRif}-${cjur.numRif}`, margin + halfW, currentY, fourthW);
-      drawCell('Actividad Económica', `${cjur.actividadEconomica}${cjur.ramoComercial ? ` (${cjur.ramoComercial})` : ''}`, margin + halfW + fourthW, currentY, fourthW);
-      currentY += 8.5;
+    }else {
+  const cjur = cont.personaJuridica;
+  const crep = cjur.representanteLegal;
+  const rowH = 8.5; // Altura estándar uniforme por fila
 
-      drawCell('Reg. Mercantil / Tomo / Fecha', `${cjur.numRegistroMercantil}, Tomo: ${cjur.numTomo}, F: ${cjur.fechaRegistro}`, margin, currentY, halfW);
-      drawCell('Dirección Fiscal', cjur.direccionFiscal, margin + halfW, currentY, halfW);
-      currentY += 8.5;
+  // --- 1. DATOS DE LA EMPRESA (PERSONA JURÍDICA) ---
+  // Fila 1: Razón Social, RIF y Actividad Económica
+  drawCell('Razón Social', cjur.razonSocial || '-', margin, currentY, halfW);
+  drawCell('R.I.F. Jurídico', `${cjur.tipoRif}-${cjur.numRif}`, margin + halfW, currentY, fourthW);
+  drawCell('Actividad Económica', `${cjur.actividadEconomica}${cjur.ramoComercial ? ` (${cjur.ramoComercial})` : ''}`, margin + halfW + fourthW, currentY, fourthW);
+  currentY += rowH;
 
-      const crep = cjur.representanteLegal;
-      drawCell('Representante Legal', `${crep.nombres} ${crep.apellidos} (C.I: ${crep.tipoDoc}-${crep.numDoc})`, margin, currentY, halfW);
-      drawCell('Teléfono / Cargo', `${cjur.telefono} / ${crep.profesion}`, margin + halfW, currentY, halfW);
-      currentY += 10.5;
-    }
+  // Fila 2: Registro Mercantil y Dirección Fiscal / Teléfono
+  const regMercantil = [
+    cjur.numRegistroMercantil ? `N° ${cjur.numRegistroMercantil}` : '',
+    cjur.numTomo ? `Tomo: ${cjur.numTomo}` : '',
+    cjur.fechaRegistro ? `F: ${cjur.fechaRegistro}` : ''
+  ].filter(Boolean).join(', ') || '-';
+
+  drawCell('Reg. Mercantil / Tomo / Fecha', regMercantil, margin, currentY, halfW);
+  drawCell('Dirección Fiscal / Teléfono Empresa', `${cjur.direccionFiscal || '-'} / ${cjur.telefono || '-'}`, margin + halfW, currentY, halfW);
+  currentY += rowH;
+
+  // --- 2. DATOS DEL REPRESENTANTE LEGAL ---
+  // Fila 3: Datos de Identificación y Cargo
+  drawCell('Representante Legal', `${crep.nombres} ${crep.apellidos} (C.I: ${crep.tipoDoc}-${crep.numDoc})`, margin, currentY, halfW);
+  drawCell('Ocupación / Profesión', `${crep.ocupacion || '-'} / ${crep.profesion || '-'}`, margin + halfW, currentY, halfW);
+  currentY += rowH;
+
+  // Fila 4: Nacimiento y Datos Personales
+  drawCell('Fecha / Lugar de Nacimiento', `${crep.fechaNacimiento || '-'} / ${crep.lugarNacimiento || '-'}`, margin, currentY, halfW);
+  drawCell('Sexo / Estado Civil / Nacionalidad', `${crep.sexo || '-'} / ${crep.estadoCivil || '-'} / ${crep.nacionalidad || '-'}`, margin + halfW, currentY, halfW);
+  currentY += rowH;
+
+  // Fila 5: Contacto (Corrección del error de teléfono)
+  const tlfMovil = (crep as any).telefonoCelular || (crep as any).telefonoMovil || (crep as any).telefono || '-';
+  drawCell('Teléfono Móvil / Habitación', `${tlfMovil} / ${crep.telefonoHabitacion || '-'}`, margin, currentY, halfW);
+  drawCell('Correo Electrónico', crep.email || '-', margin + halfW, currentY, halfW);
+  currentY += rowH;
+
+  // Fila 6: Habitación e Información Financiera / PEP
+  drawCell('Dirección de Habitación', crep.direccionHabitacion || '-', margin, currentY, halfW);
+  drawCell('Ingreso Anual Bs. / Descripción Actividad (PEP)', `${crep.ingresoAnualBs || '-'} / ${crep.pepDescripcion || 'N/A'}`, margin + halfW, currentY, halfW);
+  currentY += rowH;
+}
 
     // SECCIÓN 3: PERSONAS A AFILIAR Y PLAN SOLICITADO
     currentY = drawSectionTitle('3. Personas a Afiliar y Plan Solicitado', currentY);
@@ -901,7 +930,7 @@ if (esDeporteSi && detallesDeportivos.length > 0) {
       img.onload = () => resolve(img);
       img.onerror = (err) => reject(err);
     });
-}
+  }
 }
 
 export default PdfGeneratorService;
