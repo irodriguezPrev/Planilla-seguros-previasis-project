@@ -94,7 +94,7 @@ export class PdfGeneratorService {
     const drawSectionTitle = (title: string, y: number): number => {
       doc.setFillColor(7, 62, 35); // Verde Bosque
       doc.rect(margin, y, contentWidth, 5.2, 'F');
-      
+
       // Borde decorativo
       doc.setDrawColor(0, 139, 71);
       doc.setLineWidth(0.4);
@@ -301,51 +301,51 @@ export class PdfGeneratorService {
       drawCell('Teléfonos', `${cnat.telefonoHabitacion} / ${cnat.telefonoMovil}`, margin + halfW, currentY, fourthW);
       drawCell('Correo Electrónico', cnat.email, margin + halfW + fourthW, currentY, fourthW);
       currentY += 10.5;
-    }else {
-  const cjur = cont.personaJuridica;
-  const crep = cjur.representanteLegal;
-  const rowH = 8.5; // Altura estándar uniforme por fila
+    } else {
+      const cjur = cont.personaJuridica;
+      const crep = cjur.representanteLegal;
+      const rowH = 8.5; // Altura estándar uniforme por fila
 
-  // --- 1. DATOS DE LA EMPRESA (PERSONA JURÍDICA) ---
-  // Fila 1: Razón Social, RIF y Actividad Económica
-  drawCell('Razón Social', cjur.razonSocial || '-', margin, currentY, halfW);
-  drawCell('R.I.F. Jurídico', `${cjur.tipoRif}-${cjur.numRif}`, margin + halfW, currentY, fourthW);
-  drawCell('Actividad Económica', `${cjur.actividadEconomica}${cjur.ramoComercial ? ` (${cjur.ramoComercial})` : ''}`, margin + halfW + fourthW, currentY, fourthW);
-  currentY += rowH;
+      // --- 1. DATOS DE LA EMPRESA (PERSONA JURÍDICA) ---
+      // Fila 1: Razón Social, RIF y Actividad Económica
+      drawCell('Razón Social', cjur.razonSocial || '-', margin, currentY, halfW);
+      drawCell('R.I.F. Jurídico', `${cjur.tipoRif}-${cjur.numRif}`, margin + halfW, currentY, fourthW);
+      drawCell('Actividad Económica', `${cjur.actividadEconomica}${cjur.ramoComercial ? ` (${cjur.ramoComercial})` : ''}`, margin + halfW + fourthW, currentY, fourthW);
+      currentY += rowH;
 
-  // Fila 2: Registro Mercantil y Dirección Fiscal / Teléfono
-  const regMercantil = [
-    cjur.numRegistroMercantil ? `N° ${cjur.numRegistroMercantil}` : '',
-    cjur.numTomo ? `Tomo: ${cjur.numTomo}` : '',
-    cjur.fechaRegistro ? `F: ${cjur.fechaRegistro}` : ''
-  ].filter(Boolean).join(', ') || '-';
+      // Fila 2: Registro Mercantil y Dirección Fiscal / Teléfono
+      const regMercantil = [
+        cjur.numRegistroMercantil ? `N° ${cjur.numRegistroMercantil}` : '',
+        cjur.numTomo ? `Tomo: ${cjur.numTomo}` : '',
+        cjur.fechaRegistro ? `F: ${cjur.fechaRegistro}` : ''
+      ].filter(Boolean).join(', ') || '-';
 
-  drawCell('Reg. Mercantil / Tomo / Fecha', regMercantil, margin, currentY, halfW);
-  drawCell('Dirección Fiscal / Teléfono Empresa', `${cjur.direccionFiscal || '-'} / ${cjur.telefono || '-'}`, margin + halfW, currentY, halfW);
-  currentY += rowH;
+      drawCell('Reg. Mercantil / Tomo / Fecha', regMercantil, margin, currentY, halfW);
+      drawCell('Dirección Fiscal / Teléfono Empresa', `${cjur.direccionFiscal || '-'} / ${cjur.telefono || '-'}`, margin + halfW, currentY, halfW);
+      currentY += rowH;
 
-  // --- 2. DATOS DEL REPRESENTANTE LEGAL ---
-  // Fila 3: Datos de Identificación y Cargo
-  drawCell('Representante Legal', `${crep.nombres} ${crep.apellidos} (C.I: ${crep.tipoDoc}-${crep.numDoc})`, margin, currentY, halfW);
-  drawCell('Ocupación / Profesión', `${crep.ocupacion || '-'} / ${crep.profesion || '-'}`, margin + halfW, currentY, halfW);
-  currentY += rowH;
+      // --- 2. DATOS DEL REPRESENTANTE LEGAL ---
+      // Fila 3: Datos de Identificación y Cargo
+      drawCell('Representante Legal', `${crep.nombres} ${crep.apellidos} (C.I: ${crep.tipoDoc}-${crep.numDoc})`, margin, currentY, halfW);
+      drawCell('Ocupación / Profesión', `${crep.ocupacion || '-'} / ${crep.profesion || '-'}`, margin + halfW, currentY, halfW);
+      currentY += rowH;
 
-  // Fila 4: Nacimiento y Datos Personales
-  drawCell('Fecha / Lugar de Nacimiento', `${crep.fechaNacimiento || '-'} / ${crep.lugarNacimiento || '-'}`, margin, currentY, halfW);
-  drawCell('Sexo / Estado Civil / Nacionalidad', `${crep.sexo || '-'} / ${crep.estadoCivil || '-'} / ${crep.nacionalidad || '-'}`, margin + halfW, currentY, halfW);
-  currentY += rowH;
+      // Fila 4: Nacimiento y Datos Personales
+      drawCell('Fecha / Lugar de Nacimiento', `${crep.fechaNacimiento || '-'} / ${crep.lugarNacimiento || '-'}`, margin, currentY, halfW);
+      drawCell('Sexo / Estado Civil / Nacionalidad', `${crep.sexo || '-'} / ${crep.estadoCivil || '-'} / ${crep.nacionalidad || '-'}`, margin + halfW, currentY, halfW);
+      currentY += rowH;
 
-  // Fila 5: Contacto (Corrección del error de teléfono)
-  const tlfMovil = (crep as any).telefonoCelular || (crep as any).telefonoMovil || (crep as any).telefono || '-';
-  drawCell('Teléfono Móvil / Habitación', `${tlfMovil} / ${crep.telefonoHabitacion || '-'}`, margin, currentY, halfW);
-  drawCell('Correo Electrónico', crep.email || '-', margin + halfW, currentY, halfW);
-  currentY += rowH;
+      // Fila 5: Contacto (Corrección del error de teléfono)
+      const tlfMovil = (crep as any).telefonoCelular || (crep as any).telefonoMovil || (crep as any).telefono || '-';
+      drawCell('Teléfono Móvil / Habitación', `${tlfMovil} / ${crep.telefonoHabitacion || '-'}`, margin, currentY, halfW);
+      drawCell('Correo Electrónico', crep.email || '-', margin + halfW, currentY, halfW);
+      currentY += rowH;
 
-  // Fila 6: Habitación e Información Financiera / PEP
-  drawCell('Dirección de Habitación', crep.direccionHabitacion || '-', margin, currentY, halfW);
-  drawCell('Ingreso Anual Bs. / Descripción Actividad (PEP)', `${crep.ingresoAnualBs || '-'} / ${crep.pepDescripcion || 'N/A'}`, margin + halfW, currentY, halfW);
-  currentY += rowH;
-}
+      // Fila 6: Habitación e Información Financiera / PEP
+      drawCell('Dirección de Habitación', crep.direccionHabitacion || '-', margin, currentY, halfW);
+      drawCell('Ingreso Anual Bs. / Descripción Actividad (PEP)', `${crep.ingresoAnualBs || '-'} / ${crep.pepDescripcion || 'N/A'}`, margin + halfW, currentY, halfW);
+      currentY += rowH;
+    }
 
     // SECCIÓN 3: PERSONAS A AFILIAR Y PLAN SOLICITADO
     currentY = drawSectionTitle('3. Personas a Afiliar y Plan Solicitado', currentY);
@@ -404,346 +404,384 @@ export class PdfGeneratorService {
     const startHealthY = margin + 22; // debajo del encabezado
     currentY = startHealthY;
 
-// ---- ENCABEZADO DE LA DECLARACIÓN DE SALUD ----
-const colCodeW = 22; // ancho de la columna de código
-const colHealthW = pageWidth - margin * 2;
-const colQuestionW = colHealthW - colCodeW; // ancho disponible para la pregunta
+    // ---- ENCABEZADO DE LA DECLARACIÓN DE SALUD ----
+    const colCodeW = 22; // ancho de la columna de código
+    const colHealthW = pageWidth - margin * 2;
+    const colQuestionW = colHealthW - colCodeW; // ancho disponible para la pregunta
 
-// Título largo (dos líneas)
-doc.setFillColor(226, 232, 240);
-doc.rect(margin, currentY, colHealthW, 8, 'F');
-doc.setDrawColor(203, 213, 225);
-doc.rect(margin, currentY, colHealthW, 8);
+    // Título largo (dos líneas)
+    doc.setFillColor(226, 232, 240);
+    doc.rect(margin, currentY, colHealthW, 8, 'F');
+    doc.setDrawColor(203, 213, 225);
+    doc.rect(margin, currentY, colHealthW, 8);
 
-doc.setFont('helvetica', 'bold');
-doc.setFontSize(5.3);
-doc.setTextColor(7, 62, 35);
-const tituloSalud = 'DECLARACIÓN DE SALUD : Usted o algún dependiente, ha(n) padecido o padece(n), o como consecuencia de algún accidente ha tenido alguna de las siguientes dolencias o enfermedades que se indican a continuación: Marque con una "X" la casilla que corresponda y en caso afirmativo subraye la enfermedad o dolencia que padezca o haya padecido e indique el código o (los) número(s) correspondiente(s) al (los) Afiliado(s)';
-const lineasTitulo = doc.splitTextToSize(tituloSalud, colQuestionW - 4);
-doc.text(lineasTitulo, margin + 2, currentY + 3);
-// Etiqueta "Código del Afiliado" en la columna derecha
-doc.text('Código del Afiliado', margin + colQuestionW + 2, currentY + 3);
-currentY += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.3);
+    doc.setTextColor(7, 62, 35);
+    const tituloSalud = 'DECLARACIÓN DE SALUD : Usted o algún dependiente, ha(n) padecido o padece(n), o como consecuencia de algún accidente ha tenido alguna de las siguientes dolencias o enfermedades que se indican a continuación: Marque con una "X" la casilla que corresponda y en caso afirmativo subraye la enfermedad o dolencia que padezca o haya padecido e indique el código o (los) número(s) correspondiente(s) al (los) Afiliado(s)';
+    const lineasTitulo = doc.splitTextToSize(tituloSalud, colQuestionW - 4);
+    doc.text(lineasTitulo, margin + 2, currentY + 3);
+    // Etiqueta "Código del Afiliado" en la columna derecha
+    doc.text('Código del Afiliado', margin + colQuestionW + 2, currentY + 3);
+    currentY += 8;
 
-// ---- PREGUNTAS DE SALUD (con altura dinámica) ----
-const lineHeight = 4.8; // altura por línea de texto
+    // ---- PREGUNTAS DE SALUD (con altura dinámica) ----
+    const lineHeight = 4.8; // altura por línea de texto
 
-HEALTH_QUESTIONS.forEach((q) => {
-  const resp = data.salud.preguntas[q.id]?.respuesta || 'NO';
-  // Extra detalles si la respuesta es SÍ
-  const extra = data.salud.preguntas[q.id]?.detallesExtra;
-  const codigosAfiliados = data.salud.preguntas[q.id]?.codigosAfiliados || [];
-  const isYes = resp === 'SÍ';
+    HEALTH_QUESTIONS.forEach((q) => {
+      const resp = data.salud.preguntas[q.id]?.respuesta || 'NO';
+      // Extra detalles si la respuesta es SÍ
+      const extra = data.salud.preguntas[q.id]?.detallesExtra;
+      const codigosAfiliados = data.salud.preguntas[q.id]?.codigosAfiliados || [];
+      const isYes = resp === 'SÍ';
 
-  // 1. Construir el texto completo de la pregunta: título en negrita + ": " + descripción
-  const titulo = `${q.id}. ${q.title}`;
-  const descripcion = q.description || '';
-  
-  const textoCompleto = titulo + ': ' + descripcion;
+      // 1. Construir el texto completo de la pregunta: título en negrita + ": " + descripción
+      const titulo = `${q.id}. ${q.title}`;
+      const descripcion = q.description || '';
 
-  // 2. Calcular el ancho disponible para el texto (restar espacio para checkboxes y margen)
-  //    Los checkboxes ocupan: "SÍ" + cuadro + espacio + "NO" + cuadro + un margen
-  const anchoCheckSI = doc.getTextWidth('SÍ') + 3.2 + 2.5; // texto + cuadro + separación
-  const anchoCheckNO = doc.getTextWidth('NO') + 3.2 + 2.5;
-  const espacioEntreChecks = 4;
-  const anchoTotalCheck = anchoCheckSI + espacioEntreChecks + anchoCheckNO;
-  const margenCheck = 3; // separación adicional del borde derecho
-  const anchoTexto = colQuestionW - anchoTotalCheck - margenCheck - 4; // 4 de margen izquierdo
+      const textoCompleto = titulo + ': ' + descripcion;
 
-  // 3. Dividir el texto en líneas según el ancho disponible
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.0);
-  const lineas = doc.splitTextToSize(textoCompleto, anchoTexto);
-  const textoCodigos = codigosAfiliados.length
-    ? codigosAfiliados.map((codigo) => `#${codigo}`).join(', ')
-    : '-';
-  const lineasCodigos = doc.splitTextToSize(textoCodigos, colCodeW - 4);
+      // 2. Calcular el ancho disponible para el texto (restar espacio para checkboxes y margen)
+      //    Los checkboxes ocupan: "SÍ" + cuadro + espacio + "NO" + cuadro + un margen
+      const anchoCheckSI = doc.getTextWidth('SÍ') + 3.2 + 2.5; // texto + cuadro + separación
+      const anchoCheckNO = doc.getTextWidth('NO') + 3.2 + 2.5;
+      const espacioEntreChecks = 4;
+      const anchoTotalCheck = anchoCheckSI + espacioEntreChecks + anchoCheckNO;
+      const margenCheck = 3; // separación adicional del borde derecho
+      const anchoTexto = colQuestionW - anchoTotalCheck - margenCheck - 4; // 4 de margen izquierdo
 
-  // 4. Calcular la altura de la fila (mínimo 7 mm, pero se ajusta al número de líneas)
-  const numLineas = lineas.length;
-  const alturaFila = Math.max(
-    7,
-    numLineas * lineHeight + 3,
-    lineasCodigos.length * lineHeight + 3,
-  ); // +3 de padding
-
-  // 5. Dibujar el borde de la fila
-  doc.setDrawColor(203, 213, 225);
-  doc.rect(margin, currentY, colHealthW, alturaFila);
-
-  // 6. Dibujar el texto (título en negrita, descripción en normal)
-  //    Pero como tenemos el texto completo, podemos usar el mismo estilo para todas las líneas,
-  //    o resaltar el título en negrita. Para simplificar, pondré el título en negrita y el resto normal.
-  //    Para hacerlo bien, necesitamos dividir el texto en partes: título + ": " + descripción.
-  //    Pero para no complicar, dibujamos todo el texto con estilo normal, y el título lo pondremos en negrita
-  //    usando la primera parte. Voy a dibujar línea por línea con el formato adecuado.
-
-  // Para cada línea, dibujamos con el estilo adecuado (la primera línea lleva el título en negrita)
-  lineas.forEach((linea:any, idx:number) => {
-    const yTexto = currentY + 2.5 + idx * lineHeight;
-    if (idx === 0) {
-      // Primera línea: título en negrita + el resto de la línea (si incluye descripción)
-      // Extraemos el título de la línea (asumimos que empieza con "X. Título:")
-      const idxDosPuntos = linea.indexOf(':');
-      if (idxDosPuntos !== -1) {
-        const tituloLinea = linea.substring(0, idxDosPuntos + 1);
-        const descLinea = linea.substring(idxDosPuntos + 1);
-        // Dibujar título en negrita
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6.0);
-        doc.setTextColor(isYes ? 0 : 7, isYes ? 139 : 62, isYes ? 71 : 35);
-        doc.text(tituloLinea, margin + 2, yTexto);
-        // Dibujar descripción en normal (justo después)
-        const xDesc = margin + 2 + doc.getTextWidth(tituloLinea);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(6.0);
-        doc.setTextColor(71, 85, 105);
-        doc.text(descLinea, xDesc, yTexto);
-      } else {
-        // Si no hay dos puntos, todo el texto en negrita
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6.0);
-        doc.setTextColor(isYes ? 0 : 7, isYes ? 139 : 62, isYes ? 71 : 35);
-        doc.text(linea, margin + 2, yTexto);
-      }
-    } else {
-      // Líneas siguientes: solo descripción en normal
+      // 3. Dividir el texto en líneas según el ancho disponible
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6.0);
-      doc.setTextColor(71, 85, 105);
-      doc.text(linea, margin + 2, yTexto);
+      const lineas = doc.splitTextToSize(textoCompleto, anchoTexto);
+      const textoCodigos = codigosAfiliados.length
+        ? codigosAfiliados.map((codigo) => `#${codigo}`).join(', ')
+        : '-';
+      const lineasCodigos = doc.splitTextToSize(textoCodigos, colCodeW - 4);
+
+      // 4. Calcular la altura de la fila (mínimo 7 mm, pero se ajusta al número de líneas)
+      const numLineas = lineas.length;
+      const alturaFila = Math.max(
+        7,
+        numLineas * lineHeight + 3,
+        lineasCodigos.length * lineHeight + 3,
+      ); // +3 de padding
+
+      // 5. Dibujar el borde de la fila
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(margin, currentY, colHealthW, alturaFila);
+
+      // 6. Dibujar el texto (título en negrita, descripción en normal)
+      //    Pero como tenemos el texto completo, podemos usar el mismo estilo para todas las líneas,
+      //    o resaltar el título en negrita. Para simplificar, pondré el título en negrita y el resto normal.
+      //    Para hacerlo bien, necesitamos dividir el texto en partes: título + ": " + descripción.
+      //    Pero para no complicar, dibujamos todo el texto con estilo normal, y el título lo pondremos en negrita
+      //    usando la primera parte. Voy a dibujar línea por línea con el formato adecuado.
+
+      // Para cada línea, dibujamos con el estilo adecuado (la primera línea lleva el título en negrita)
+      lineas.forEach((linea: any, idx: number) => {
+        const yTexto = currentY + 2.5 + idx * lineHeight;
+        if (idx === 0) {
+          // Primera línea: título en negrita + el resto de la línea (si incluye descripción)
+          // Extraemos el título de la línea (asumimos que empieza con "X. Título:")
+          const idxDosPuntos = linea.indexOf(':');
+          if (idxDosPuntos !== -1) {
+            const tituloLinea = linea.substring(0, idxDosPuntos + 1);
+            const descLinea = linea.substring(idxDosPuntos + 1);
+            // Dibujar título en negrita
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.0);
+            doc.setTextColor(isYes ? 0 : 7, isYes ? 139 : 62, isYes ? 71 : 35);
+            doc.text(tituloLinea, margin + 2, yTexto);
+            // Dibujar descripción en normal (justo después)
+            const xDesc = margin + 2 + doc.getTextWidth(tituloLinea);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6.0);
+            doc.setTextColor(71, 85, 105);
+            doc.text(descLinea, xDesc, yTexto);
+          } else {
+            // Si no hay dos puntos, todo el texto en negrita
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.0);
+            doc.setTextColor(isYes ? 0 : 7, isYes ? 139 : 62, isYes ? 71 : 35);
+            doc.text(linea, margin + 2, yTexto);
+          }
+        } else {
+          // Líneas siguientes: solo descripción en normal
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(6.0);
+          doc.setTextColor(71, 85, 105);
+          doc.text(linea, margin + 2, yTexto);
+        }
+      });
+
+      // 7. Si hay detalles extra (cuando es SÍ), mostrarlos en una línea adicional
+      if (isYes && extra) {
+        const yExtra = currentY + 2.5 + numLineas * lineHeight;
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(5.2);
+        doc.setTextColor(0, 139, 71);
+        const extraText = `Esp: ${extra.substring(0, 60)}${extra.length > 60 ? '…' : ''}`;
+        doc.text(extraText, margin + 2, yExtra);
+        // Ajustar altura de fila si el extra ocupa más espacio
+        // (opcional, pero si se sale del rectángulo, mejor aumentar alturaFila)
+        // En este caso, no aumentamos para no complicar, pero se puede hacer dinámico.
+      }
+
+      // 8. Dibujar los checkboxes SÍ/NO al final de la primera columna
+      //    Los centramos verticalmente respecto a la altura total de la fila.
+      const yCheckFinal = currentY + alturaFila / 2;
+
+      // Calcular posición x para los checkboxes
+      const checkStartX = margin + colQuestionW - anchoTotalCheck - margenCheck;
+      drawCheckbox('SÍ', isYes, checkStartX, yCheckFinal);
+      drawCheckbox('NO', !isYes, checkStartX + anchoCheckSI + espacioEntreChecks, yCheckFinal);
+
+      // 9. Imprimir los códigos seleccionados en la columna derecha.
+      doc.setDrawColor(203, 213, 225);
+      doc.line(
+        margin + colQuestionW,
+        currentY,
+        margin + colQuestionW,
+        currentY + alturaFila,
+      );
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.0);
+      doc.setTextColor(15, 23, 42);
+      lineasCodigos.forEach((linea: string, idx: number) => {
+        doc.text(linea, margin + colQuestionW + 2, currentY + 2.5 + idx * lineHeight);
+      });
+
+      // 10. Avanzar currentY
+      currentY += alturaFila;
+    });
+
+    // ---- DETALLE CLÍNICO DE AFECCIONES ----
+
+    const afecciones = data.salud.afeccionesDetalles || [];
+
+    if (afecciones.length > 0) {
+      const rowHeight = 6.5;
+      const headerHeight = 11;
+      const bottomLimit = pageHeight - margin - 15;
+
+      const renderAfeccionesHeader = () => {
+        doc.setFillColor(241, 245, 249);
+        doc.rect(margin, currentY, contentWidth, 5, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(7, 62, 35);
+        doc.text('DETALLE CLÍNICO DE AFECCIONES MÉDICAS DECLARADAS CON "SÍ"', margin + 3, currentY + 3.5);
+        currentY += 5;
+        const afColW = [16, 42, 28, 42, 28, 39.9];
+        const afHeaders = [
+          'Cód. af.',
+          'Tipo Padecimiento',
+          'Fecha Diag.',
+          'Tratamiento / Quirúrgica',
+          'Fecha Últ. Cheq.',
+          'Institución Hospitalaria',
+        ];
+
+        doc.setFillColor(226, 232, 240);
+        doc.rect(margin, currentY, contentWidth, 5, 'FD');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        doc.setTextColor(7, 62, 35);
+
+        let afCurX = margin;
+        afHeaders.forEach((h, i) => {
+          doc.text(h, afCurX + 1.5, currentY + 3.5);
+          afCurX += afColW[i];
+        });
+        currentY += 5;
+
+        return afColW;
+      };
+
+      if (currentY + headerHeight + rowHeight > bottomLimit) {
+        doc.addPage();
+        currentY = margin + 22;
+      } else {
+        currentY += 3;
+      }
+      let afColW = renderAfeccionesHeader();
+      afecciones.forEach((af) => {
+
+        const requiredInitialSpace = headerHeight + (rowHeight * 2);
+
+        if (currentY + requiredInitialSpace > bottomLimit) {
+          doc.addPage();
+          currentY = margin + 22;
+        }
+
+
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(margin, currentY, contentWidth, rowHeight);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6);
+        doc.setTextColor(15, 23, 42);
+
+        let rowX = margin;
+
+        doc.text(`#${af.codigoAfiliado || 1}`, rowX + 1.5, currentY + 4.2);
+        rowX += afColW[0];
+
+        doc.text(
+          doc.splitTextToSize(af.padecimiento || '-', afColW[1] - 2)[0] || '-',
+          rowX + 1.5,
+          currentY + 4.2
+        );
+        rowX += afColW[1];
+
+        doc.text(af.fechaDiagnostico || '-', rowX + 1.5, currentY + 4.2);
+        rowX += afColW[2];
+
+        doc.text(
+          doc.splitTextToSize(af.tratamientoPracticado || '-', afColW[3] - 2)[0] || '-',
+          rowX + 1.5,
+          currentY + 4.2
+        );
+        rowX += afColW[3];
+
+        doc.text(af.fechaUltimoChequeo || '-', rowX + 1.5, currentY + 4.2);
+        rowX += afColW[4];
+
+        doc.text(
+          doc.splitTextToSize(af.institucionHospitalaria || '-', afColW[5] - 2)[0] || '-',
+          rowX + 1.5,
+          currentY + 4.2
+        );
+
+        currentY += rowHeight;
+      });
+
+      currentY += 2;
     }
-  });
 
-  // 7. Si hay detalles extra (cuando es SÍ), mostrarlos en una línea adicional
-  if (isYes && extra) {
-    const yExtra = currentY + 2.5 + numLineas * lineHeight;
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(5.2);
-    doc.setTextColor(0, 139, 71);
-    const extraText = `Esp: ${extra.substring(0, 60)}${extra.length > 60 ? '…' : ''}`;
-    doc.text(extraText, margin + 2, yExtra);
-    // Ajustar altura de fila si el extra ocupa más espacio
-    // (opcional, pero si se sale del rectángulo, mejor aumentar alturaFila)
-    // En este caso, no aumentamos para no complicar, pero se puede hacer dinámico.
-  }
+    // ---- CONTINUAR CON LA SIGUIENTE SECCIÓN (FORMA DE PAGO, etc.) ----
+    // (El código posterior a esta sección debe continuar sin cambios)
+    // ---- DETALLE DE PRÁCTICA DEPORTIVA (PREGUNTA N° 17) ----
+    const preg17 = data.salud.preguntas[17] || data.salud.preguntas['17']; // TODO put this on dynamic way
+    const esDeporteSi = preg17?.respuesta === 'SÍ';
+    const detallesDeportivos = data.salud.detallesDeportivos || [];
 
-  // 8. Dibujar los checkboxes SÍ/NO al final de la primera columna
-  //    Los centramos verticalmente respecto a la altura total de la fila.
-  const yCheckFinal = currentY + alturaFila / 2;
+    if (esDeporteSi && detallesDeportivos.length > 0) {
+      // 1. Calcular el alto requerido (Encabezado + Cabecera + Filas)
+      const estimatedHeight = 15 + detallesDeportivos.length * 6;
 
-  // Calcular posición x para los checkboxes
-  const checkStartX = margin + colQuestionW - anchoTotalCheck - margenCheck;
-  drawCheckbox('SÍ', isYes, checkStartX, yCheckFinal);
-  drawCheckbox('NO', !isYes, checkStartX + anchoCheckSI + espacioEntreChecks, yCheckFinal);
+      // 2. Si no hay espacio antes del pie de página, forzar salto a una nueva página
+      if (currentY + estimatedHeight > pageHeight - margin - 18) {
+        doc.addPage();
+        currentY = margin + 22;
+      } else {
+        currentY += 3;
+      }
 
-  // 9. Imprimir los códigos seleccionados en la columna derecha.
-  doc.setDrawColor(203, 213, 225);
-  doc.line(
-    margin + colQuestionW,
-    currentY,
-    margin + colQuestionW,
-    currentY + alturaFila,
-  );
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.0);
-  doc.setTextColor(15, 23, 42);
-  lineasCodigos.forEach((linea: string, idx: number) => {
-    doc.text(linea, margin + colQuestionW + 2, currentY + 2.5 + idx * lineHeight);
-  });
+      // 3. Título de la Sección
+      doc.setFillColor(241, 245, 249);
+      doc.rect(margin, currentY, contentWidth, 5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(7, 62, 35);
+      doc.text('DETALLE DE PRÁCTICA DEPORTIVA DECLARADA (PREGUNTA N° 17)', margin + 3, currentY + 3.5);
+      currentY += 5;
 
-  // 10. Avanzar currentY
-  currentY += alturaFila;
-});
+      // 4. Cabecera de la Tabla
+      const depColW = [25, 65, 65, 40.9];
+      const depHeaders = ['Código Afiliado', 'Deporte Practicado', 'Frecuencia / Rutina', 'Nivel de Práctica'];
 
-// ---- DETALLE CLÍNICO DE AFECCIONES ----
-currentY += 3; // pequeño margen
-doc.setFillColor(241, 245, 249);
-doc.rect(margin, currentY, contentWidth, 5, 'F');
-doc.setFont('helvetica', 'bold');
-doc.setFontSize(7);
-doc.setTextColor(7, 62, 35);
-doc.text('DETALLE CLÍNICO DE AFECCIONES MÉDICAS DECLARADAS CON "SÍ"', margin + 3, currentY + 3.5);
-currentY += 5;
+      doc.setFillColor(226, 232, 240);
+      doc.rect(margin, currentY, contentWidth, 5, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.2);
+      doc.setTextColor(7, 62, 35);
 
-const afColW = [14, 45, 24, 42, 28, 42.9];
-const afHeaders = ['Cód. afiliado', 'Tipo Padecimiento', 'Fecha Diagnóstico', 'Tratamiento/ intervención quirúrgica', 'Fecha último chequeo', 'Institución Hospitalaria'];
+      let depCurX = margin;
+      depHeaders.forEach((h, i) => {
+        doc.text(h, depCurX + 1.5, currentY + 3.5);
+        depCurX += depColW[i];
+      });
+      currentY += 5;
 
-doc.setFillColor(226, 232, 240);
-doc.rect(margin, currentY, contentWidth, 5, 'FD');
-doc.setFontSize(6.2);
-let afCurX = margin;
-afHeaders.forEach((h, i) => {
-  doc.text(h, afCurX + 1.5, currentY + 3.5);
-  afCurX += afColW[i];
-});
-currentY += 5;
+      // 5. Filas de datos
+      detallesDeportivos.forEach((dep) => {
+        const rowHeight = 6;
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(margin, currentY, contentWidth, rowHeight);
 
-const afDetails = data.salud.afeccionesDetalles;
-if (afDetails.length === 0) {
-  doc.setDrawColor(203, 213, 225);
-  doc.rect(margin, currentY, contentWidth, 6);
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(6.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text('SIN AFECCIONES MÉDICAS PREEXISTENTES DECLARADAS.', margin + 3, currentY + 4);
-  currentY += 8;
-} else {
-  afDetails.forEach((d) => {
-    const textoPadecimiento = doc.splitTextToSize(d.padecimiento || '-', afColW[1] - 2);
-    const textoTratamiento = doc.splitTextToSize(d.tratamientoPracticado || '-', afColW[3] - 2);
-    const textoInstitucion = doc.splitTextToSize(d.institucionHospitalaria || '-', afColW[5] - 2);
-    const lineHeight = 3.2;
-    const maxLines = Math.max(textoPadecimiento.length, textoTratamiento.length, textoInstitucion.length, 1);
-    const rowHeight = Math.max(6, maxLines * lineHeight + 3);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.2);
+        doc.setTextColor(15, 23, 42);
 
+        let rowX = margin;
+        doc.text(`#${dep.codigoAfiliado}`, rowX + 2, currentY + 4);
+        rowX += depColW[0];
+
+        doc.text(doc.splitTextToSize(dep.deporte || '-', depColW[1] - 2)[0] || '-', rowX + 1.5, currentY + 4);
+        rowX += depColW[1];
+
+        doc.text(doc.splitTextToSize(dep.frecuencia || '-', depColW[2] - 2)[0] || '-', rowX + 1.5, currentY + 4);
+        rowX += depColW[2];
+
+        doc.text(dep.nivel || '-', rowX + 1.5, currentY + 4);
+
+        currentY += rowHeight;
+      });
+
+      currentY += 2;
+    }
+
+    // ---- CONTINUAR CON LA SIGUIENTE SECCIÓN (FORMA DE PAGO, etc.) ----
+    // (El código posterior a esta sección debe continuar sin cambios)
+    // Evaluamos el espacio real necesario (aprox 24-26mm)
+    if (currentY + 26 > pageHeight - margin - 15) {
+      doc.addPage();
+      currentY = margin + 22;
+    }
+
+    currentY = drawSectionTitle('5. Forma de Pago y Otros Contratos', currentY);
+    const pago = data.pago;
+
+    // Box para preguntas sobre otros contratos / negaciones (Altura reducida a 9.5mm)
+    const preguntaBoxHeight = 9.5;
     doc.setDrawColor(203, 213, 225);
-    doc.rect(margin, currentY, contentWidth, rowHeight);
+    doc.rect(margin, currentY, contentWidth, preguntaBoxHeight);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.2);
+    doc.setFontSize(6.8);
     doc.setTextColor(15, 23, 42);
 
-    let rowX = margin;
-    doc.text(`#${d.codigoAfiliado}`, rowX + 2, currentY + 4);
-    rowX += afColW[0];
-    doc.text(textoPadecimiento, rowX + 1.5, currentY + 4);
-    rowX += afColW[1];
-    doc.text(d.fechaDiagnostico || '-', rowX + 1.5, currentY + 4);
-    rowX += afColW[2];
-    doc.text(textoTratamiento, rowX + 1.5, currentY + 4);
-    rowX += afColW[3];
-    doc.text(d.fechaUltimoChequeo || '-', rowX + 1.5, currentY + 4);
-    rowX += afColW[4];
-    doc.text(textoInstitucion, rowX + 1.5, currentY + 4);
+    // Fila 1: Otros Contratos
+    doc.text('¿Mantiene usted o su grupo contratos de salud con otra compañía?', margin + 2, currentY + 3.2);
+    drawCheckbox('NO', pago.otrosContratos.tiene === 'NO', margin + 95, currentY + 3.2);
+    drawCheckbox('SÍ', pago.otrosContratos.tiene === 'SÍ', margin + 110, currentY + 3.2);
+    if (pago.otrosContratos.tiene === 'SÍ') {
+      doc.text(`Cía: ${pago.otrosContratos.nombreCompania || '-'}, Contrato: ${pago.otrosContratos.numContrato || '-'}`, margin + 125, currentY + 3.2);
+    }
 
-    currentY += rowHeight;
-  });
-  currentY += 2;
-}
+    // Fila 2: Negativa Previa
+    doc.text('¿Le ha sido negado o anulado un contrato de salud previamente?', margin + 2, currentY + 7.2);
+    drawCheckbox('NO', pago.negativaPrevia.tiene === 'NO', margin + 95, currentY + 7.2);
+    drawCheckbox('SÍ', pago.negativaPrevia.tiene === 'SÍ', margin + 110, currentY + 7.2);
+    if (pago.negativaPrevia.tiene === 'SÍ') {
+      doc.text(`Cía: ${pago.negativaPrevia.nombreCompania || '-'}`, margin + 125, currentY + 7.2);
+    }
 
-// ---- CONTINUAR CON LA SIGUIENTE SECCIÓN (FORMA DE PAGO, etc.) ----
-// (El código posterior a esta sección debe continuar sin cambios)
-// ---- DETALLE DE PRÁCTICA DEPORTIVA (PREGUNTA N° 17) ----
-const preg17 = data.salud.preguntas[17] || data.salud.preguntas['17']; // TODO put this on dynamic way
-const esDeporteSi = preg17?.respuesta === 'SÍ';
-const detallesDeportivos = data.salud.detallesDeportivos || [];
+    // Incrementamos Y para situarnos justo debajo de la caja de preguntas
+    currentY += preguntaBoxHeight;
 
-if (esDeporteSi && detallesDeportivos.length > 0) {
-  // 1. Calcular el alto requerido (Encabezado + Cabecera + Filas)
-  const estimatedHeight = 15 + detallesDeportivos.length * 6;
+    // Fila de celdas: Frecuencia, Moneda y Modalidad de Pago (Altura estándar 8.5mm)
+    const cellHeight = 8.5;
+    const modalidadTexto = `${pago.modalidadPago}${pago.especifiqueOtroPago ? ` (${pago.especifiqueOtroPago})` : ''}`;
 
-  // 2. Si no hay espacio antes del pie de página, forzar salto a una nueva página
-  if (currentY + estimatedHeight > pageHeight - margin - 18) {
-    doc.addPage();
-    currentY = margin + 22;
-  } else {
-    currentY += 3;
-  }
+    drawCell('Frecuencia de Pago', pago.frecuenciaPago, margin, currentY, thirdW, cellHeight);
+    drawCell('Moneda de Pago', pago.moneda, margin + thirdW, currentY, thirdW, cellHeight);
+    drawCell('Modalidad de Pago', modalidadTexto, margin + thirdW * 2, currentY, thirdW, cellHeight);
 
-  // 3. Título de la Sección
-  doc.setFillColor(241, 245, 249);
-  doc.rect(margin, currentY, contentWidth, 5, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(7, 62, 35);
-  doc.text('DETALLE DE PRÁCTICA DEPORTIVA DECLARADA (PREGUNTA N° 17)', margin + 3, currentY + 3.5);
-  currentY += 5;
-
-  // 4. Cabecera de la Tabla
-  const depColW = [25, 65, 65, 40.9];
-  const depHeaders = ['Código Afiliado', 'Deporte Practicado', 'Frecuencia / Rutina', 'Nivel de Práctica'];
-
-  doc.setFillColor(226, 232, 240);
-  doc.rect(margin, currentY, contentWidth, 5, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.2);
-  doc.setTextColor(7, 62, 35);
-
-  let depCurX = margin;
-  depHeaders.forEach((h, i) => {
-    doc.text(h, depCurX + 1.5, currentY + 3.5);
-    depCurX += depColW[i];
-  });
-  currentY += 5;
-
-  // 5. Filas de datos
-  detallesDeportivos.forEach((dep) => {
-    const rowHeight = 6;
-    doc.setDrawColor(203, 213, 225);
-    doc.rect(margin, currentY, contentWidth, rowHeight);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.2);
-    doc.setTextColor(15, 23, 42);
-
-    let rowX = margin;
-    doc.text(`#${dep.codigoAfiliado}`, rowX + 2, currentY + 4);
-    rowX += depColW[0];
-
-    doc.text(doc.splitTextToSize(dep.deporte || '-', depColW[1] - 2)[0] || '-', rowX + 1.5, currentY + 4);
-    rowX += depColW[1];
-
-    doc.text(doc.splitTextToSize(dep.frecuencia || '-', depColW[2] - 2)[0] || '-', rowX + 1.5, currentY + 4);
-    rowX += depColW[2];
-
-    doc.text(dep.nivel || '-', rowX + 1.5, currentY + 4);
-
-    currentY += rowHeight;
-  });
-
-  currentY += 2;
-}
-
-// ---- CONTINUAR CON LA SIGUIENTE SECCIÓN (FORMA DE PAGO, etc.) ----
-// (El código posterior a esta sección debe continuar sin cambios)
-// Evaluamos el espacio real necesario (aprox 24-26mm)
-  if (currentY + 26 > pageHeight - margin - 15) {
-    doc.addPage();
-    currentY = margin + 22;
-  }
-
-  currentY = drawSectionTitle('5. Forma de Pago y Otros Contratos', currentY);
-  const pago = data.pago;
-
-  // Box para preguntas sobre otros contratos / negaciones (Altura reducida a 9.5mm)
-  const preguntaBoxHeight = 9.5;
-  doc.setDrawColor(203, 213, 225);
-  doc.rect(margin, currentY, contentWidth, preguntaBoxHeight);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.8);
-  doc.setTextColor(15, 23, 42);
-
-  // Fila 1: Otros Contratos
-  doc.text('¿Mantiene usted o su grupo contratos de salud con otra compañía?', margin + 2, currentY + 3.2);
-  drawCheckbox('NO', pago.otrosContratos.tiene === 'NO', margin + 95, currentY + 3.2);
-  drawCheckbox('SÍ', pago.otrosContratos.tiene === 'SÍ', margin + 110, currentY + 3.2);
-  if (pago.otrosContratos.tiene === 'SÍ') {
-    doc.text(`Cía: ${pago.otrosContratos.nombreCompania || '-'}, Contrato: ${pago.otrosContratos.numContrato || '-'}`, margin + 125, currentY + 3.2);
-  }
-
-  // Fila 2: Negativa Previa
-  doc.text('¿Le ha sido negado o anulado un contrato de salud previamente?', margin + 2, currentY + 7.2);
-  drawCheckbox('NO', pago.negativaPrevia.tiene === 'NO', margin + 95, currentY + 7.2);
-  drawCheckbox('SÍ', pago.negativaPrevia.tiene === 'SÍ', margin + 110, currentY + 7.2);
-  if (pago.negativaPrevia.tiene === 'SÍ') {
-    doc.text(`Cía: ${pago.negativaPrevia.nombreCompania || '-'}`, margin + 125, currentY + 7.2);
-  }
-
-  // Incrementamos Y para situarnos justo debajo de la caja de preguntas
-  currentY += preguntaBoxHeight;
-
-  // Fila de celdas: Frecuencia, Moneda y Modalidad de Pago (Altura estándar 8.5mm)
-  const cellHeight = 8.5;
-  const modalidadTexto = `${pago.modalidadPago}${pago.especifiqueOtroPago ? ` (${pago.especifiqueOtroPago})` : ''}`;
-
-  drawCell('Frecuencia de Pago', pago.frecuenciaPago, margin, currentY, thirdW, cellHeight);
-  drawCell('Moneda de Pago', pago.moneda, margin + thirdW, currentY, thirdW, cellHeight);
-  drawCell('Modalidad de Pago', modalidadTexto, margin + thirdW * 2, currentY, thirdW, cellHeight);
-
-  // Avanzamos Y para la siguiente sección
-  currentY += cellHeight + 3;
+    // Avanzamos Y para la siguiente sección
+    currentY += cellHeight + 3;
     // ================= PÁGINA 3 =================
     if (currentY + 90 > pageHeight - margin - 18) {
       doc.addPage();
