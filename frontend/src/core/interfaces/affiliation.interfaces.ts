@@ -97,8 +97,9 @@ export interface AfiliadoRow {
   sexo: Sexo;
   pesoKg: string;
   estaturaCm: string;
-  planSolicitado: PlanSolicitado;
+  planSolicitado: string;
   limiteCobertura: string;
+  cuota: number;
 }
 
 export interface AfeccionMedicaDetalle {

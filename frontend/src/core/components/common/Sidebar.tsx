@@ -72,7 +72,7 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Sudeaseg ID box in Sidebar bottom */}
+      {/* box in Sidebar bottom */}
       <div
         style={{
           marginTop: 'auto',

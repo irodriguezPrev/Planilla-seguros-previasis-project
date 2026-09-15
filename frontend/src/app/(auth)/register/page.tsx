@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { PreviasisLogo } from '@/core/components/common/PreviasisLogo';
-import { ShieldAlert, ArrowLeft, Lock } from 'lucide-react';
+import { ArrowLeft, Lock } from 'lucide-react';
 
 export default function RegisterPage() {
   return (
@@ -57,7 +57,7 @@ export default function RegisterPage() {
             Registro Público Deshabilitado
           </h1>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: 1.5 }}>
-            Por políticas de seguridad y cumplimiento de la <strong>Superintendencia de la Actividad Aseguradora (Sudeaseg)</strong>, las cuentas de asesores comerciales solo pueden ser dadas de alta por los <strong>Administradores</strong> desde el Panel de Control.
+            Por políticas de seguridad y cumplimiento de la <strong>Superintendencia de la Actividad Aseguradora</strong>, las cuentas de asesores comerciales solo pueden ser dadas de alta por los <strong>Administradores</strong> desde el Panel de Control.
           </p>
         </div>
 

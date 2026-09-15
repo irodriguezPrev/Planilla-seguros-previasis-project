@@ -6,7 +6,7 @@ import '@/styles/globals.css';
 
 export const metadata: Metadata = {
   title: 'PREVIASIS Medicina Prepagada S.A. | Solicitud de Afiliación Digital',
-  description: 'Plataforma oficial de afiliación digital y emisión de pólizas autorizada por Sudeaseg (Providencia Nº SAA-09-1585).',
+  description: 'Plataforma oficial de afiliación digital y emisión de pólizas',
 };
 
 export default function RootLayout({

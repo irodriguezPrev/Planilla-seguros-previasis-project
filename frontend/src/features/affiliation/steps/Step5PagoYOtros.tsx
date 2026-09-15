@@ -57,7 +57,7 @@ export const Step5PagoYOtros: React.FC<Step5Props> = ({ pago, onChangePago }) =>
           </div>
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--previasis-dark-green)' }}>
-              Forma de Pago
+              Frecuencia de Pago
             </h3>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
               Seleccione la frecuencia y modalidad de facturación

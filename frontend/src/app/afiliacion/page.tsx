@@ -149,6 +149,7 @@ const INITIAL_STATE: SolicitudAfiliacionFormState = {
       estaturaCm: '',
       planSolicitado: 'Plan Oro',
       limiteCobertura: '$25.000',
+      cuota:0
     },
   ],
   salud: {
@@ -364,6 +365,7 @@ export default function AfiliacionPage() {
           estaturaCm: '178',
           planSolicitado: 'Plan Oro',
           limiteCobertura: '$25.000',
+          cuota:0
         },
         {
           id: '2',
@@ -378,6 +380,7 @@ export default function AfiliacionPage() {
           estaturaCm: '165',
           planSolicitado: 'Plan Oro',
           limiteCobertura: '$25.000',
+          cuota:0
         },
         {
           id: '3',
@@ -392,6 +395,7 @@ export default function AfiliacionPage() {
           estaturaCm: '128',
           planSolicitado: 'Plan Plata',
           limiteCobertura: '$15.000',
+          cuota:0
         },
       ],
       salud: {
@@ -624,7 +628,7 @@ export default function AfiliacionPage() {
                 Solicitud de Afiliación
               </h1>
               <p style={{ fontSize: '0.8125rem', color: 'rgba(255, 255, 255, 0.75)' }}>
-                PREVIASIS MEDICINA PREPAGADA S.A. • RIF J-412048970 • Sudeaseg ID: MP-000015
+                PREVIASIS MEDICINA PREPAGADA S.A. • RIF J-412048970 •
               </p>
             </div>
           </div>

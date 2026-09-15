@@ -8,7 +8,7 @@ import {
   TipoDocumento,
 } from '@/core/interfaces/affiliation.interfaces';
 import { calculateActuarialAge as calculateAge } from '@/core/utils/age.utils';
-import { UserPlus, Trash2, Users, Award, Check } from 'lucide-react';
+import { UserPlus, Trash2, Users, Award, Check, Calculator } from 'lucide-react';
 
 type PlanOption = {
   id: PlanSolicitado;
@@ -18,7 +18,7 @@ type PlanOption = {
   defaultCoverage: string;
   monthlyPrices: Partial<Record<'0-20' | '21-40' | '41-60' | '61-80', number>>;
 };
-//TODO: CONNECT THIS FROM ODOO SYSTEM
+
 const planOptions: PlanOption[] = [
   {
     id: 'Plan Bronce',
@@ -102,6 +102,15 @@ function getMonthlyPrice(plan: PlanOption | undefined, age: number | null): numb
     : null;
 }
 
+// Obtiene la cuota sin impuestos de un beneficiario según su plan y edad actuarial
+function getAfiliadoCuota(afiliado: AfiliadoRow): number {
+  const age = calculateAge(afiliado.fechaNacimiento);
+  const plan = planOptions.find(
+    (p) => p.id === afiliado.planSolicitado && p.defaultCoverage === afiliado.limiteCobertura
+  );
+  return getMonthlyPrice(plan, age) || 0;
+}
+
 interface Step3Props {
   afiliados: AfiliadoRow[];
   onChangeAfiliados: (afiliados: AfiliadoRow[]) => void;
@@ -116,10 +125,14 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
   const [selectedMemberIndex, setSelectedMemberIndex] = useState<number>(0);
 
   const normalizeAfiliados = (items: AfiliadoRow[]) =>
-    items.map((item, index) => ({
-      ...item,
-      codigoAfiliado: index + 1,
-    }));
+    items.map((item, index) => {
+      const cuotaCalculada = getAfiliadoCuota(item);
+      return {
+        ...item,
+        codigoAfiliado: index + 1,
+        cuota: cuotaCalculada,
+      };
+    });
 
   const addAfiliado = () => {
     const newAfiliado: AfiliadoRow = {
@@ -135,6 +148,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
       estaturaCm: '',
       planSolicitado: 'Plan Oro',
       limiteCobertura: '$25.000',
+      cuota: 0,
     };
     const updated = normalizeAfiliados([...afiliados, newAfiliado]);
     onChangeAfiliados(updated);
@@ -155,15 +169,16 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
     : planOptions.filter((plan) => plan.id !== 'Abuelos');
 
   const selectPlan = (plan: PlanOption) => {
+    const monthlyPrice = getMonthlyPrice(plan, currentAge) || 0;
     updateAfiliado(selectedMemberIndex, {
       planSolicitado: plan.id,
       limiteCobertura: plan.defaultCoverage,
+      cuota: monthlyPrice,
     });
   };
 
   const validateBirthDate = (fechaNacimiento: string) => {
     const age = calculateAge(fechaNacimiento);
-    console.log(fechaNacimiento, age);
 
     if (age === null || age > 80) {
       alert('No se puede registrar como beneficiario a una persona mayor de 80 años.');
@@ -188,6 +203,8 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
         planSolicitado: 'Plan Bronce',
         limiteCobertura: '$10.000',
       });
+    } else {
+      updateAfiliado(selectedMemberIndex, { fechaNacimiento });
     }
   };
 
@@ -202,6 +219,9 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
       setSelectedMemberIndex(filtered.length - 1);
     }
   };
+
+  // Sumatoria total de las cuotas de todos los beneficiarios sin impuestos
+  const subtotalGrupo = afiliados.reduce((sum, item) => sum + getAfiliadoCuota(item), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -244,6 +264,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {afiliados.map((af, idx) => {
               const isSelected = idx === selectedMemberIndex;
+              const cuotaAfiliado = getAfiliadoCuota(af);
 
               return (
                 <div
@@ -291,6 +312,9 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                           ? 'Edad pendiente'
                           : `${calculateAge(af.fechaNacimiento)} años`}
                       </p>
+                      <p style={{ fontWeight: 800, fontSize: '0.8125rem', color: 'var(--previasis-green)', marginTop: '2px' }}>
+                        Cuota: ${cuotaAfiliado} / mes
+                      </p>
                     </div>
                   </div>
 
@@ -308,7 +332,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                             color: 'var(--text-muted)',
                           }}
                         >
-                          CODIGO: #{af.codigoAfiliado}
+                          CÓDIGO: #{af.codigoAfiliado}
                         </span>
                         <button
                           type="button"
@@ -334,6 +358,9 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
               );
             })}
           </div>
+          <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--previasis-green)' }}>
+           Subtotal: ${subtotalGrupo} / mes
+          </span>
         </div>
 
         {/* SELECCIÓN DE PLAN (Derecha) */}
@@ -410,6 +437,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                     <strong style={{ fontSize: '1.25rem' }}>
                       {monthlyPrice === null ? 'Consultar' : `$${monthlyPrice}`}
                     </strong>
+                    
                   </div>
                 </button>
               );
@@ -533,55 +561,6 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
               readOnly
               value={currentMember.limiteCobertura}
             />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Se determina al seleccionar una tarjeta.
-            </span>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-            gap: '0.75rem',
-            padding: '1rem',
-            borderRadius: 'var(--radius-lg)',
-            backgroundColor: 'var(--bg-card-alt)',
-            border: '1px solid var(--border-card)',
-            marginBottom: '1rem',
-          }}
-        >
-          <div>
-            <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Edad calculada</span>
-            <strong style={{ color: 'var(--previasis-dark-green)' }}>
-              {currentAge === null ? 'Pendiente' : `${currentAge} años`}
-            </strong>
-          </div>
-          <div>
-            <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Plan seleccionado</span>
-            <strong style={{ color: 'var(--previasis-dark-green)' }}>
-              {currentRange === null ? 'Consultar' : currentMember.planSolicitado}
-            </strong>
-          </div>
-          <div>
-            <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cuota mensual</span>
-            <strong style={{ color: 'var(--previasis-green)' }}>
-              {getMonthlyPrice(
-                planOptions.find(
-                  (plan) => plan.id === currentMember.planSolicitado
-                    && plan.defaultCoverage === currentMember.limiteCobertura,
-                ),
-                currentAge,
-              ) === null
-                ? 'Consultar'
-                : `$${getMonthlyPrice(
-                  planOptions.find(
-                    (plan) => plan.id === currentMember.planSolicitado
-                      && plan.defaultCoverage === currentMember.limiteCobertura,
-                  ),
-                  currentAge,
-                )}`}
-            </strong>
           </div>
         </div>
 
