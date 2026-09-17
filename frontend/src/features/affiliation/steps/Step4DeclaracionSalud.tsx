@@ -39,7 +39,7 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
       respuesta === 'SÍ'
         ? (current.codigosAfiliados && current.codigosAfiliados.length > 0
             ? current.codigosAfiliados
-            : shouldSelectBeneficiary && !isBeneficiaryDetailOnly ? [afiliados[0]?.codigoAfiliado || 1] : [])
+            : [])
         : [];
 
     const updatedPreguntas = {
