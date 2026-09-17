@@ -163,6 +163,7 @@ const INITIAL_STATE: SolicitudAfiliacionFormState = {
     frecuenciaPago: 'Mensual',
     moneda: 'Dólares',
     modalidadPago: 'Pago en Oficina',
+    otrosContratos: '',
   },
   firmas: {
     lugar: 'Caracas, Dto. Capital',
@@ -247,8 +248,7 @@ export default function AfiliacionPage() {
           };
         }
 
-        const pago = { ...legacyPago } as LegacyPago;
-        delete pago.otrosContratos;
+        const pago = { ...legacyPago, otrosContratos: '' };
         delete pago.negativaPrevia;
 
         setFormData({
@@ -580,6 +580,7 @@ export default function AfiliacionPage() {
         frecuenciaPago: 'Anual',
         moneda: 'Dólares',
         modalidadPago: 'Pago en Oficina',
+        otrosContratos: '',
       },
       firmas: {
         lugar: 'Barquisimeto, Edo. Lara',
