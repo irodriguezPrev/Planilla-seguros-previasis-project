@@ -16,7 +16,7 @@ export type ActividadEconomicaJuridica = 'Profesional' | 'Comercial' | 'Industri
 export type PlanSolicitado = 'Previasis' | 'Abuelos' | 'Previasis 24/7' | 'Plan Bronce' | 'Plan Plata' | 'Plan Oro' | 'Plan Diamante';
 export type FrecuenciaPago = 'Anual' | 'Semestral' | 'Trimestral' | 'Mensual';
 export type MonedaPago = 'Bolívares' | 'Dólares';
-export type ModalidadPago = 'Domiciliación de Pago' | 'Pago en Oficina' | 'Otro';
+export type ModalidadPago = 'Domiciliación de Pago' | 'Pago en Oficina' | 'Pagos en Divisas' | 'Zelle' | 'Otro';
 export type Parentesco = 'Titular' | 'Cónyuge' | 'Hijo/a' | 'Padre/Madre' | 'Hermano/a' | 'Otro';
 
 export interface UploadedFileItem {
@@ -54,6 +54,7 @@ export interface PersonaNaturalData {
   pep: 'SÍ' | 'NO';
   pepDescripcion?: string;
   clasificacionActividad: ClasificacionActividad;
+  empresa?: string;
   direccionHabitacion: string;
   direccionOficina: string;
   direccionCobro: string;
@@ -118,6 +119,7 @@ export interface PreguntaSalud {
   categoria?: string;
   respuesta: 'SÍ' | 'NO';
   detallesExtra?: string;
+  detalleAntecedente?: DetalleAntecedente;
 }
 
 export interface DetalleDeportivo {
@@ -127,39 +129,35 @@ export interface DetalleDeportivo {
   nivel: 'Amateur' | 'Profesional' | '';
 }
 
+export interface DetalleAclaracion {
+  codigoAfiliado: number;
+  campo1: string;
+  campo2: string;
+}
+
+export interface DetalleAntecedente {
+  campo1: string;
+  campo2: string;
+}
+
 export interface DeclaracionSaludSection {
   preguntas: Record<number, {
     respuesta: 'SÍ' | 'NO';
     detallesExtra?: string;
     codigosAfiliados?: number[];
+    detalleAntecedente?: DetalleAntecedente;
   }>;
   detallesDeportivos?: DetalleDeportivo[];
+  detallesAclaracion?: Record<number, DetalleAclaracion[]>;
   afeccionesDetalles: AfeccionMedicaDetalle[];
 }
 
-export interface ContratoExistente {
-  tiene: 'SÍ' | 'NO';
-  numContrato?: string;
-  nombreCompania?: string;
-  limiteCobertura?: string;
-  fechaVigencia?: string;
-}
-
-export interface NegativaPrevia {
-  tiene: 'SÍ' | 'NO';
-  tipoSeguro?: string;
-  nombreCompania?: string;
-  limiteCobertura?: string;
-  fechaRechazo?: string;
-}
-
 export interface FormaDePagoSection {
-  otrosContratos: ContratoExistente;
-  negativaPrevia: NegativaPrevia;
   frecuenciaPago: FrecuenciaPago;
   moneda: MonedaPago;
   modalidadPago: ModalidadPago;
   especifiqueOtroPago?: string;
+  otrosContratos: string;
 }
 
 export interface DeclaracionesFirmasSection {

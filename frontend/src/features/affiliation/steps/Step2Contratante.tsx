@@ -27,12 +27,13 @@ export const Step2contractor: React.FC<Step2Props> = ({
   onChangeContractor,
 }) => {
   const updatecontractor = (fields: Partial<contractorSection>) => {
-    onChangeContractor({ ...contractor, ...fields });
+    onChangeContractor({ ...contractor, ...fields, tipoPersona: 'Natural' });
   };
 
   const updateNatural = (fields: Partial<PersonaNaturalData>) => {
     onChangeContractor({
       ...contractor,
+      tipoPersona: 'Natural',
       personaNatural: { ...contractor.personaNatural, ...fields },
     });
   };
@@ -70,7 +71,7 @@ export const Step2contractor: React.FC<Step2Props> = ({
             Datos del contractor
           </h3>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-            Persona natural o jurídica responsable de la contratación y pago del plan
+            Persona natural responsable de la contratación y pago del plan
           </p>
         </div>
 
@@ -118,32 +119,8 @@ export const Step2contractor: React.FC<Step2Props> = ({
         ) : (
           /* Renderizado si el contractor es DIFERENTE */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Selector Persona Natural vs Persona Jurídica */}
-            <div style={{ display: 'flex', gap: '1.5rem', backgroundColor: 'var(--bg-secondary)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="tipoPersonacontractor"
-                  value="Natural"
-                  checked={contractor.tipoPersona === 'Natural'}
-                  onChange={() => updatecontractor({ tipoPersona: 'Natural' })}
-                />
-                <span>Persona Natural</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="tipoPersonacontractor"
-                  value="Juridica"
-                  checked={contractor.tipoPersona === 'Juridica'}
-                  onChange={() => updatecontractor({ tipoPersona: 'Juridica' })}
-                />
-                <span>Persona Jurídica (Empresa / Institución)</span>
-              </label>
-            </div>
-
             {/* PERSONA NATURAL contractor */}
-            {contractor.tipoPersona === 'Natural' && (
+            {(
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="input-group">
@@ -301,15 +278,37 @@ export const Step2contractor: React.FC<Step2Props> = ({
                   />
                 </div>
 
-                <div className="input-group">
-                  <label className="input-label">Dirección de Habitación *</label>
-                  <textarea
-                    className="input-field"
-                    rows={2}
-                    value={nat.direccionHabitacion}
-                    onChange={(e) => updateNatural({ direccionHabitacion: e.target.value })}
-                    required
-                  />
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="input-group">
+                    <label className="input-label">Dirección de Habitación *</label>
+                    <textarea
+                      className="input-field"
+                      rows={2}
+                      value={nat.direccionHabitacion}
+                      onChange={(e) => updateNatural({ direccionHabitacion: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Dirección de Oficina *</label>
+                    <textarea
+                      className="input-field"
+                      rows={2}
+                      value={nat.direccionOficina}
+                      onChange={(e) => updateNatural({ direccionOficina: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Dirección de Cobro *</label>
+                    <textarea
+                      className="input-field"
+                      rows={2}
+                      value={nat.direccionCobro}
+                      onChange={(e) => updateNatural({ direccionCobro: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             )}

@@ -451,6 +451,22 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
           </div>
         </div>
 
+        {titular.clasificacionActividad === 'Dependiente' && (
+          <div className="previasis-input-group step1-field-wide">
+            <label className="previasis-label">
+              Empresa donde labora <span className="previasis-label-required">*</span>
+            </label>
+            <input
+              type="text"
+              className="previasis-input"
+              placeholder="Nombre de la empresa"
+              value={titular.empresa || ''}
+              onChange={(e) => updateTitular({ empresa: e.target.value })}
+              required
+            />
+          </div>
+        )}
+
         {titular.pep === 'SÍ' && (
           <div className="previasis-input-group step1-field-wide">
             <label className="previasis-label">

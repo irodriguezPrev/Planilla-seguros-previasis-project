@@ -12,6 +12,7 @@ import { DocumentUploader, UploadedFileItem } from '@/features/affiliation/Docum
 import { PdfPreviewModal } from '@/features/affiliation/PdfPreviewModal';
 import { PreviasisLogo } from '@/core/components/common/PreviasisLogo';
 import { SolicitudAfiliacionFormState } from '@/core/interfaces/affiliation.interfaces';
+import { HEALTH_QUESTIONS } from '@/core/config/health-questions.config';
 import { calculateActuarialAge } from '@/core/utils/age.utils';
 import {
   ArrowLeft,
@@ -26,9 +27,9 @@ import {
 
 const STEPS: StepItem[] = [
   { id: 1, title: 'Datos del Titular y Control', shortTitle: '1. Titular', description: 'Identificación y datos del proponente titular' },
-  { id: 2, title: 'Datos del Contratante', shortTitle: '2. Contratante', description: 'Persona natural o jurídica pagadora' },
+  { id: 2, title: 'Datos del Contratante', shortTitle: '2. Contratante', description: 'Persona natural responsable del pago' },
   { id: 3, title: 'Grupo Familiar y Planes', shortTitle: '3. Planes', description: 'Selección de planes y familiares' },
-  { id: 4, title: 'Declaración de Salud', shortTitle: '4. Salud', description: 'Cuestionario médico de 24 preguntas' },
+  { id: 4, title: 'Declaración de Salud', shortTitle: '4. Salud', description: 'Cuestionario médico de 26 preguntas' },
   { id: 5, title: 'Forma de Pago', shortTitle: '5. Pagos y Soportes', description: 'Frecuencia de pago y fotos/PDF' },
   { id: 6, title: 'Firmas y Declaraciones', shortTitle: '6. Firmas', description: 'Textos legales Sudeaseg y firma digital' },
 ];
@@ -154,11 +155,11 @@ const INITIAL_STATE: SolicitudAfiliacionFormState = {
   ],
   salud: {
     preguntas: {},
+    detallesDeportivos: [],
+    detallesAclaracion: {},
     afeccionesDetalles: [],
   },
   pago: {
-    otrosContratos: { tiene: 'NO' },
-    negativaPrevia: { tiene: 'NO' },
     frecuenciaPago: 'Mensual',
     moneda: 'Dólares',
     modalidadPago: 'Pago en Oficina',
@@ -182,6 +183,18 @@ const INITIAL_STATE: SolicitudAfiliacionFormState = {
 
 const STORAGE_KEY = 'previasis_afiliacion_draft_v2';
 
+type LegacyAntecedent = {
+  tiene?: 'SÍ' | 'NO';
+  numContrato?: string;
+  nombreCompania?: string;
+  tipoSeguro?: string;
+};
+
+type LegacyPago = SolicitudAfiliacionFormState['pago'] & {
+  otrosContratos?: LegacyAntecedent;
+  negativaPrevia?: LegacyAntecedent;
+};
+
 export default function AfiliacionPage() {
   //State management
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -194,7 +207,62 @@ export default function AfiliacionPage() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        setFormData(JSON.parse(saved));
+        const parsed = JSON.parse(saved) as SolicitudAfiliacionFormState & { pago: LegacyPago };
+        const salud = parsed.salud || {
+          preguntas: {},
+          detallesDeportivos: [],
+          detallesAclaracion: {},
+          afeccionesDetalles: [],
+        };
+        const preguntas = { ...salud.preguntas };
+        const legacyPago = (parsed.pago || {}) as LegacyPago;
+        const otrosContratos = legacyPago.otrosContratos;
+        const negativaPrevia = legacyPago.negativaPrevia;
+
+        if (otrosContratos && !preguntas[25]) {
+          preguntas[25] = {
+            respuesta: otrosContratos.tiene === 'SÍ' ? 'SÍ' : 'NO',
+            ...(otrosContratos.numContrato || otrosContratos.nombreCompania
+              ? {
+                  detalleAntecedente: {
+                    campo1: otrosContratos.numContrato || '',
+                    campo2: otrosContratos.nombreCompania || '',
+                  },
+                }
+              : {}),
+          };
+        }
+
+        if (negativaPrevia && !preguntas[26]) {
+          preguntas[26] = {
+            respuesta: negativaPrevia.tiene === 'SÍ' ? 'SÍ' : 'NO',
+            ...(negativaPrevia.tipoSeguro || negativaPrevia.nombreCompania
+              ? {
+                  detalleAntecedente: {
+                    campo1: negativaPrevia.tipoSeguro || '',
+                    campo2: negativaPrevia.nombreCompania || '',
+                  },
+                }
+              : {}),
+          };
+        }
+
+        const pago = { ...legacyPago } as LegacyPago;
+        delete pago.otrosContratos;
+        delete pago.negativaPrevia;
+
+        setFormData({
+          ...parsed,
+          salud: {
+            ...salud,
+            preguntas,
+          },
+          pago: pago as SolicitudAfiliacionFormState['pago'],
+          contratante: {
+            ...parsed.contratante,
+            tipoPersona: 'Natural',
+          },
+        });
       }
     } catch (e) {
       console.error('Error cargando borrador:', e);
@@ -250,18 +318,10 @@ export default function AfiliacionPage() {
       }
     }
     if (step === 2 && formData.contratante.esDiferente) {
-      if (formData.contratante.tipoPersona === 'Natural') {
-        const c = formData.contratante.personaNatural;
-        if (!c.nombres || !c.apellidos || !c.numDoc) {
-          alert('Por favor complete los datos obligatorios del Contratante.');
-          return false;
-        }
-      } else {
-        const j = formData.contratante.personaJuridica;
-        if (!j.razonSocial || !j.numRif || !j.representanteLegal.nombres) {
-          alert('Por favor complete los datos de la Persona Jurídica.');
-          return false;
-        }
+      const c = formData.contratante.personaNatural;
+      if (!c.nombres || !c.apellidos || !c.numDoc) {
+        alert('Por favor complete los datos obligatorios del Contratante.');
+        return false;
       }
     }
     if (step === 3) {
@@ -288,8 +348,83 @@ export default function AfiliacionPage() {
         return false;
       }
     }
-    return true;
-  };
+    if (step === 4) {
+      const preguntas = formData.salud.preguntas;
+      const beneficiaryDetailIds = HEALTH_QUESTIONS
+        .filter((q) => q.beneficiaryDetail)
+        .map((q) => q.id);
+
+      for (const [id, pregunta] of Object.entries(preguntas)) {
+        if (
+          pregunta.respuesta === 'SÍ' &&
+          beneficiaryDetailIds.includes(Number(id)) &&
+          (!pregunta.codigosAfiliados || pregunta.codigosAfiliados.length === 0)
+        ) {
+          const qTitle = HEALTH_QUESTIONS.find((q) => q.id === Number(id))?.title || `Pregunta ${id}`;
+          alert(`Debe seleccionar al menos un beneficiario para: ${qTitle}`);
+          return false;
+        }
+      }
+      if (preguntas[17]?.respuesta === 'SÍ') {
+        const detalles = formData.salud.detallesDeportivos || [];
+        const codigosSeleccionados = preguntas[17].codigosAfiliados || [];
+        for (const codigo of codigosSeleccionados) {
+          const detalle = detalles.find((d) => d.codigoAfiliado === codigo);
+          if (!detalle || !detalle.deporte.trim() || !detalle.frecuencia.trim() || !detalle.nivel) {
+            alert('Debe completar deporte, frecuencia y nivel para cada beneficiario en Práctica Deportiva.');
+            return false;
+          }
+        }
+      }
+
+      const aclaracionQuestionIds = HEALTH_QUESTIONS
+        .filter((q) => q.beneficiaryDetail && q.id !== 17)
+        .map((q) => q.id);
+
+      for (const qid of aclaracionQuestionIds) {
+        const pregunta = preguntas[qid];
+        if (!pregunta || pregunta.respuesta !== 'SÍ') continue;
+        const codigos = pregunta.codigosAfiliados || [];
+        if (codigos.length === 0) continue;
+        const detalles = formData.salud.detallesAclaracion?.[qid] || [];
+        if (detalles.length === 0) {
+          const qTitle = HEALTH_QUESTIONS.find((q) => q.id === qid)?.title || `Pregunta ${qid}`;
+          alert(`Debe completar los campos de aclaración para cada beneficiario en: ${qTitle}`);
+          return false;
+        }
+        const allCodigosHaveDetalle = codigos.every((c) =>
+          detalles.some((d) => d.codigoAfiliado === c)
+        );
+        if (!allCodigosHaveDetalle) {
+          const qTitle = HEALTH_QUESTIONS.find((q) => q.id === qid)?.title || `Pregunta ${qid}`;
+          alert(`Debe completar los campos de aclaración para cada beneficiario en: ${qTitle}`);
+          return false;
+        }
+        for (const dt of detalles) {
+          if (!dt.campo1.trim() || !dt.campo2.trim()) {
+            const qTitle = HEALTH_QUESTIONS.find((q) => q.id === qid)?.title || `Pregunta ${qid}`;
+            alert(`Debe completar los campos de aclaración para cada beneficiario en: ${qTitle}`);
+            return false;
+          }
+        }
+       }
+     }
+     if (step === 5) {
+       if (!formData.pago.frecuenciaPago) {
+         alert('Seleccione una frecuencia de pago.');
+         return false;
+       }
+       if (!formData.pago.modalidadPago) {
+         alert('Seleccione una modalidad de pago.');
+         return false;
+       }
+       if (formData.pago.modalidadPago === 'Otro' && !formData.pago.especifiqueOtroPago) {
+         alert('Especifique la otra modalidad de pago.');
+         return false;
+       }
+     }
+     return true;
+   };
 
   const handleNext = () => {
     if (!validateStep(currentStep)) return;
@@ -416,7 +551,7 @@ export default function AfiliacionPage() {
           14: { respuesta: 'NO' },
           15: { respuesta: 'SÍ', detallesExtra: '1 embarazo a término sin complicaciones' },
           16: { respuesta: 'NO' },
-          17: { respuesta: 'SÍ', detallesExtra: 'Ciclismo de ruta 2 veces por semana' },
+          17: { respuesta: 'SÍ', codigosAfiliados: [1], detallesExtra: 'Ciclismo de ruta 2 veces por semana' },
           18: { respuesta: 'NO' },
           19: { respuesta: 'NO' },
           20: { respuesta: 'NO' },
@@ -425,6 +560,10 @@ export default function AfiliacionPage() {
           23: { respuesta: 'NO' },
           24: { respuesta: 'NO' },
         },
+        detallesDeportivos: [
+          { codigoAfiliado: 1, deporte: 'Ciclismo de ruta', frecuencia: '2 veces por semana', nivel: 'Amateur' },
+        ],
+        detallesAclaracion: {},
         afeccionesDetalles: [
           {
             id: 'af1',
@@ -438,8 +577,6 @@ export default function AfiliacionPage() {
         ],
       },
       pago: {
-        otrosContratos: { tiene: 'NO' },
-        negativaPrevia: { tiene: 'NO' },
         frecuenciaPago: 'Anual',
         moneda: 'Dólares',
         modalidadPago: 'Pago en Oficina',
@@ -475,7 +612,7 @@ export default function AfiliacionPage() {
 
   return (
     <div style={{ backgroundColor: 'var(--bg-app)', minHeight: '100vh', paddingBottom: '6rem' }}>
-      <style>{`
+      <style suppressHydrationWarning>{`
         .afiliacion-hero {
           background: var(--grad-hero);
           padding: 2.5rem 1.5rem 3.5rem 1.5rem;
@@ -696,7 +833,10 @@ export default function AfiliacionPage() {
           {currentStep === 2 && (
             <Step2contractor
               contractor={formData.contratante}
-              onChangeContractor={(contratante) => setFormData({ ...formData, contratante })}
+              onChangeContractor={(contratante) => setFormData({
+                ...formData,
+                contratante: { ...contratante, tipoPersona: 'Natural' },
+              })}
             />
           )}
 

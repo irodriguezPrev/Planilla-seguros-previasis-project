@@ -8,7 +8,7 @@ export class PdfGeneratorService {
    * Genera el documento oficial Sudeaseg en PDF de alta fidelidad
    * Conforme a la Providencia Administrativa Nº SAA-09-1585 del 04/03/2026
    */
-  static generateSolicitudPdf(data: SolicitudAfiliacionFormState): jsPDF {
+  static async generateSolicitudPdf(data: SolicitudAfiliacionFormState): Promise<jsPDF> {
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -19,6 +19,7 @@ export class PdfGeneratorService {
     const pageHeight = 279.4;
     const margin = 10;
     const contentWidth = pageWidth - margin * 2; // 195.9 mm
+    const logo = await this.cargarImagen('/images/logo-previasis-horizontal.png').catch(() => null);
 
     // Helper: Dibuja el encabezado oficial y el pie de página legal obligatorio
     const drawHeaderAndFooter = (pageNum: number, totalPages: number) => {
@@ -33,30 +34,32 @@ export class PdfGeneratorService {
       doc.setLineWidth(0.18);
       doc.rect(margin + 0.8, margin + 0.8, contentWidth - 1.6, 18.4);
 
-      // Logo Ave Verde Vectorial
-      doc.setFillColor(0, 139, 71);
-      doc.circle(margin + 7, margin + 10, 5, 'F');
-      doc.setFillColor(132, 204, 22);
-      doc.circle(margin + 8.5, margin + 8.5, 2.5, 'F');
-      doc.setFillColor(245, 158, 11);
-      doc.triangle(margin + 2.5, margin + 9.5, margin + 4, margin + 8, margin + 4, margin + 11, 'F');
+      // Marca corporativa: proporción original, sin espacio transparente sobrante.
+      if (logo) {
+        doc.addImage(logo, 'PNG', margin + 2.5, margin + 2.2, 39, 15, undefined, 'FAST');
+      } else {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(0, 139, 71);
+        doc.text('PREVIASIS', margin + 3, margin + 10.5);
+      }
 
-      // Texto Corporativo Previasis (Izquierda)
+      const companyInfoX = margin + 44;
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.5);
+      doc.setFontSize(7.2);
       doc.setTextColor(7, 62, 35);
-      doc.text('PREVIASIS MEDICINA PREPAGADA S.A.', margin + 14, margin + 6.5);
+      doc.text('PREVIASIS MEDICINA PREPAGADA S.A.', companyInfoX, margin + 5.2);
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.5);
+      doc.setFontSize(6.4);
       doc.setTextColor(0, 139, 71);
-      doc.text('R.I.F. J-412048970', margin + 14, margin + 10.5);
+      doc.text('R.I.F. J-412048970', companyInfoX, margin + 8.7);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.5);
+      doc.setFontSize(5.2);
       doc.setTextColor(71, 85, 105);
-      doc.text('Inscrita en la Superintendencia de la Actividad Aseguradora bajo el Nº MP-000015', margin + 14, margin + 14);
-      doc.text('Providencia Administrativa Nº SAA-09-1585 de fecha 04 de Marzo de 2026', margin + 14, margin + 17.5);
+      doc.text('Inscrita en la Superintendencia de la Actividad Aseguradora bajo el Nº MP-000015', companyInfoX, margin + 12.2);
+      doc.text('Providencia Administrativa Nº SAA-09-1585 de fecha 04 de Marzo de 2026', companyInfoX, margin + 15.5);
 
       // Título del Formulario (Derecha)
       doc.setFont('helvetica', 'bold');
@@ -259,6 +262,11 @@ export class PdfGeneratorService {
     drawCell('Clasificación Actividad', tit.clasificacionActividad, margin + wIngreso + wPep, currentY, wClasif);
     currentY += rowHeight;
 
+    if (tit.clasificacionActividad === 'Dependiente' && tit.empresa) {
+      drawCell('Empresa donde labora', tit.empresa, margin, currentY, contentWidth);
+      currentY += rowHeight;
+    }
+
     // ----- Fila 4: Dirección de Residencia y Oficina -----
     drawCell('Dirección de Residencia / Habitación', tit.direccionHabitacion, margin, currentY, contentWidth * 0.5);
     drawCell('Dirección de Oficina / Trabajo', tit.direccionOficina, margin + contentWidth * 0.5, currentY, contentWidth * 0.5);
@@ -278,7 +286,7 @@ export class PdfGeneratorService {
 
     // SECCIÓN 2: DATOS DEL CONTRATANTE
     const cont = data.contratante;
-    currentY = drawSectionTitle('2. Datos del Contratante (Persona Natural o Jurídica)', currentY);
+    currentY = drawSectionTitle('2. Datos del Contratante', currentY);
 
     if (!cont.esDiferente) {
       doc.setFillColor(248, 250, 252);
@@ -288,65 +296,72 @@ export class PdfGeneratorService {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7.2);
       doc.setTextColor(0, 139, 71);
-      doc.text('EL CONTRATANTE ES EL MISMO PROPUESTO AFILIADO TITULAR (DATOS IDENTIFICADOS EN LA SECCIÓN 1).', margin + 4, currentY + 4.8);
+      doc.text(
+        'EL CONTRATANTE ES EL MISMO PROPUESTO AFILIADO TITULAR (DATOS IDENTIFICADOS EN LA SECCIÓN 1).',
+        margin + 4,
+        currentY + 4.8,
+      );
       currentY += 9.5;
-    } else if (cont.tipoPersona === 'Natural') {
+    }
+
+    if (cont.esDiferente) {
       const cnat = cont.personaNatural;
+      const contractorRowHeight = 8.5;
+
       drawCell('Nombres y Apellidos Contratante', `${cnat.nombres} ${cnat.apellidos}`, margin, currentY, halfW);
       drawCell('C.I. / Pasaporte', `${cnat.tipoDoc}-${cnat.numDoc}`, margin + halfW, currentY, fourthW);
       drawCell('R.I.F.', `${cnat.tipoRif}-${cnat.numRif}`, margin + halfW + fourthW, currentY, fourthW);
-      currentY += 8.5;
+      currentY += contractorRowHeight;
 
-      drawCell('Dirección Habitación', cnat.direccionHabitacion, margin, currentY, halfW);
-      drawCell('Teléfonos', `${cnat.telefonoHabitacion} / ${cnat.telefonoMovil}`, margin + halfW, currentY, fourthW);
-      drawCell('Correo Electrónico', cnat.email, margin + halfW + fourthW, currentY, fourthW);
-      currentY += 10.5;
-    } else {
-      const cjur = cont.personaJuridica;
-      const crep = cjur.representanteLegal;
-      const rowH = 8.5; // Altura estándar uniforme por fila
+      const contractorNationalityW = contentWidth * 0.17;
+      const contractorCivilStatusW = contentWidth * 0.17;
+      const contractorSexW = contentWidth * 0.12;
+      const contractorBirthDateW = contentWidth * 0.18;
+      const contractorBirthPlaceW = contentWidth - contractorNationalityW - contractorCivilStatusW - contractorSexW - contractorBirthDateW;
+      drawCell('Nacionalidad', cnat.nacionalidad, margin, currentY, contractorNationalityW);
+      drawCell('Estado Civil', cnat.estadoCivil, margin + contractorNationalityW, currentY, contractorCivilStatusW);
+      drawCell('Sexo', cnat.sexo, margin + contractorNationalityW + contractorCivilStatusW, currentY, contractorSexW);
+      drawCell('Fecha de Nacimiento', cnat.fechaNacimiento, margin + contractorNationalityW + contractorCivilStatusW + contractorSexW, currentY, contractorBirthDateW);
+      drawCell('Lugar de Nacimiento', cnat.lugarNacimiento, margin + contractorNationalityW + contractorCivilStatusW + contractorSexW + contractorBirthDateW, currentY, contractorBirthPlaceW);
+      currentY += contractorRowHeight;
 
-      // --- 1. DATOS DE LA EMPRESA (PERSONA JURÍDICA) ---
-      // Fila 1: Razón Social, RIF y Actividad Económica
-      drawCell('Razón Social', cjur.razonSocial || '-', margin, currentY, halfW);
-      drawCell('R.I.F. Jurídico', `${cjur.tipoRif}-${cjur.numRif}`, margin + halfW, currentY, fourthW);
-      drawCell('Actividad Económica', `${cjur.actividadEconomica}${cjur.ramoComercial ? ` (${cjur.ramoComercial})` : ''}`, margin + halfW + fourthW, currentY, fourthW);
-      currentY += rowH;
+      const contractorProfessionW = contentWidth * 0.25;
+      const contractorOccupationW = contentWidth * 0.25;
+      const contractorIncomeW = contentWidth * 0.20;
+      const contractorPepW = contentWidth * 0.15;
+      const contractorActivityW = contentWidth - contractorProfessionW - contractorOccupationW - contractorIncomeW - contractorPepW;
+      drawCell('Profesión', cnat.profesion, margin, currentY, contractorProfessionW);
+      drawCell('Ocupación', cnat.ocupacion, margin + contractorProfessionW, currentY, contractorOccupationW);
+      drawCell('Ingreso Anual (Bs.)', cnat.ingresoAnualBs, margin + contractorProfessionW + contractorOccupationW, currentY, contractorIncomeW);
+      drawCell('PEP', `${cnat.pep}${cnat.pep === 'SÍ' && cnat.pepDescripcion ? `: ${cnat.pepDescripcion}` : ''}`, margin + contractorProfessionW + contractorOccupationW + contractorIncomeW, currentY, contractorPepW);
+      drawCell('Actividad', cnat.clasificacionActividad, margin + contractorProfessionW + contractorOccupationW + contractorIncomeW + contractorPepW, currentY, contractorActivityW);
+      currentY += contractorRowHeight;
 
-      // Fila 2: Registro Mercantil y Dirección Fiscal / Teléfono
-      const regMercantil = [
-        cjur.numRegistroMercantil ? `N° ${cjur.numRegistroMercantil}` : '',
-        cjur.numTomo ? `Tomo: ${cjur.numTomo}` : '',
-        cjur.fechaRegistro ? `F: ${cjur.fechaRegistro}` : ''
-      ].filter(Boolean).join(', ') || '-';
+      if (cnat.clasificacionActividad === 'Dependiente' && cnat.empresa) {
+        drawCell('Empresa donde labora', cnat.empresa, margin, currentY, halfW);
+        drawCell('Dirección de Habitación', cnat.direccionHabitacion, margin + halfW, currentY, fourthW);
+        drawCell('Dirección de Oficina', cnat.direccionOficina, margin + halfW + fourthW, currentY, fourthW);
+        currentY += contractorRowHeight;
 
-      drawCell('Reg. Mercantil / Tomo / Fecha', regMercantil, margin, currentY, halfW);
-      drawCell('Dirección Fiscal / Teléfono Empresa', `${cjur.direccionFiscal || '-'} / ${cjur.telefono || '-'}`, margin + halfW, currentY, halfW);
-      currentY += rowH;
+        drawCell('Dirección de Cobro', cnat.direccionCobro, margin, currentY, halfW);
+        drawCell('Teléfono Habitación', cnat.telefonoHabitacion, margin + halfW, currentY, fourthW);
+        drawCell('Teléfono Móvil', cnat.telefonoMovil, margin + halfW + fourthW, currentY, fourthW);
+        currentY += contractorRowHeight;
 
-      // --- 2. DATOS DEL REPRESENTANTE LEGAL ---
-      // Fila 3: Datos de Identificación y Cargo
-      drawCell('Representante Legal', `${crep.nombres} ${crep.apellidos} (C.I: ${crep.tipoDoc}-${crep.numDoc})`, margin, currentY, halfW);
-      drawCell('Ocupación / Profesión', `${crep.ocupacion || '-'} / ${crep.profesion || '-'}`, margin + halfW, currentY, halfW);
-      currentY += rowH;
+        drawCell('Correo Electrónico', cnat.email, margin, currentY, contentWidth);
+        currentY += contractorRowHeight + 2;
+      } else {
+        drawCell('Dirección de Habitación', cnat.direccionHabitacion, margin, currentY, halfW);
+        drawCell('Dirección de Oficina', cnat.direccionOficina, margin + halfW, currentY, fourthW);
+        drawCell('Dirección de Cobro', cnat.direccionCobro, margin + halfW + fourthW, currentY, fourthW);
+        currentY += contractorRowHeight;
 
-      // Fila 4: Nacimiento y Datos Personales
-      drawCell('Fecha / Lugar de Nacimiento', `${crep.fechaNacimiento || '-'} / ${crep.lugarNacimiento || '-'}`, margin, currentY, halfW);
-      drawCell('Sexo / Estado Civil / Nacionalidad', `${crep.sexo || '-'} / ${crep.estadoCivil || '-'} / ${crep.nacionalidad || '-'}`, margin + halfW, currentY, halfW);
-      currentY += rowH;
-
-      // Fila 5: Contacto (Corrección del error de teléfono)
-      const tlfMovil = (crep as any).telefonoCelular || (crep as any).telefonoMovil || (crep as any).telefono || '-';
-      drawCell('Teléfono Móvil / Habitación', `${tlfMovil} / ${crep.telefonoHabitacion || '-'}`, margin, currentY, halfW);
-      drawCell('Correo Electrónico', crep.email || '-', margin + halfW, currentY, halfW);
-      currentY += rowH;
-
-      // Fila 6: Habitación e Información Financiera / PEP
-      drawCell('Dirección de Habitación', crep.direccionHabitacion || '-', margin, currentY, halfW);
-      drawCell('Ingreso Anual Bs. / Descripción Actividad (PEP)', `${crep.ingresoAnualBs || '-'} / ${crep.pepDescripcion || 'N/A'}`, margin + halfW, currentY, halfW);
-      currentY += rowH;
+        drawCell('Teléfono Local', cnat.telefonoHabitacion, margin, currentY, contentWidth * 0.20);
+        drawCell('Teléfono Móvil', cnat.telefonoMovil, margin + contentWidth * 0.20, currentY, contentWidth * 0.20);
+        drawCell('Correo Electrónico', cnat.email, margin + contentWidth * 0.40, currentY, contentWidth * 0.60);
+        currentY += contractorRowHeight + 2;
+      }
     }
-
     // SECCIÓN 3: PERSONAS A AFILIAR Y PLAN SOLICITADO
     currentY = drawSectionTitle('3. Personas a Afiliar y Plan Solicitado', currentY);
 
@@ -432,6 +447,7 @@ export class PdfGeneratorService {
       const resp = data.salud.preguntas[q.id]?.respuesta || 'NO';
       // Extra detalles si la respuesta es SÍ
       const extra = data.salud.preguntas[q.id]?.detallesExtra;
+      const antecedente = data.salud.preguntas[q.id]?.detalleAntecedente;
       const codigosAfiliados = data.salud.preguntas[q.id]?.codigosAfiliados || [];
       const isYes = resp === 'SÍ';
 
@@ -454,6 +470,12 @@ export class PdfGeneratorService {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6.0);
       const lineas = doc.splitTextToSize(textoCompleto, anchoTexto);
+      const antecedentLines = isYes && q.antecedentFields
+        ? [
+            `${q.antecedentFields.campo1Label}: ${antecedente?.campo1 || '-'}`,
+            `${q.antecedentFields.campo2Label}: ${antecedente?.campo2 || '-'}`,
+          ].flatMap((line) => doc.splitTextToSize(line, colQuestionW - 8))
+        : [];
       const textoCodigos = codigosAfiliados.length
         ? codigosAfiliados.map((codigo) => `#${codigo}`).join(', ')
         : '-';
@@ -461,9 +483,10 @@ export class PdfGeneratorService {
 
       // 4. Calcular la altura de la fila (mínimo 7 mm, pero se ajusta al número de líneas)
       const numLineas = lineas.length;
+      const extraLineCount = isYes && extra ? 1 : 0;
       const alturaFila = Math.max(
         7,
-        numLineas * lineHeight + 3,
+        (numLineas + extraLineCount + antecedentLines.length) * lineHeight + 3,
         lineasCodigos.length * lineHeight + 3,
       ); // +3 de padding
 
@@ -515,18 +538,26 @@ export class PdfGeneratorService {
         }
       });
 
-      // 7. Si hay detalles extra (cuando es SÍ), mostrarlos en una línea adicional
+      // 7. Si hay detalles extra o antecedentes (cuando es SÍ), mostrarlos en líneas adicionales
+      let detalleY = currentY + 2.5 + numLineas * lineHeight;
       if (isYes && extra) {
-        const yExtra = currentY + 2.5 + numLineas * lineHeight;
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(5.2);
         doc.setTextColor(0, 139, 71);
         const extraText = `Esp: ${extra.substring(0, 60)}${extra.length > 60 ? '…' : ''}`;
-        doc.text(extraText, margin + 2, yExtra);
-        // Ajustar altura de fila si el extra ocupa más espacio
-        // (opcional, pero si se sale del rectángulo, mejor aumentar alturaFila)
-        // En este caso, no aumentamos para no complicar, pero se puede hacer dinámico.
+        doc.text(extraText, margin + 2, detalleY);
+        detalleY += lineHeight;
       }
+
+      if (antecedentLines.length > 0) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(5.2);
+        doc.setTextColor(71, 85, 105);
+        antecedentLines.forEach((linea, idx) => {
+          doc.text(linea, margin + 2, detalleY + idx * lineHeight);
+        });
+      }
+
 
       // 8. Dibujar los checkboxes SÍ/NO al final de la primera columna
       //    Los centramos verticalmente respecto a la altura total de la fila.
@@ -733,6 +764,79 @@ export class PdfGeneratorService {
       currentY += 2;
     }
 
+    // ---- DETALLES DE PREGUNTAS CONFIGURADAS POR BENEFICIARIO ----
+    const renderDetalleBeneficiarios = (
+      questionConfig: (typeof HEALTH_QUESTIONS)[number],
+    ) => {
+      const questionId = questionConfig.id;
+      const question = data.salud.preguntas[questionId];
+      const details = data.salud.detallesAclaracion?.[questionId] || [];
+
+      if (question?.respuesta !== 'SÍ' || details.length === 0) return;
+
+      const rowHeight = 6;
+      const estimatedHeight = 12 + details.length * rowHeight;
+      if (currentY + estimatedHeight > pageHeight - margin - 18) {
+        doc.addPage();
+        currentY = margin + 22;
+      } else {
+        currentY += 3;
+      }
+
+      doc.setFillColor(241, 245, 249);
+      doc.rect(margin, currentY, contentWidth, 5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(7, 62, 35);
+      doc.text(
+        `DETALLE DE ${questionConfig.title.toUpperCase()} (PREGUNTA N° ${questionId})`,
+        margin + 3,
+        currentY + 3.5,
+      );
+      currentY += 5;
+
+      const detailColWidths = [28, 76, contentWidth - 104];
+      const detailHeaders = [
+        'Código Afiliado',
+        questionConfig.beneficiaryDetailLabels?.campo1 || 'Detalle 1',
+        questionConfig.beneficiaryDetailLabels?.campo2 || 'Detalle 2',
+      ];
+      doc.setFillColor(226, 232, 240);
+      doc.rect(margin, currentY, contentWidth, 5, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.2);
+      doc.setTextColor(7, 62, 35);
+
+      let headerX = margin;
+      detailHeaders.forEach((header, index) => {
+        doc.text(header, headerX + 1.5, currentY + 3.5);
+        headerX += detailColWidths[index];
+      });
+      currentY += 5;
+
+      details.forEach((detail) => {
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(margin, currentY, contentWidth, rowHeight);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.2);
+        doc.setTextColor(15, 23, 42);
+
+        let rowX = margin;
+        doc.text(`#${detail.codigoAfiliado}`, rowX + 2, currentY + 4);
+        rowX += detailColWidths[0];
+        doc.text(doc.splitTextToSize(detail.campo1 || '-', detailColWidths[1] - 3)[0] || '-', rowX + 1.5, currentY + 4);
+        rowX += detailColWidths[1];
+        doc.text(doc.splitTextToSize(detail.campo2 || '-', detailColWidths[2] - 3)[0] || '-', rowX + 1.5, currentY + 4);
+        currentY += rowHeight;
+      });
+
+      currentY += 2;
+    };
+
+    HEALTH_QUESTIONS
+      .filter((question) => question.beneficiaryDetail && question.id !== 17)
+      .forEach(renderDetalleBeneficiarios);
+
     // ---- CONTINUAR CON LA SIGUIENTE SECCIÓN (FORMA DE PAGO, etc.) ----
     // (El código posterior a esta sección debe continuar sin cambios)
     // Evaluamos el espacio real necesario (aprox 24-26mm)
@@ -741,36 +845,8 @@ export class PdfGeneratorService {
       currentY = margin + 22;
     }
 
-    currentY = drawSectionTitle('5. Forma de Pago y Otros Contratos', currentY);
+    currentY = drawSectionTitle('5. Forma de Pago', currentY);
     const pago = data.pago;
-
-    // Box para preguntas sobre otros contratos / negaciones (Altura reducida a 9.5mm)
-    const preguntaBoxHeight = 9.5;
-    doc.setDrawColor(203, 213, 225);
-    doc.rect(margin, currentY, contentWidth, preguntaBoxHeight);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.8);
-    doc.setTextColor(15, 23, 42);
-
-    // Fila 1: Otros Contratos
-    doc.text('¿Mantiene usted o su grupo contratos de salud con otra compañía?', margin + 2, currentY + 3.2);
-    drawCheckbox('NO', pago.otrosContratos.tiene === 'NO', margin + 95, currentY + 3.2);
-    drawCheckbox('SÍ', pago.otrosContratos.tiene === 'SÍ', margin + 110, currentY + 3.2);
-    if (pago.otrosContratos.tiene === 'SÍ') {
-      doc.text(`Cía: ${pago.otrosContratos.nombreCompania || '-'}, Contrato: ${pago.otrosContratos.numContrato || '-'}`, margin + 125, currentY + 3.2);
-    }
-
-    // Fila 2: Negativa Previa
-    doc.text('¿Le ha sido negado o anulado un contrato de salud previamente?', margin + 2, currentY + 7.2);
-    drawCheckbox('NO', pago.negativaPrevia.tiene === 'NO', margin + 95, currentY + 7.2);
-    drawCheckbox('SÍ', pago.negativaPrevia.tiene === 'SÍ', margin + 110, currentY + 7.2);
-    if (pago.negativaPrevia.tiene === 'SÍ') {
-      doc.text(`Cía: ${pago.negativaPrevia.nombreCompania || '-'}`, margin + 125, currentY + 7.2);
-    }
-
-    // Incrementamos Y para situarnos justo debajo de la caja de preguntas
-    currentY += preguntaBoxHeight;
 
     // Fila de celdas: Frecuencia, Moneda y Modalidad de Pago (Altura estándar 8.5mm)
     const cellHeight = 8.5;
@@ -789,7 +865,7 @@ export class PdfGeneratorService {
     }
 
     // SECCIÓN 6: DECLARACIONES LEGALES SUDEASEG
-    currentY = drawSectionTitle('6. Declaraciones y Autorizaciones Oficiales (Sudeaseg)', currentY);
+    currentY = drawSectionTitle('6. Declaraciones y Autorizaciones Oficiales', currentY);
 
     // Declaración Titular
     doc.setFillColor(248, 250, 252);
@@ -946,8 +1022,8 @@ export class PdfGeneratorService {
   /**
    * Descarga directa del PDF
    */
-  static downloadPdf(data: SolicitudAfiliacionFormState, filename?: string): void {
-    const doc = this.generateSolicitudPdf(data);
+  static async downloadPdf(data: SolicitudAfiliacionFormState, filename?: string): Promise<void> {
+    const doc = await this.generateSolicitudPdf(data);
     const name = filename || `Solicitud_Afiliacion_Previasis_${data.titular.numDoc || 'Doc'}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(name);
   }
@@ -955,12 +1031,12 @@ export class PdfGeneratorService {
   /**
    * Obtiene la URL blob del PDF para vista previa
    */
-  static getPdfBlobUrl(data: SolicitudAfiliacionFormState): string {
-    const doc = this.generateSolicitudPdf(data);
+  static async getPdfBlobUrl(data: SolicitudAfiliacionFormState): Promise<string> {
+    const doc = await this.generateSolicitudPdf(data);
     return doc.output('bloburl').toString();
   }
 
-  private async cargarImagen(url: string): Promise<HTMLImageElement> {
+  private static async cargarImagen(url: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'Anonymous';

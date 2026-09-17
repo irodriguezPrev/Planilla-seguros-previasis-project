@@ -26,7 +26,7 @@ export const PreviasisLogo: React.FC<PreviasisLogoProps> = ({
       }}
     >
       <img
-        src="/images/logo-previasis.png"
+        src="/images/logo-previasis-horizontal.png"
         alt="PREVIASIS Medicina Prepagada S.A."
         style={{
           height: `${size}px`,

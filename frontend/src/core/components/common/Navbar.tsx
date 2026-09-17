@@ -19,7 +19,7 @@ export const Navbar: React.FC = () => {
   };
   return (
     <>
-      <style>{`
+      <style suppressHydrationWarning>{`
         .navbar-header {
           position: sticky;
           top: 0;
@@ -363,4 +363,3 @@ export const Navbar: React.FC = () => {
 };
 
 export default Navbar;
-

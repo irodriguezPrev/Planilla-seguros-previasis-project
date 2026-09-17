@@ -6,6 +6,7 @@ import {
   AfeccionMedicaDetalle,
   AfiliadoRow,
   DetalleDeportivo,
+  DetalleAclaracion,
 } from '@/core/interfaces/affiliation.interfaces';
 import { HEALTH_QUESTIONS } from '@/core/config/health-questions.config';
 import { HeartPulse, PlusCircle, Trash2, AlertCircle, ChevronLeft, ChevronRight, CheckCircle, UserCheck } from 'lucide-react';
@@ -28,11 +29,17 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
 
   const setRespuestaPregunta = (id: number, respuesta: 'SÍ' | 'NO') => {
     const current = salud.preguntas[id] || { respuesta: 'NO' };
+    const questionConfig = HEALTH_QUESTIONS.find((q) => q.id === id);
+    const isBeneficiaryDetailOnly =
+      questionConfig?.beneficiaryDetail === true && id !== 17;
+    const shouldSelectBeneficiary = questionConfig?.requiresBeneficiarySelection !== false;
+    const shouldCreateClinicalDetail = questionConfig?.requiresClinicalDetail !== false;
+
     const codigosAfiliadosIniciales =
       respuesta === 'SÍ'
         ? (current.codigosAfiliados && current.codigosAfiliados.length > 0
             ? current.codigosAfiliados
-            : [afiliados[0]?.codigoAfiliado || 1])
+            : shouldSelectBeneficiary && !isBeneficiaryDetailOnly ? [afiliados[0]?.codigoAfiliado || 1] : [])
         : [];
 
     const updatedPreguntas = {
@@ -45,7 +52,7 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
     };
 
     let updatedAfecciones = [...salud.afeccionesDetalles];
-    if (respuesta === 'SÍ' && updatedAfecciones.length === 0) {
+    if (respuesta === 'SÍ' && shouldCreateClinicalDetail && updatedAfecciones.length === 0) {
       updatedAfecciones.push({
         id: Math.random().toString(36).substring(2, 9),
         codigoAfiliado: afiliados[0]?.codigoAfiliado || 1,
@@ -57,15 +64,21 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
       });
     }
 
+    let detallesAclaracion = salud.detallesAclaracion;
+    if (isBeneficiaryDetailOnly && respuesta === 'NO') {
+      detallesAclaracion = { ...(salud.detallesAclaracion || {}) };
+      delete detallesAclaracion[id];
+    }
+
     onChangeSalud({
       ...salud,
       preguntas: updatedPreguntas,
       detallesDeportivos: id === 17 && respuesta === 'NO' ? [] : salud.detallesDeportivos,
+      detallesAclaracion,
       afeccionesDetalles: updatedAfecciones,
     });
   };
 
-  // Manejador para alternar checkboxes individualmente
   const toggleBeneficiarioCheckbox = (id: number, codigoAfiliado: number) => {
     const current = salud.preguntas[id] || { respuesta: 'SÍ' as const, codigosAfiliados: [] };
     const actualCodigos = current.codigosAfiliados || [];
@@ -86,6 +99,27 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
       ))
       : salud.detallesDeportivos;
 
+    const questionConfig = HEALTH_QUESTIONS.find((q) => q.id === id);
+    const isBeneficiaryDetailQuestion =
+      questionConfig?.beneficiaryDetail === true && id !== 17;
+
+    let updatedDetallesAclaracion = salud.detallesAclaracion;
+
+    if (isBeneficiaryDetailQuestion) {
+      const existing = salud.detallesAclaracion?.[id] || [];
+      updatedDetallesAclaracion = {
+        ...(salud.detallesAclaracion || {}),
+        [id]: updatedCodigos.map(
+          (codigo) =>
+            existing.find((d) => d.codigoAfiliado === codigo) || {
+              codigoAfiliado: codigo,
+              campo1: '',
+              campo2: '',
+            }
+        ),
+      };
+    }
+
     onChangeSalud({
       ...salud,
       preguntas: {
@@ -93,6 +127,7 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
         [id]: { ...current, codigosAfiliados: updatedCodigos },
       },
       detallesDeportivos,
+      detallesAclaracion: updatedDetallesAclaracion,
     });
   };
 
@@ -103,6 +138,23 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
     onChangeSalud({ ...salud, detallesDeportivos });
   };
 
+  const updateDetalleAclaracion = (
+    preguntaId: number,
+    codigoAfiliado: number,
+    field: 'campo1' | 'campo2',
+    value: string
+  ) => {
+    const detalles = salud.detallesAclaracion || {};
+    const entries = detalles[preguntaId] || [];
+    const updatedEntries = entries.map((d: DetalleAclaracion) =>
+      d.codigoAfiliado === codigoAfiliado ? { ...d, [field]: value } : d
+    );
+    onChangeSalud({
+      ...salud,
+      detallesAclaracion: { ...detalles, [preguntaId]: updatedEntries },
+    });
+  };
+
   const setDetallesExtra = (id: number, extra: string) => {
     const current = salud.preguntas[id] || { respuesta: 'NO' };
     onChangeSalud({
@@ -110,6 +162,23 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
       preguntas: {
         ...salud.preguntas,
         [id]: { ...current, detallesExtra: extra },
+      },
+    });
+  };
+
+  const setDetalleAntecedente = (id: number, field: 'campo1' | 'campo2', value: string) => {
+    const current = salud.preguntas[id] || { respuesta: 'NO' };
+    onChangeSalud({
+      ...salud,
+      preguntas: {
+        ...salud.preguntas,
+        [id]: {
+          ...current,
+          detalleAntecedente: {
+            ...(current.detalleAntecedente || { campo1: '', campo2: '' }),
+            [field]: value,
+          },
+        },
       },
     });
   };
@@ -142,6 +211,9 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
   };
 
   const hasAnyYes = Object.values(salud.preguntas).some((p) => p.respuesta === 'SÍ');
+  const hasAnyClinicalYes = HEALTH_QUESTIONS.some(
+    (question) => question.requiresClinicalDetail !== false && salud.preguntas[question.id]?.respuesta === 'SÍ',
+  );
 
   // Valores de la pregunta actual
   const q = currentQuestion;
@@ -149,7 +221,50 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
   const extraVal = salud.preguntas[q.id]?.detallesExtra || '';
   const codigosAfiliados = salud.preguntas[q.id]?.codigosAfiliados || [];
   const isYes = currentResp === 'SÍ';
-  const hasNoBeneficiary = isYes && codigosAfiliados.length === 0;
+  const requiresBeneficiarySelection = q.requiresBeneficiarySelection !== false;
+  const hasNoBeneficiary = isYes && requiresBeneficiarySelection && codigosAfiliados.length === 0;
+
+  // Validación de Detalles Deportivos (Pregunta 17)
+  const isDeporteIncomplete = isYes && q.id === 17 && codigosAfiliados.length > 0 && (
+    (salud.detallesDeportivos || []).length === 0 ||
+    salud.detallesDeportivos?.some(
+      (d) => !d.deporte.trim() || !d.frecuencia.trim() || !d.nivel
+    )
+  );
+
+  // Validación per-question: campos de aclaración vacíos (Q5, Q19, Q21)
+  const isDetalleAclaracionIncomplete =
+    isYes &&
+    q.beneficiaryDetail &&
+    q.id !== 17 &&
+    codigosAfiliados.length > 0 &&
+    (
+      (salud.detallesAclaracion?.[q.id] || []).length === 0 ||
+      (salud.detallesAclaracion?.[q.id] || []).some(
+        (d) => !d.campo1.trim() || !d.campo2.trim()
+      )
+    );
+
+  // Validación all-questions: cualquier pregunta beneficiaryDetail (excl. Q17) incompleta
+  const incompleteBeneficiaryDetailTitles = HEALTH_QUESTIONS
+    .filter((qItem) => qItem.beneficiaryDetail && qItem.id !== 17)
+    .filter((qItem) => {
+      const pregunta = salud.preguntas[qItem.id];
+      if (!pregunta || pregunta.respuesta !== 'SÍ') return false;
+      const codigos = pregunta.codigosAfiliados || [];
+      if (codigos.length === 0) return true;
+      const detalles = salud.detallesAclaracion?.[qItem.id] || [];
+      if (detalles.length === 0) return true;
+      return detalles.some((d) => !d.campo1.trim() || !d.campo2.trim());
+    })
+    .map((qItem) => qItem.title);
+
+  const isBeneficiaryDetailIncomplete = incompleteBeneficiaryDetailTitles.length > 0;
+
+  const isNextDisabled =
+    hasNoBeneficiary ||
+    isDeporteIncomplete ||
+    isDetalleAclaracionIncomplete;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -248,6 +363,7 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
                 </p>
               </div>
             </div>
+            
 
             {/* Switch SÍ / NO */}
             <div className="pill-switch health-answer-switch">
@@ -281,7 +397,7 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
           </div>
 
           {/* Lista de Checkboxes si la respuesta es "SÍ" */}
-          {isYes && (
+          {isYes && requiresBeneficiarySelection && (
             <div
               style={{
                 marginTop: '0.5rem',
@@ -367,23 +483,258 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
             </div>
           )}
 
-          {/* Input Extra si la pregunta lo requiere */}
-          {isYes && q.id !== 17 && q.hasExtraInput && (
-            <div className="previasis-input-group">
-              <label className="previasis-label">
-                {q.extraInputLabel || 'Especificación requerida'} <span className="previasis-label-required">*</span>
-              </label>
-              <input
-                type="text"
-                className="previasis-input"
-                placeholder={q.extraInputPlaceholder}
-                value={extraVal}
-                onChange={(e) => setDetallesExtra(q.id, e.target.value)}
-                required
-              />
+          {isYes && q.antecedentFields && (
+            <div className="grid grid-cols-2 gap-4" style={{ padding: '1rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-lg)' }}>
+              <div className="previasis-input-group">
+                <label className="previasis-label">{q.antecedentFields.campo1Label}</label>
+                <input
+                  type="text"
+                  className="previasis-input"
+                  placeholder={q.antecedentFields.campo1Placeholder}
+                  value={salud.preguntas[q.id]?.detalleAntecedente?.campo1 || ''}
+                  onChange={(e) => setDetalleAntecedente(q.id, 'campo1', e.target.value)}
+                />
+              </div>
+              <div className="previasis-input-group">
+                <label className="previasis-label">{q.antecedentFields.campo2Label}</label>
+                <input
+                  type="text"
+                  className="previasis-input"
+                  placeholder={q.antecedentFields.campo2Placeholder}
+                  value={salud.preguntas[q.id]?.detalleAntecedente?.campo2 || ''}
+                  onChange={(e) => setDetalleAntecedente(q.id, 'campo2', e.target.value)}
+                />
+              </div>
             </div>
           )}
+
+          {/* DETALLE DEPORTIVO (Pregunta 17) CON VALIDACIONES */}
+          {isYes && q.id === 17 && codigosAfiliados.length > 0 && (
+            <div
+              style={{
+                marginTop: '0.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+              }}
+            >
+              <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--previasis-dark-green)' }}>
+                Detalle deportivo por beneficiario
+              </p>
+              {salud.detallesDeportivos?.map((detalle) => {
+                const isDeporteEmpty = !detalle.deporte.trim();
+                const isFrecuenciaEmpty = !detalle.frecuencia.trim();
+                const isNivelEmpty = !detalle.nivel;
+
+                return (
+                  <div
+                    className="health-sport-detail-grid"
+                    key={detalle.codigoAfiliado}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(110px, 0.7fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(140px, 0.8fr)',
+                      gap: '0.625rem',
+                      alignItems: 'end',
+                      padding: '0.75rem',
+                      border: '1px solid var(--border-card)',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: '#ffffff',
+                    }}
+                  >
+                    <div>
+                      <span style={{ display: 'block', fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Beneficiario</span>
+                      <strong style={{ fontSize: '0.8125rem', color: 'var(--previasis-dark-green)' }}>
+                        #{detalle.codigoAfiliado}
+                      </strong>
+                    </div>
+
+                    <div className="previasis-input-group">
+                      <label className="previasis-label">Deporte *</label>
+                      <input
+                        type="text"
+                        className="previasis-input"
+                        placeholder="Natación"
+                        value={detalle.deporte}
+                        onChange={(e) => updateDetalleDeportivo(detalle.codigoAfiliado, { deporte: e.target.value })}
+                        required
+                        style={{
+                          borderColor: isDeporteEmpty ? 'var(--status-error)' : undefined,
+                        }}
+                      />
+                    </div>
+
+                    <div className="previasis-input-group">
+                      <label className="previasis-label">Frecuencia *</label>
+                      <input
+                        type="text"
+                        className="previasis-input"
+                        placeholder="3 veces por semana"
+                        value={detalle.frecuencia}
+                        onChange={(e) => updateDetalleDeportivo(detalle.codigoAfiliado, { frecuencia: e.target.value })}
+                        required
+                        style={{
+                          borderColor: isFrecuenciaEmpty ? 'var(--status-error)' : undefined,
+                        }}
+                      />
+                    </div>
+
+                    <div className="previasis-input-group">
+                      <label className="previasis-label">Nivel *</label>
+                      <select
+                        className="previasis-input"
+                        value={detalle.nivel}
+                        onChange={(e) => updateDetalleDeportivo(detalle.codigoAfiliado, { nivel: e.target.value as DetalleDeportivo['nivel'] })}
+                        required
+                        style={{
+                          borderColor: isNivelEmpty ? 'var(--status-error)' : undefined,
+                        }}
+                      >
+                        <option value="">Seleccionar</option>
+                        <option value="Amateur">Amateur</option>
+                        <option value="Profesional">Profesional</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {isDeporteIncomplete && (
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--status-error)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  <AlertCircle size={14} /> Debe completar los campos de deporte, frecuencia y nivel para cada beneficiario.
+                </span>
+              )}
+            </div>
+            )}
+
+            {/* DETALLE POR BENEFICIARIO GENÉRICO (Q5, Q19, Q21) */}
+            {isYes && q.beneficiaryDetail && q.id !== 17 && codigosAfiliados.length > 0 && (
+              <div
+                style={{
+                  marginTop: '0.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
+                }}
+              >
+                <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--previasis-dark-green)' }}>
+                  Detalle por beneficiario
+                </p>
+                {salud.detallesAclaracion?.[q.id]?.map((detalle) => {
+                  const isCampo1Empty = !detalle.campo1.trim();
+                  const isCampo2Empty = !detalle.campo2.trim();
+                  return (
+                    <div
+                      key={detalle.codigoAfiliado}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(100px, 0.8fr) 1fr 1fr',
+                        gap: '0.625rem',
+                        alignItems: 'end',
+                        padding: '0.75rem',
+                        border: '1px solid var(--border-card)',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: '#ffffff',
+                      }}
+                    >
+                      <div>
+                        <span style={{ display: 'block', fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Beneficiario</span>
+                        <strong style={{ fontSize: '0.8125rem', color: 'var(--previasis-dark-green)' }}>
+                          #{detalle.codigoAfiliado}
+                        </strong>
+                      </div>
+                      <div className="previasis-input-group">
+                        <label className="previasis-label">{q.beneficiaryDetailLabels?.campo1} *</label>
+                        <input
+                          type="text"
+                          className="previasis-input"
+                          placeholder={q.beneficiaryDetailPlaceholders?.campo1}
+                          value={detalle.campo1}
+                          onChange={(e) => updateDetalleAclaracion(q.id, detalle.codigoAfiliado, 'campo1', e.target.value)}
+                          required
+                          style={{
+                            borderColor: isCampo1Empty ? 'var(--status-error)' : undefined,
+                          }}
+                        />
+                      </div>
+                      <div className="previasis-input-group">
+                        <label className="previasis-label">{q.beneficiaryDetailLabels?.campo2} *</label>
+                        <input
+                          type="text"
+                          className="previasis-input"
+                          placeholder={q.beneficiaryDetailPlaceholders?.campo2}
+                          value={detalle.campo2}
+                          onChange={(e) => updateDetalleAclaracion(q.id, detalle.codigoAfiliado, 'campo2', e.target.value)}
+                          required
+                          style={{
+                            borderColor: isCampo2Empty ? 'var(--status-error)' : undefined,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {isDetalleAclaracionIncomplete && (
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--status-error)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <AlertCircle size={14} /> Debe completar ambos campos para cada beneficiario.
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Input Extra si la pregunta lo requiere */}
+            {isYes && !q.beneficiaryDetail && q.hasExtraInput && (
+              <div className="previasis-input-group">
+                <label className="previasis-label">
+                  {q.extraInputLabel || 'Especificación requerida'} <span className="previasis-label-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="previasis-input"
+                  placeholder={q.extraInputPlaceholder}
+                  value={extraVal}
+                  onChange={(e) => setDetallesExtra(q.id, e.target.value)}
+                  required
+                />
+              </div>
+          )}
+
         </div>
+
+        {/* Banner genérico: bloqueado por preguntas de beneficiario incompletas en otras preguntas */}
+        {isBeneficiaryDetailIncomplete && !isDetalleAclaracionIncomplete && !hasNoBeneficiary && !isDeporteIncomplete && (
+          <div style={{ marginTop: '0.5rem' }}>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--status-error)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                fontWeight: 600,
+              }}
+            >
+              <AlertCircle size={14} /> Complete los detalles de beneficiarios para: {incompleteBeneficiaryDetailTitles.join(', ')}
+            </span>
+          </div>
+        )}
 
         {/* Botones de Navegación Step-by-Step */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
@@ -405,23 +756,23 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
             type="button"
             className="btn-pill"
             style={{
-              backgroundColor: hasNoBeneficiary ? '#cbd5e1' : 'var(--previasis-green)',
+              backgroundColor: isNextDisabled ? '#cbd5e1' : 'var(--previasis-green)',
               color: '#fff',
-              cursor: hasNoBeneficiary ? 'not-allowed' : 'pointer',
+              cursor: isNextDisabled ? 'not-allowed' : 'pointer',
             }}
-            disabled={hasNoBeneficiary}
+            disabled={isNextDisabled}
             onClick={() => setCurrentQuestionIndex((prev) => Math.min(totalQuestions - 1, prev + 1))}
           >
             {currentQuestionIndex === totalQuestions - 1 ? (
-              <>Finalizar Cuestionario <CheckCircle size={16} /></>
+              <>Fin del Cuestionario <CheckCircle size={16} /></>
             ) : (
-              <>Siguiente <ChevronRight size={16} /></>
+              <>Siguiente Pregunta <ChevronRight size={16} /></>
             )}
           </button>
         </div>
 
         {/* SUB-FORMULARIO CLÍNICO OBLIGATORIO SI HAY CONDICIONES 'SÍ' */}
-        {hasAnyYes && (
+        {hasAnyClinicalYes && (
           <div
             style={{
               marginTop: '2.5rem',
@@ -436,7 +787,7 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
               <div>
                 <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--previasis-green)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <HeartPulse size={20} />
-                  Detalle Clínico de Afecciones Declaradas (Sudeaseg)
+                  Detalle Clínico de Afecciones Declaradas
                 </h4>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
                   Complete los datos clínicos de cada diagnóstico para el análisis médico de la compañía

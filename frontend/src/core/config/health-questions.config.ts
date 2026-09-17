@@ -5,6 +5,23 @@ export interface HealthQuestionItem {
   hasExtraInput?: boolean;
   extraInputLabel?: string;
   extraInputPlaceholder?: string;
+  beneficiaryDetail?: boolean;
+  beneficiaryDetailLabels?: {
+    campo1: string;
+    campo2: string;
+  };
+  beneficiaryDetailPlaceholders?: {
+    campo1: string;
+    campo2: string;
+  };
+  requiresBeneficiarySelection?: boolean;
+  requiresClinicalDetail?: boolean;
+  antecedentFields?: {
+    campo1Label: string;
+    campo2Label: string;
+    campo1Placeholder?: string;
+    campo2Placeholder?: string;
+  };
 }
 
 export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
@@ -32,6 +49,15 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     id: 5,
     title: 'Enfermedades Vasculares',
     description: 'Accidentes cerebrovasculares, hemorragias cerebrales.',
+    beneficiaryDetail: true,
+    beneficiaryDetailLabels: {
+      campo1: 'Tipo de evento',
+      campo2: 'Fecha diagnóstico',
+    },
+    beneficiaryDetailPlaceholders: {
+      campo1: 'Ej: Accidente cerebrovascular',
+      campo2: 'Ej: 03/2021',
+    },
   },
   {
     id: 6,
@@ -95,9 +121,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     id: 17,
     title: 'Práctica Deportiva',
     description: '¿Usted o alguna persona a incluir practica algún deporte?',
-    hasExtraInput: true,
-    extraInputLabel: 'Especifique deporte, frecuencia y nivel (Amateur/Profesional)',
-    extraInputPlaceholder: 'Ej: Natación 3 veces por semana nivel amateur',
+    beneficiaryDetail: true,
   },
   {
     id: 18,
@@ -111,9 +135,15 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     id: 19,
     title: 'Cirugías Previas',
     description: '¿Usted o alguna persona a incluir se ha practicado alguna cirugía? (Funcional o Estética).',
-    hasExtraInput: true,
-    extraInputLabel: 'Indique persona, tipo de cirugía y año',
-    extraInputPlaceholder: 'Ej: Apendicectomía (2018), Rinoplastia (2021)',
+    beneficiaryDetail: true,
+    beneficiaryDetailLabels: {
+      campo1: 'Tipo de cirugía',
+      campo2: 'Año',
+    },
+    beneficiaryDetailPlaceholders: {
+      campo1: 'Ej: Apendicectomía',
+      campo2: 'Ej: 2018',
+    },
   },
   {
     id: 20,
@@ -127,9 +157,15 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     id: 21,
     title: 'Tratamiento Médico Actual',
     description: '¿Usted u otra persona a incluir en el contrato se encuentra bajo un tratamiento con algún medicamento?',
-    hasExtraInput: true,
-    extraInputLabel: 'Nombre del medicamento, dosis y frecuencia',
-    extraInputPlaceholder: 'Ej: Losartán 50mg 1 vez al día',
+    beneficiaryDetail: true,
+    beneficiaryDetailLabels: {
+      campo1: 'Medicamento',
+      campo2: 'Dosis / Frecuencia',
+    },
+    beneficiaryDetailPlaceholders: {
+      campo1: 'Ej: Losartán',
+      campo2: 'Ej: 50mg 1 vez al día',
+    },
   },
   {
     id: 22,
@@ -154,5 +190,31 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     hasExtraInput: true,
     extraInputLabel: 'Especifique parentesco y diagnóstico familiar',
     extraInputPlaceholder: 'Ej: Padre con Hipertensión, Madre con Diabetes tipo 2',
+  },
+  {
+    id: 25,
+    title: 'Contratos de salud vigentes con otra compañía',
+    description: '¿Mantiene usted o algún familiar contrato de salud vigente con otra compañía?',
+    requiresBeneficiarySelection: false,
+    requiresClinicalDetail: false,
+    antecedentFields: {
+      campo1Label: 'Nº de Contrato',
+      campo2Label: 'Nombre de la Compañía',
+      campo1Placeholder: 'Ej: 000123',
+      campo2Placeholder: 'Ej: Compañía de salud',
+    },
+  },
+  {
+    id: 26,
+    title: 'Negativa o anulación de contrato de salud',
+    description: '¿En alguna oportunidad le ha sido negado o anulado un contrato de salud?',
+    requiresBeneficiarySelection: false,
+    requiresClinicalDetail: false,
+    antecedentFields: {
+      campo1Label: 'Tipo de Seguro',
+      campo2Label: 'Compañía que Rechazó',
+      campo1Placeholder: 'Ej: Colectivo',
+      campo2Placeholder: 'Ej: Compañía que rechazó',
+    },
   },
 ];

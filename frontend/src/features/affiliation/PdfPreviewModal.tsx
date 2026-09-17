@@ -21,22 +21,29 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   //Obtiene la info del pdf, y el pdf ya esta llenado
   useEffect(() => {
+    let cancelled = false;
+
     if (isOpen) {
-      try {
-        const url = PdfGeneratorService.getPdfBlobUrl(formData);
-        setPdfUrl(url);
-      } catch (err) {
-        console.error('Error generando URL del PDF:', err);
-      }
+      void PdfGeneratorService.getPdfBlobUrl(formData)
+        .then((url) => {
+          if (!cancelled) setPdfUrl(url);
+        })
+        .catch((err) => {
+          console.error('Error generando URL del PDF:', err);
+        });
     } else {
       setPdfUrl(null);
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, formData]);
 
   if (!isOpen) return null;
 
   const handleDownload = () => {
-    PdfGeneratorService.downloadPdf(formData);
+    void PdfGeneratorService.downloadPdf(formData);
   };
 
   const handlePrint = () => {
@@ -104,7 +111,7 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '1.125rem', fontWeight: 800 }}>
-                Vista Previa de Solicitud de Afiliación (Sudeaseg)
+                Vista Previa de Solicitud de Afiliación
               </h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 Providencia Nº SAA-09-1585 • PREVIASIS Medicina Prepagada S.A.

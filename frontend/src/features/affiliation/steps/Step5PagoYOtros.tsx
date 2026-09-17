@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   FormaDePagoSection,
   FrecuenciaPago,
@@ -8,6 +8,12 @@ import {
   ModalidadPago,
 } from '@/core/interfaces/affiliation.interfaces';
 import { Calendar, Layers, Repeat, Gift, CreditCard, DollarSign } from 'lucide-react';
+import {
+  FRECUENCIA_BY_MONEDA,
+  MODALIDAD_PAGO_BY_MONEDA,
+  labelFrecuenciaPago,
+  labelModalidadPago,
+} from '@/core/config/payment-options.config';
 
 interface Step5Props {
   pago: FormaDePagoSection;
@@ -15,26 +21,26 @@ interface Step5Props {
 }
 
 export const Step5PagoYOtros: React.FC<Step5Props> = ({ pago, onChangePago }) => {
-  const updateOtrosContratos = (fields: Partial<typeof pago.otrosContratos>) => {
-    onChangePago({
-      ...pago,
-      otrosContratos: { ...pago.otrosContratos, ...fields },
-    });
+  const frecuenciaIconMap: Record<FrecuenciaPago, React.ElementType> = {
+    Mensual: Calendar,
+    Trimestral: Layers,
+    Semestral: Repeat,
+    Anual: Gift,
   };
 
-  const updateNegativa = (fields: Partial<typeof pago.negativaPrevia>) => {
-    onChangePago({
-      ...pago,
-      negativaPrevia: { ...pago.negativaPrevia, ...fields },
-    });
-  };
+  const frecuenciasDisponibles = FRECUENCIA_BY_MONEDA[pago.moneda];
 
-  const frecuencias: { id: FrecuenciaPago; label: string; icon: any }[] = [
-    { id: 'Mensual', label: 'Mensual', icon: Calendar },
-    { id: 'Trimestral', label: 'Trimestral', icon: Layers },
-    { id: 'Semestral', label: 'Semestral', icon: Repeat },
-    { id: 'Anual', label: 'Anual', icon: Gift },
-  ];
+  useEffect(() => {
+    const validFrecuencias = FRECUENCIA_BY_MONEDA[pago.moneda];
+    if (!validFrecuencias.includes(pago.frecuenciaPago)) {
+      onChangePago({ ...pago, frecuenciaPago: validFrecuencias[0] });
+    }
+    const validModalidades = MODALIDAD_PAGO_BY_MONEDA[pago.moneda];
+    if (!validModalidades.includes(pago.modalidadPago)) {
+      onChangePago({ ...pago, modalidadPago: validModalidades[0], especifiqueOtroPago: undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pago.moneda]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -67,15 +73,15 @@ export const Step5PagoYOtros: React.FC<Step5Props> = ({ pago, onChangePago }) =>
 
         {/* Frecuencia de Pago Cards 2x2 */}
         <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '1.5rem' }}>
-          {frecuencias.map((frec) => {
-            const Icon = frec.icon;
-            const isSelected = pago.frecuenciaPago === frec.id;
+          {frecuenciasDisponibles.map((frec) => {
+            const Icon = frecuenciaIconMap[frec];
+            const isSelected = pago.frecuenciaPago === frec;
 
             return (
               <button
-                key={frec.id}
+                key={frec}
                 type="button"
-                onClick={() => onChangePago({ ...pago, frecuenciaPago: frec.id })}
+                onClick={() => onChangePago({ ...pago, frecuenciaPago: frec })}
                 style={{
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-lg)',
@@ -99,8 +105,8 @@ export const Step5PagoYOtros: React.FC<Step5Props> = ({ pago, onChangePago }) =>
                     fontSize: '0.9375rem',
                     color: isSelected ? 'var(--previasis-dark-green)' : 'var(--text-body)',
                   }}
-                >
-                  {frec.label}
+                 >
+                  {labelFrecuenciaPago[frec]}
                 </span>
               </button>
             );
@@ -131,15 +137,17 @@ export const Step5PagoYOtros: React.FC<Step5Props> = ({ pago, onChangePago }) =>
             <label className="previasis-label">
               Modalidad de Cobro <span className="previasis-label-required">*</span>
             </label>
-            <select
-              className="previasis-input"
-              value={pago.modalidadPago}
-              onChange={(e) => onChangePago({ ...pago, modalidadPago: e.target.value as ModalidadPago })}
-            >
-              <option value="Domiciliación de Pago">Domiciliación Bancaria / Cargo Automático</option>
-              <option value="Pago en Oficina">Pago Directo en Oficina Previasis</option>
-              <option value="Otro">Otro (Transferencia / Zelle / Pago Móvil)</option>
-            </select>
+             <select
+               className="previasis-input"
+               value={pago.modalidadPago}
+               onChange={(e) => onChangePago({ ...pago, modalidadPago: e.target.value as ModalidadPago })}
+             >
+               {MODALIDAD_PAGO_BY_MONEDA[pago.moneda].map((mod) => (
+                 <option key={mod} value={mod}>
+                   {labelModalidadPago[mod]}
+                 </option>
+               ))}
+             </select>
           </div>
         </div>
 
@@ -158,109 +166,6 @@ export const Step5PagoYOtros: React.FC<Step5Props> = ({ pago, onChangePago }) =>
             />
           </div>
         )}
-      </div>
-
-      {/* OTROS CONTRATOS Y NEGATIVAS */}
-      <div className="previasis-card">
-        <h4 style={{ fontSize: '1.0625rem', fontWeight: 800, color: 'var(--previasis-dark-green)', marginBottom: '1rem' }}>
-          Antecedentes de Contratos y Seguros
-        </h4>
-
-        {/* Otros Contratos */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label className="previasis-label" style={{ maxWidth: '70%' }}>
-              ¿Mantiene usted o algún familiar contrato de salud vigente con otra compañía?
-            </label>
-            <div className="pill-switch">
-              <button
-                type="button"
-                onClick={() => updateOtrosContratos({ tiene: 'NO' })}
-                className={`pill-switch-btn ${pago.otrosContratos.tiene === 'NO' ? 'active' : ''}`}
-              >
-                NO
-              </button>
-              <button
-                type="button"
-                onClick={() => updateOtrosContratos({ tiene: 'SÍ' })}
-                className={`pill-switch-btn ${pago.otrosContratos.tiene === 'SÍ' ? 'active' : ''}`}
-              >
-                SÍ
-              </button>
-            </div>
-          </div>
-
-          {pago.otrosContratos.tiene === 'SÍ' && (
-            <div className="grid grid-cols-2 gap-4" style={{ padding: '1rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-lg)' }}>
-              <div className="previasis-input-group">
-                <label className="previasis-label">Nº de Contrato</label>
-                <input
-                  type="text"
-                  className="previasis-input"
-                  value={pago.otrosContratos.numContrato || ''}
-                  onChange={(e) => updateOtrosContratos({ numContrato: e.target.value })}
-                />
-              </div>
-              <div className="previasis-input-group">
-                <label className="previasis-label">Nombre de la Compañía</label>
-                <input
-                  type="text"
-                  className="previasis-input"
-                  value={pago.otrosContratos.nombreCompania || ''}
-                  onChange={(e) => updateOtrosContratos({ nombreCompania: e.target.value })}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Negativas Previas */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label className="previasis-label" style={{ maxWidth: '70%' }}>
-              ¿En alguna oportunidad le ha sido negado o anulado un contrato de salud?
-            </label>
-            <div className="pill-switch">
-              <button
-                type="button"
-                onClick={() => updateNegativa({ tiene: 'NO' })}
-                className={`pill-switch-btn ${pago.negativaPrevia.tiene === 'NO' ? 'active' : ''}`}
-              >
-                NO
-              </button>
-              <button
-                type="button"
-                onClick={() => updateNegativa({ tiene: 'SÍ' })}
-                className={`pill-switch-btn ${pago.negativaPrevia.tiene === 'SÍ' ? 'active' : ''}`}
-              >
-                SÍ
-              </button>
-            </div>
-          </div>
-
-          {pago.negativaPrevia.tiene === 'SÍ' && (
-            <div className="grid grid-cols-2 gap-4" style={{ padding: '1rem', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-lg)' }}>
-              <div className="previasis-input-group">
-                <label className="previasis-label">Tipo de Seguro</label>
-                <input
-                  type="text"
-                  className="previasis-input"
-                  value={pago.negativaPrevia.tipoSeguro || ''}
-                  onChange={(e) => updateNegativa({ tipoSeguro: e.target.value })}
-                />
-              </div>
-              <div className="previasis-input-group">
-                <label className="previasis-label">Compañía que Rechazó</label>
-                <input
-                  type="text"
-                  className="previasis-input"
-                  value={pago.negativaPrevia.nombreCompania || ''}
-                  onChange={(e) => updateNegativa({ nombreCompania: e.target.value })}
-                />
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

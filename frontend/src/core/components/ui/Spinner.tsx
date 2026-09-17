@@ -35,7 +35,7 @@ export const Spinner: React.FC<SpinnerProps> = ({ size = 'md', color = 'currentC
         strokeDasharray="40 60"
         strokeLinecap="round"
       />
-      <style>{`
+      <style suppressHydrationWarning>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
