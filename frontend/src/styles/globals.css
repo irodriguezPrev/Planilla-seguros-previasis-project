@@ -1170,6 +1170,40 @@ button {
   overflow-wrap: anywhere;
 }
 
+.family-member-name-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.family-member-edit-button {
+  display: inline-flex;
+  padding: 0.18rem 0.45rem;
+  border: 1px solid rgba(0, 139, 71, 0.25);
+  border-radius: var(--radius-full);
+  background: #fff;
+  color: var(--previasis-green);
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: var(--transition);
+}
+
+.family-member-edit-button:hover,
+.family-member-edit-button:focus-visible {
+  border-color: var(--previasis-green);
+  background: var(--previasis-green);
+  color: #fff;
+  outline: none;
+  box-shadow: 0 3px 10px var(--previasis-green-glow);
+}
+
 /* Comparador de frecuencia de pago en el subtotal del grupo familiar */
 .billing-preview {
   display: flex;
@@ -1595,6 +1629,11 @@ button {
   .family-member-main {
     align-items: flex-start !important;
     width: 100%;
+  }
+
+  .family-member-edit-button {
+    min-height: 36px;
+    padding-inline: 0.65rem;
   }
 
   .family-member-actions {

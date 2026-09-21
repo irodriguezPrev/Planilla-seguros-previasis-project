@@ -9,7 +9,7 @@ import {
   TipoDocumento,
 } from '@/core/interfaces/affiliation.interfaces';
 import { calculateActuarialAge as calculateAge } from '@/core/utils/age.utils';
-import { UserPlus, Trash2, Users, Award, Check, Calculator, Flame } from 'lucide-react';
+import { UserPlus, Trash2, Users, Award, Check, Calculator, Flame, Pencil } from 'lucide-react';
 
 type PricingStyle = 'cards' | 'segmented' | 'compact';
 
@@ -144,7 +144,11 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
   const [pricingStyle, setPricingStyle] = useState<PricingStyle>('cards');
   const memberNameInputRef = useRef<HTMLInputElement | null>(null);
 
-  const selectMemberForEditing = (index: number) => {
+  const selectMember = (index: number) => {
+    setSelectedMemberIndex(index);
+  };
+
+  const editMember = (index: number) => {
     setSelectedMemberIndex(index);
 
     window.requestAnimationFrame(() => {
@@ -187,7 +191,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
     };
     const updated = normalizeAfiliados([...afiliados, newAfiliado]);
     onChangeAfiliados(updated);
-    selectMemberForEditing(updated.length - 1);
+    editMember(updated.length - 1);
   };
 
   const updateAfiliado = (index: number, fields: Partial<AfiliadoRow>) => {
@@ -307,11 +311,11 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                   className="family-member-card"
                   role="button"
                   tabIndex={0}
-                  onClick={() => selectMemberForEditing(idx)}
+                  onClick={() => selectMember(idx)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      selectMemberForEditing(idx);
+                      selectMember(idx);
                     }
                   }}
                   style={{
@@ -346,9 +350,23 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                       {af.codigoAfiliado}
                     </div>
                     <div>
-                      <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--previasis-dark-green)' }}>
-                        {af.nombreCompleto || `Persona #${af.codigoAfiliado}`}
-                      </p>
+                      <div className="family-member-name-row">
+                        <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--previasis-dark-green)' }}>
+                          {af.nombreCompleto || `Persona #${af.codigoAfiliado}`}
+                        </p>
+                        <button
+                          type="button"
+                          className="family-member-edit-button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            editMember(idx);
+                          }}
+                          aria-label={`Editar ${af.nombreCompleto || `Persona #${af.codigoAfiliado}`}`}
+                          title="Editar datos del familiar"
+                        >
+                          <Pencil size={12} /> Editar
+                        </button>
+                      </div>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {af.parentesco} • {af.planSolicitado} ({af.limiteCobertura})
                         {' · '}
