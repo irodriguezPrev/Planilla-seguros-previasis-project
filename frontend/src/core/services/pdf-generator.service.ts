@@ -1047,6 +1047,7 @@ export class PdfGeneratorService {
       const totalPages = doc.getNumberOfPages();
       for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
         doc.setPage(pageNumber);
+        doc.save();
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(34);
         doc.setTextColor(220, 220, 220);

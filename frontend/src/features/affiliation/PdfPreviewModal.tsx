@@ -71,8 +71,8 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
       : `Solicitud_Afiliacion_Previasis_Firmada_${documentId}_${date}.pdf`;
   };
 
-  const handleDownload = async () => {
-    await PdfGeneratorService.downloadPdf(formData, getFileName(), { mode });
+  const handleDownload = () => {
+    void PdfGeneratorService.downloadPdf(formData, getFileName(), { mode });
   };
 
   const handlePrint = () => {
@@ -109,7 +109,12 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
         return;
       }
 
-      
+      await PdfGeneratorService.downloadPdf(formData, fileName, { mode: 'final' });
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(`${shareText}. El PDF fue descargado; adjúntelo a esta conversación.`)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return;
       console.error('Error compartiendo el PDF:', error);
