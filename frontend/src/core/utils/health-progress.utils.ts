@@ -12,6 +12,11 @@ export type HealthDetailMode = NonNullable<HealthQuestionItem['detailMode']>;
 export const getHealthDetailMode = (question: HealthQuestionItem): HealthDetailMode =>
   question.detailMode || 'clinical';
 
+export const isQuestionApplicableToAffiliate = (
+  question: HealthQuestionItem,
+  afiliado: AfiliadoRow,
+): boolean => !question.applicableSex || afiliado.sexo === question.applicableSex;
+
 export const getAffiliateAnswers = (
   salud: DeclaracionSaludSection,
   question: HealthQuestionItem,
@@ -45,9 +50,7 @@ export const isClinicalDetailComplete = (detail: AfeccionMedicaDetalle): boolean
   Boolean(
     detail.padecimiento.trim() &&
     detail.fechaDiagnostico.trim() &&
-    detail.tratamientoPracticado.trim() &&
-    detail.fechaUltimoChequeo.trim() &&
-    detail.institucionHospitalaria.trim(),
+    detail.tratamientoPracticado.trim(),
   );
 
 export const getAffiliateQuestionStatus = (
@@ -56,16 +59,20 @@ export const getAffiliateQuestionStatus = (
   afiliado: AfiliadoRow,
   afiliados: AfiliadoRow[],
 ): HealthCompletionStatus => {
+  if (!isQuestionApplicableToAffiliate(question, afiliado)) return 'complete';
+
   const answer = getAffiliateAnswers(salud, question, afiliados)[afiliado.codigoAfiliado];
   if (!answer) return 'pending';
   if (answer === 'NO') return 'complete';
 
   const mode = getHealthDetailMode(question);
   if (mode === 'sport') {
-    const detail = salud.detallesDeportivos?.find(
+    const details = salud.detallesDeportivos?.filter(
       (item) => item.codigoAfiliado === afiliado.codigoAfiliado,
-    );
-    return detail?.deporte.trim() && detail.frecuencia.trim() && detail.nivel
+    ) || [];
+    return details.length > 0 && details.every(
+      (detail) => detail.deporte.trim() && detail.frecuencia.trim() && detail.nivel,
+    )
       ? 'complete'
       : 'incomplete';
   }
@@ -111,7 +118,12 @@ export const getQuestionStatus = (
       : 'incomplete';
   }
 
-  const statuses = afiliados.map((afiliado) =>
+  const applicableAffiliates = afiliados.filter((afiliado) =>
+    isQuestionApplicableToAffiliate(question, afiliado),
+  );
+  if (applicableAffiliates.length === 0) return 'complete';
+
+  const statuses = applicableAffiliates.map((afiliado) =>
     getAffiliateQuestionStatus(salud, question, afiliado, afiliados),
   );
   if (statuses.every((status) => status === 'complete')) return 'complete';

@@ -2,6 +2,7 @@ export interface HealthQuestionItem {
   id: number;
   title: string;
   description: string;
+  applicableSex?: 'F' | 'M';
   hasExtraInput?: boolean;
   extraInputLabel?: string;
   extraInputPlaceholder?: string;
@@ -113,6 +114,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     id: 14,
     title: 'Femenino',
     description: 'Desórdenes de mamas, dolor pélvico, útero, afecciones de las trompas y ovarios, incontinencia, fibroma.',
+    applicableSex: 'F',
   },
   {
     id: 15,
@@ -127,6 +129,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     id: 16,
     title: 'Masculino',
     description: 'Desórdenes de la próstata, fimosis o parafimosis, retención de orina.',
+    applicableSex: 'M',
   },
   {
     id: 17,

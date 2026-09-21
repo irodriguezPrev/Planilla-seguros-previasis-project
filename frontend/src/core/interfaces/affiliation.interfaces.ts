@@ -126,6 +126,7 @@ export interface PreguntaSalud {
 }
 
 export interface DetalleDeportivo {
+  id?: string;
   codigoAfiliado: number;
   deporte: string;
   frecuencia: string;

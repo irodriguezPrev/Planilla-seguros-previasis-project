@@ -757,7 +757,7 @@ button {
   font-weight: 800;
 }
 
-.health-answer-buttons button.selected.no { background: #e2e8f0; color: #334155; }
+.health-answer-buttons button.selected.no { background: var(--previasis-green); color: #fff; }
 .health-answer-buttons button.selected.yes { background: var(--previasis-green); color: #fff; }
 
 .health-positive-details {
@@ -878,6 +878,30 @@ button {
 }
 
 .health-special-detail-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.health-sport-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.health-sport-entry + .health-sport-entry {
+  margin-top: 0.7rem;
+}
+
+.health-sport-entry-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--previasis-dark-green);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
 
 .health-beneficiary-detail {
   display: grid;
@@ -1086,6 +1110,230 @@ button {
   overflow-wrap: anywhere;
 }
 
+/* Comparador de frecuencia de pago en el subtotal del grupo familiar */
+.billing-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: auto;
+  padding-top: 1.25rem;
+  text-align: center;
+  border-top: 1px solid var(--border-card);
+}
+
+.billing-preview-heading h4 {
+  margin-top: 0.2rem;
+  color: var(--previasis-green);
+  font-size: clamp(1.85rem, 4vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.billing-preview-heading h4 sup {
+  margin-left: 0.15rem;
+  font-size: 0.85rem;
+  vertical-align: top;
+}
+
+.billing-preview-heading p {
+  margin-top: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.billing-preview-eyebrow {
+  color: var(--previasis-dark-green);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.billing-style-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.billing-style-picker > span {
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.billing-style-picker button {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-full);
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  transition: var(--transition);
+}
+
+.billing-style-picker button.active {
+  border-color: var(--previasis-green);
+  background: var(--previasis-green);
+  color: #fff;
+}
+
+.billing-periods {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.billing-period {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 102px;
+  padding: 1.25rem 0.4rem 0.65rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--text-body);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font: inherit;
+  transition: var(--transition);
+}
+
+.billing-period:hover {
+  border-color: rgba(0, 139, 71, 0.55);
+  transform: translateY(-2px);
+}
+
+.billing-period.selected {
+  border-color: var(--previasis-green);
+  background: var(--previasis-green-light);
+  box-shadow: 0 7px 18px var(--previasis-green-glow);
+}
+
+.billing-period-name {
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.billing-period strong {
+  color: var(--previasis-dark-green);
+  font-size: 1.05rem;
+}
+
+.billing-period small {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+}
+
+.billing-popular-badge {
+  position: absolute;
+  top: -0.55rem;
+  left: 50%;
+  display: inline-flex;
+  width: max-content;
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--radius-full);
+  background: #f97316;
+  color: #fff;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  transform: translateX(-50%);
+}
+
+.billing-period-check {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--previasis-green);
+  color: #fff;
+}
+
+.billing-periods--segmented {
+  gap: 0;
+  padding: 0.35rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card-alt);
+}
+
+.billing-periods--segmented .billing-period {
+  min-height: 94px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: none;
+}
+
+.billing-periods--segmented .billing-period.selected {
+  background: var(--previasis-dark-green);
+  color: #fff;
+}
+
+.billing-periods--segmented .billing-period.selected strong,
+.billing-periods--segmented .billing-period.selected small {
+  color: #fff;
+}
+
+.billing-periods--compact {
+  padding: 0.25rem;
+  border-radius: var(--radius-full);
+  background: var(--previasis-green-light);
+}
+
+.billing-periods--compact .billing-period {
+  min-height: 78px;
+  padding-top: 0.75rem;
+  border-color: transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+}
+
+.billing-periods--compact .billing-period.selected {
+  background: #fff;
+  box-shadow: 0 5px 14px rgba(7, 62, 35, 0.14);
+}
+
+.billing-periods--compact .billing-popular-badge {
+  top: -0.45rem;
+}
+
+.billing-tax-note {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-style: italic;
+  text-align: center;
+}
+
+.health-applicability-note,
+.health-not-applicable {
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(2, 132, 199, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(2, 132, 199, 0.07);
+  color: #075985;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.health-not-applicable {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
 .pdf-preview-viewer {
   min-height: 0;
 }
@@ -1128,6 +1376,72 @@ button {
 .gap-3 { gap: 0.75rem; }
 .gap-4 { gap: 1rem; }
 .gap-6 { gap: 1.5rem; }
+
+/* Transición entre pasos del formulario */
+.afiliacion-step-transition {
+  animation-duration: 380ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform, filter;
+}
+
+.afiliacion-step-transition--forward {
+  animation-name: afiliacion-step-enter-forward;
+}
+
+.afiliacion-step-transition--backward {
+  animation-name: afiliacion-step-enter-backward;
+}
+
+.afiliacion-step-transition > .previasis-card,
+.afiliacion-step-transition > div > .previasis-card {
+  animation: afiliacion-card-settle 460ms 70ms both cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes afiliacion-step-enter-forward {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+    transform: translate3d(24px, 8px, 0) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes afiliacion-step-enter-backward {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+    transform: translate3d(-24px, 8px, 0) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes afiliacion-card-settle {
+  from {
+    box-shadow: 0 18px 40px rgba(7, 62, 35, 0.12);
+    transform: translateY(6px);
+  }
+  to {
+    box-shadow: var(--shadow-card);
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .afiliacion-step-transition,
+  .afiliacion-step-transition > .previasis-card,
+  .afiliacion-step-transition > div > .previasis-card {
+    animation: none;
+  }
+}
 
 @media (max-width: 768px) {
   html {
@@ -1234,6 +1548,20 @@ button {
     justify-content: center;
     min-width: 44px;
     min-height: 44px;
+  }
+
+  .billing-periods {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .billing-periods--segmented,
+  .billing-periods--compact {
+    border-radius: var(--radius-lg);
+  }
+
+  .billing-periods--compact .billing-period {
+    border-radius: var(--radius-md);
   }
 
   .pdf-preview-overlay {

@@ -384,6 +384,7 @@ type LegacyPago = SolicitudAfiliacionFormState['pago'] & {
 export default function AfiliacionPage() {
   //State management
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
   const [formData, setFormData] = useState<SolicitudAfiliacionFormState>(INITIAL_STATE);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
@@ -709,6 +710,7 @@ export default function AfiliacionPage() {
     }
 
     if (currentStep < STEPS.length) {
+      setStepDirection('forward');
       setCurrentStep(currentStep + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -716,6 +718,7 @@ export default function AfiliacionPage() {
 
   const handlePrev = () => {
     if (currentStep > 1) {
+      setStepDirection('backward');
       setCurrentStep(currentStep - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -888,6 +891,7 @@ export default function AfiliacionPage() {
       localStorage.removeItem(STORAGE_KEY);
       setFormData(INITIAL_STATE);
       setCompletedSteps([]);
+      setStepDirection('backward');
       setCurrentStep(1);
       setApprovalSnapshot(null);
       setPreviewMode('draft');
@@ -1167,6 +1171,7 @@ export default function AfiliacionPage() {
             currentStep={currentStep}
             onSelectStep={(step) => {
               if (step <= currentStep || completedSteps.includes(step)) {
+                setStepDirection(step >= currentStep ? 'forward' : 'backward');
                 setCurrentStep(step);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
@@ -1176,7 +1181,10 @@ export default function AfiliacionPage() {
         </div>
 
         {/* Step Contents */}
-        <div>
+        <div
+          key={currentStep}
+          className={`afiliacion-step-transition afiliacion-step-transition--${stepDirection}`}
+        >
           {currentStep === 1 && (
             <Step1HeaderAndTitular
               header={formData.header}
@@ -1240,6 +1248,11 @@ export default function AfiliacionPage() {
             <Step3AfiliadosPlan
               afiliados={formData.afiliados}
               onChangeAfiliados={handleAfiliadosChange}
+              frecuenciaPago={formData.pago.frecuenciaPago}
+              onChangeFrecuenciaPago={(frecuenciaPago) => setFormData((previous) => ({
+                ...previous,
+                pago: { ...previous.pago, frecuenciaPago },
+              }))}
               titularNombreCompleto={`${formData.titular.nombres} ${formData.titular.apellidos}`}
               titularDoc={formData.titular.numDoc}
             />
@@ -1253,6 +1266,7 @@ export default function AfiliacionPage() {
                 ...previous,
                 salud: mergeChangedValues(previous.salud, formData.salud, salud),
               }))}
+              onComplete={handleNext}
             />
           )}
 

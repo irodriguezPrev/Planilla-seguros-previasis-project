@@ -3,12 +3,26 @@
 import React, { useRef, useState } from 'react';
 import {
   AfiliadoRow,
+  FrecuenciaPago,
   PlanSolicitado,
   Parentesco,
   TipoDocumento,
 } from '@/core/interfaces/affiliation.interfaces';
 import { calculateActuarialAge as calculateAge } from '@/core/utils/age.utils';
-import { UserPlus, Trash2, Users, Award, Check, Calculator } from 'lucide-react';
+import { UserPlus, Trash2, Users, Award, Check, Calculator, Flame } from 'lucide-react';
+
+type PricingStyle = 'cards' | 'segmented' | 'compact';
+
+const billingPeriods: Array<{
+  id: FrecuenciaPago;
+  shortLabel: string;
+  months: number;
+}> = [
+  { id: 'Mensual', shortLabel: '1 mes', months: 1 },
+  { id: 'Trimestral', shortLabel: '3 meses', months: 3 },
+  { id: 'Semestral', shortLabel: '6 meses', months: 6 },
+  { id: 'Anual', shortLabel: '12 meses', months: 12 },
+];
 
 type PlanOption = {
   id: PlanSolicitado;
@@ -114,6 +128,8 @@ function getAfiliadoCuota(afiliado: AfiliadoRow): number {
 interface Step3Props {
   afiliados: AfiliadoRow[];
   onChangeAfiliados: (afiliados: AfiliadoRow[]) => void;
+  frecuenciaPago: FrecuenciaPago;
+  onChangeFrecuenciaPago: (frecuencia: FrecuenciaPago) => void;
   titularNombreCompleto?: string;
   titularDoc?: string;
 }
@@ -121,8 +137,11 @@ interface Step3Props {
 export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
   afiliados,
   onChangeAfiliados,
+  frecuenciaPago,
+  onChangeFrecuenciaPago,
 }) => {
   const [selectedMemberIndex, setSelectedMemberIndex] = useState<number>(0);
+  const [pricingStyle, setPricingStyle] = useState<PricingStyle>('cards');
   const memberNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectMemberForEditing = (index: number) => {
@@ -383,9 +402,62 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
               );
             })}
           </div>
-          <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--previasis-green)' }}>
-           Subtotal: ${subtotalGrupo} / mes
-          </span>
+          <section className="billing-preview" aria-labelledby="billing-preview-title">
+            <div className="billing-preview-heading">
+              <span className="billing-preview-eyebrow">Subtotal del grupo familiar</span>
+              <h4 id="billing-preview-title">
+                ${subtotalGrupo * (billingPeriods.find((period) => period.id === frecuenciaPago)?.months || 1)}<sup>*</sup>
+              </h4>
+              <p>
+                Pago {frecuenciaPago.toLocaleLowerCase('es-VE')} · equivalente a ${subtotalGrupo} al mes
+              </p>
+            </div>
+
+            <div className="billing-style-picker" aria-label="Comparar estilos del selector">
+              <span>Vista para evaluación:</span>
+              {([
+                ['cards', 'Opción 1'],
+                ['segmented', 'Opción 2'],
+                ['compact', 'Opción 3'],
+              ] as Array<[PricingStyle, string]>).map(([style, label]) => (
+                <button
+                  key={style}
+                  type="button"
+                  className={pricingStyle === style ? 'active' : ''}
+                  onClick={() => setPricingStyle(style)}
+                  aria-pressed={pricingStyle === style}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className={`billing-periods billing-periods--${pricingStyle}`}>
+              {billingPeriods.map((period) => {
+                const isSelected = frecuenciaPago === period.id;
+                return (
+                  <button
+                    key={period.id}
+                    type="button"
+                    className={`billing-period ${isSelected ? 'selected' : ''}`}
+                    onClick={() => onChangeFrecuenciaPago(period.id)}
+                    aria-pressed={isSelected}
+                  >
+                    {period.id === 'Mensual' && (
+                      <span className="billing-popular-badge">
+                        <Flame size={13} fill="currentColor" /> Más solicitado
+                      </span>
+                    )}
+                    <span className="billing-period-name">{period.id}</span>
+                    <strong>${subtotalGrupo * period.months}</strong>
+                    <small>{period.shortLabel}</small>
+                    {isSelected && <Check className="billing-period-check" size={16} strokeWidth={3} />}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="billing-tax-note">* Los precios indicados no incluyen impuestos.</p>
+          </section>
         </div>
 
         {/* SELECCIÓN DE PLAN (Derecha) */}

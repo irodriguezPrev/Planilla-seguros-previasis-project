@@ -18,6 +18,7 @@ import {
   getQuestionStatus,
   HealthAnswer,
   HealthCompletionStatus,
+  isQuestionApplicableToAffiliate,
 } from '@/core/utils/health-progress.utils';
 import {
   AlertCircle,
@@ -39,6 +40,7 @@ interface Step4Props {
   salud: DeclaracionSaludSection;
   afiliados: AfiliadoRow[];
   onChangeSalud: (salud: DeclaracionSaludSection) => void;
+  onComplete: () => void;
 }
 
 const makeId = () => Math.random().toString(36).substring(2, 10);
@@ -54,13 +56,13 @@ const getSuggestedConditions = (question: HealthQuestionItem): string[] =>
     .replace(/\betc\.?$/i, '')
     .split(',')
     .map((condition) => condition.trim().replace(/[.?]+$/, ''))
-    .filter((condition) => condition.length > 2 && condition.length < 65)
-    .slice(0, 12);
+    .filter((condition) => condition.length > 2 && condition.length < 65);
 
 export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
   salud,
   afiliados,
   onChangeSalud,
+  onComplete,
 }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [otherConditions, setOtherConditions] = useState<Record<string, string>>({});
@@ -68,8 +70,11 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
   const question = HEALTH_QUESTIONS[currentQuestionIndex];
   const questionState = salud.preguntas[question.id];
   const detailMode = getHealthDetailMode(question);
+  const applicableAffiliates = afiliados.filter((afiliado) =>
+    isQuestionApplicableToAffiliate(question, afiliado),
+  );
   const affiliateAnswers = getAffiliateAnswers(salud, question, afiliados);
-  const yesAffiliates = afiliados.filter(
+  const yesAffiliates = applicableAffiliates.filter(
     (afiliado) => affiliateAnswers[afiliado.codigoAfiliado] === 'SÍ',
   );
   const questionStatus = getQuestionStatus(salud, question, afiliados);
@@ -86,10 +91,17 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
     answers: Partial<Record<number, HealthAnswer>>,
     extraByAffiliate = current.detallesExtraPorAfiliado,
   ) => {
-    const yesCodes = afiliados
+    const applicableCodes = new Set(applicableAffiliates.map((afiliado) => afiliado.codigoAfiliado));
+    const applicableAnswers = Object.fromEntries(
+      Object.entries(answers).filter(([code]) => applicableCodes.has(Number(code))),
+    );
+    const applicableExtraDetails = Object.fromEntries(
+      Object.entries(extraByAffiliate || {}).filter(([code]) => applicableCodes.has(Number(code))),
+    );
+    const yesCodes = applicableAffiliates
       .filter((afiliado) => answers[afiliado.codigoAfiliado] === 'SÍ')
       .map((afiliado) => afiliado.codigoAfiliado);
-    const extraSummary = Object.entries(extraByAffiliate || {})
+    const extraSummary = Object.entries(applicableExtraDetails)
       .filter(([, value]) => value?.trim())
       .map(([code, value]) => `#${code}: ${value}`)
       .join(' | ');
@@ -98,8 +110,8 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
       ...current,
       respuesta: yesCodes.length > 0 ? 'SÍ' as const : 'NO' as const,
       codigosAfiliados: yesCodes,
-      respuestasAfiliados: answers,
-      detallesExtraPorAfiliado: extraByAffiliate,
+      respuestasAfiliados: applicableAnswers,
+      detallesExtraPorAfiliado: applicableExtraDetails,
       detallesExtra: extraSummary || undefined,
     };
   };
@@ -144,7 +156,7 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
     if (answer === 'SÍ' && mode === 'sport' && !detallesDeportivos.some(
       (detail) => detail.codigoAfiliado === codigoAfiliado,
     )) {
-      detallesDeportivos.push({ codigoAfiliado, deporte: '', frecuencia: '', nivel: '' });
+      detallesDeportivos.push({ id: makeId(), codigoAfiliado, deporte: '', frecuencia: '', nivel: '' });
     }
 
     if (answer === 'SÍ' && mode === 'beneficiary' && !(detallesAclaracion[currentQuestion.id] || []).some(
@@ -169,11 +181,14 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
   };
 
   const answerNoForEveryone = (currentQuestion: HealthQuestionItem) => {
+    const applicable = afiliados.filter((afiliado) =>
+      isQuestionApplicableToAffiliate(currentQuestion, afiliado),
+    );
     const current = salud.preguntas[currentQuestion.id] || { respuesta: 'NO' as const };
     const answers = Object.fromEntries(
-      afiliados.map((afiliado) => [afiliado.codigoAfiliado, 'NO' as const]),
+      applicable.map((afiliado) => [afiliado.codigoAfiliado, 'NO' as const]),
     );
-    const affiliateCodes = new Set(afiliados.map((afiliado) => afiliado.codigoAfiliado));
+    const affiliateCodes = new Set(applicable.map((afiliado) => afiliado.codigoAfiliado));
 
     onChangeSalud({
       ...salud,
@@ -210,10 +225,37 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
     });
   };
 
-  const updateSportDetail = (codigoAfiliado: number, fields: Partial<DetalleDeportivo>) => {
-    const details = (salud.detallesDeportivos || []).map((detail) =>
-      detail.codigoAfiliado === codigoAfiliado ? { ...detail, ...fields } : detail,
-    );
+  const addSportDetail = (codigoAfiliado: number) => {
+    onChangeSalud({
+      ...salud,
+      detallesDeportivos: [
+        ...(salud.detallesDeportivos || []),
+        { id: makeId(), codigoAfiliado, deporte: '', frecuencia: '', nivel: '' },
+      ],
+    });
+  };
+
+  const updateSportDetail = (
+    codigoAfiliado: number,
+    sportIndex: number,
+    fields: Partial<DetalleDeportivo>,
+  ) => {
+    let matchingIndex = -1;
+    const details = (salud.detallesDeportivos || []).map((detail) => {
+      if (detail.codigoAfiliado !== codigoAfiliado) return detail;
+      matchingIndex += 1;
+      return matchingIndex === sportIndex ? { ...detail, ...fields } : detail;
+    });
+    onChangeSalud({ ...salud, detallesDeportivos: details });
+  };
+
+  const removeSportDetail = (codigoAfiliado: number, sportIndex: number) => {
+    let matchingIndex = -1;
+    const details = (salud.detallesDeportivos || []).filter((detail) => {
+      if (detail.codigoAfiliado !== codigoAfiliado) return true;
+      matchingIndex += 1;
+      return matchingIndex !== sportIndex;
+    });
     onChangeSalud({ ...salud, detallesDeportivos: details });
   };
 
@@ -532,11 +574,11 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
                 <input className="previasis-input" placeholder="Tratamiento farmacológico o quirúrgico" value={detail.tratamientoPracticado} onChange={(event) => updateClinicalDetail(detail.id, { tratamientoPracticado: event.target.value })} />
               </div>
               <div className="previasis-input-group">
-                <label className="previasis-label">Último chequeo médico *</label>
+                <label className="previasis-label">Último chequeo médico (opcional)</label>
                 <input type="date" className="previasis-input" value={detail.fechaUltimoChequeo} onChange={(event) => updateClinicalDetail(detail.id, { fechaUltimoChequeo: event.target.value })} />
               </div>
               <div className="previasis-input-group health-clinical-wide">
-                <label className="previasis-label">Institución hospitalaria *</label>
+                <label className="previasis-label">Institución hospitalaria (opcional)</label>
                 <input className="previasis-input" placeholder="Nombre de clínica u hospital" value={detail.institucionHospitalaria} onChange={(event) => updateClinicalDetail(detail.id, { institucionHospitalaria: event.target.value })} />
               </div>
             </div>
@@ -547,33 +589,48 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
   };
 
   const renderSportDetails = (afiliado: AfiliadoRow) => {
-    const detail = salud.detallesDeportivos?.find(
+    const details = (salud.detallesDeportivos || []).filter(
       (item) => item.codigoAfiliado === afiliado.codigoAfiliado,
-    ) || { codigoAfiliado: afiliado.codigoAfiliado, deporte: '', frecuencia: '', nivel: '' as const };
+    );
     return (
       <div className="health-detail-panel" key={afiliado.id}>
         <div className="health-detail-heading">
           <strong>{afiliado.nombreCompleto || `Afiliado #${afiliado.codigoAfiliado}`}</strong>
-          <span className="pill-badge">Detalle deportivo</span>
+          <button type="button" className="btn-pill btn-pill-outline" onClick={() => addSportDetail(afiliado.codigoAfiliado)}>
+            <PlusCircle size={14} /> Agregar otro deporte
+          </button>
         </div>
-        <div className="health-special-detail-grid health-special-detail-grid-3">
-          <div className="previasis-input-group">
-            <label className="previasis-label">Deporte *</label>
-            <input className="previasis-input" value={detail.deporte} placeholder="Natación" onChange={(event) => updateSportDetail(afiliado.codigoAfiliado, { deporte: event.target.value })} />
+        {details.length === 0 && (
+          <div className="health-not-applicable">Agregue al menos un deporte para completar esta respuesta.</div>
+        )}
+        {details.map((detail, index) => (
+          <div className="health-sport-entry" key={detail.id || `${afiliado.id}-${index}`}>
+            <div className="health-sport-entry-heading">
+              <span>Deporte #{index + 1}</span>
+              <button type="button" className="health-delete-button" onClick={() => removeSportDetail(afiliado.codigoAfiliado, index)}>
+                <Trash2 size={14} /> Eliminar
+              </button>
+            </div>
+            <div className="health-special-detail-grid health-special-detail-grid-3">
+              <div className="previasis-input-group">
+                <label className="previasis-label">Deporte *</label>
+                <input className="previasis-input" value={detail.deporte} placeholder="Natación" onChange={(event) => updateSportDetail(afiliado.codigoAfiliado, index, { deporte: event.target.value })} />
+              </div>
+              <div className="previasis-input-group">
+                <label className="previasis-label">Frecuencia *</label>
+                <input className="previasis-input" value={detail.frecuencia} placeholder="3 veces por semana" onChange={(event) => updateSportDetail(afiliado.codigoAfiliado, index, { frecuencia: event.target.value })} />
+              </div>
+              <div className="previasis-input-group">
+                <label className="previasis-label">Nivel *</label>
+                <select className="previasis-input" value={detail.nivel} onChange={(event) => updateSportDetail(afiliado.codigoAfiliado, index, { nivel: event.target.value as DetalleDeportivo['nivel'] })}>
+                  <option value="">Seleccionar</option>
+                  <option value="Amateur">Amateur</option>
+                  <option value="Profesional">Profesional</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div className="previasis-input-group">
-            <label className="previasis-label">Frecuencia *</label>
-            <input className="previasis-input" value={detail.frecuencia} placeholder="3 veces por semana" onChange={(event) => updateSportDetail(afiliado.codigoAfiliado, { frecuencia: event.target.value })} />
-          </div>
-          <div className="previasis-input-group">
-            <label className="previasis-label">Nivel *</label>
-            <select className="previasis-input" value={detail.nivel} onChange={(event) => updateSportDetail(afiliado.codigoAfiliado, { nivel: event.target.value as DetalleDeportivo['nivel'] })}>
-              <option value="">Seleccionar</option>
-              <option value="Amateur">Amateur</option>
-              <option value="Profesional">Profesional</option>
-            </select>
-          </div>
-        </div>
+        ))}
       </div>
     );
   };
@@ -683,7 +740,8 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
         <div className="health-member-progress-list">
           {afiliados.map((afiliado) => {
             const applicableQuestions = HEALTH_QUESTIONS.filter(
-              (item) => item.requiresBeneficiarySelection !== false,
+              (item) => item.requiresBeneficiarySelection !== false &&
+                isQuestionApplicableToAffiliate(item, afiliado),
             );
             const completeCount = applicableQuestions.filter(
               (item) => getAffiliateQuestionStatus(salud, item, afiliado, afiliados) === 'complete',
@@ -728,7 +786,9 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
                       <small style={{ color: meta.color }}>{renderStatusIcon(status, 12)} {meta.label}</small>
                     ) : (
                       <span className="health-affiliate-dots">
-                        {afiliados.map((afiliado) => {
+                        {afiliados.filter((afiliado) =>
+                          isQuestionApplicableToAffiliate(item, afiliado),
+                        ).map((afiliado) => {
                           const affiliateStatus = getAffiliateQuestionStatus(salud, item, afiliado, afiliados);
                           return (
                             <i key={afiliado.id} title={`${afiliado.nombreCompleto || `Afiliado #${afiliado.codigoAfiliado}`}: ${statusMeta[affiliateStatus].label}`} data-status={affiliateStatus}>
@@ -781,13 +841,25 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
             </div>
           ) : (
             <>
+              {question.applicableSex && (
+                <div className="health-applicability-note">
+                  Esta pregunta aplica únicamente a integrantes de sexo {question.applicableSex === 'F' ? 'femenino' : 'masculino'}.
+                </div>
+              )}
               <div className="health-answer-toolbar">
                 <div><Users size={18} /><span>Responda por cada integrante</span></div>
-                <button type="button" className="btn-pill btn-pill-secondary" onClick={() => answerNoForEveryone(question)}>Ningún integrante presenta esta condición</button>
+                {applicableAffiliates.length > 0 && (
+                  <button type="button" className="btn-pill btn-pill-secondary" onClick={() => answerNoForEveryone(question)}>
+                    Ningún integrante aplicable presenta esta condición
+                  </button>
+                )}
               </div>
 
               <div className="health-affiliate-answer-list">
-                {afiliados.map((afiliado) => {
+                {applicableAffiliates.length === 0 && (
+                  <div className="health-not-applicable">No hay integrantes a quienes aplique esta pregunta.</div>
+                )}
+                {applicableAffiliates.map((afiliado) => {
                   const answer = affiliateAnswers[afiliado.codigoAfiliado];
                   const status = getAffiliateQuestionStatus(salud, question, afiliado, afiliados);
                   return (
@@ -826,7 +898,11 @@ export const Step4DeclaracionSalud: React.FC<Step4Props> = ({
             <button type="button" className="btn-pill btn-pill-outline" disabled={currentQuestionIndex === 0} onClick={() => goToQuestion(Math.max(0, currentQuestionIndex - 1))}>
               <ChevronLeft size={16} /> Anterior
             </button>
-            <button type="button" className="btn-pill" onClick={goToNextPending}>
+            <button
+              type="button"
+              className="btn-pill btn-pill-primary"
+              onClick={completedQuestions === HEALTH_QUESTIONS.length ? onComplete : goToNextPending}
+            >
               {completedQuestions === HEALTH_QUESTIONS.length ? 'Cuestionario completado' : 'Ir a la siguiente pendiente'}
               {completedQuestions === HEALTH_QUESTIONS.length ? <CheckCircle2 size={16} /> : <ChevronRight size={16} />}
             </button>
