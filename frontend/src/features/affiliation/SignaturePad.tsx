@@ -114,7 +114,10 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', width: '100%' }}>
+    <div
+      className={`signature-pad ${required && !hasDrawn ? 'is-invalid' : ''}`}
+      style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', width: '100%' }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <label className="previasis-label">
@@ -134,6 +137,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
 
       {/* Signature Canvas Box con Borde Punteado Verde */}
       <div
+        className="signature-pad-canvas"
         style={{
           position: 'relative',
           width: '100%',
@@ -184,6 +188,10 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
           </div>
         )}
       </div>
+
+      {required && !hasDrawn && (
+        <span className="required-field-message">Este campo es obligatorio</span>
+      )}
 
       {/* Acción para limpiar la firma dibujada */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>

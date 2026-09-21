@@ -1039,6 +1039,66 @@ button {
   font-weight: 400;
 }
 
+/* Validación visual uniforme de campos obligatorios */
+.show-validation-errors .previasis-input:required:invalid,
+.show-validation-errors .input-field:required:invalid {
+  border-color: var(--status-error) !important;
+  background-color: rgba(239, 68, 68, 0.045) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.11) !important;
+}
+
+.show-validation-errors .previasis-input-group:has(.previasis-input:required:invalid) > .previasis-label,
+.show-validation-errors .input-group:has(.input-field:required:invalid) > .input-label {
+  color: #b91c1c !important;
+}
+
+.show-validation-errors .previasis-input-group:has(.previasis-input:required:invalid)::after,
+.show-validation-errors .input-group:has(.input-field:required:invalid)::after {
+  content: 'Complete correctamente este campo obligatorio';
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--status-error);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.show-validation-errors label:has(input[type='checkbox']:required:invalid) {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--status-error);
+  border-radius: var(--radius-md);
+  background: rgba(239, 68, 68, 0.055);
+  color: #b91c1c !important;
+}
+
+.show-validation-errors input[type='checkbox']:required:invalid {
+  outline: 2px solid rgba(239, 68, 68, 0.35);
+  outline-offset: 2px;
+}
+
+.required-field-message {
+  display: none;
+  color: var(--status-error);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.show-validation-errors .signature-pad.is-invalid .signature-pad-canvas {
+  border-color: var(--status-error) !important;
+  background: rgba(239, 68, 68, 0.045) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.11) !important;
+}
+
+.show-validation-errors .signature-pad.is-invalid .previasis-label,
+.show-validation-errors .signature-pad.is-invalid .required-field-message {
+  display: block;
+  color: #b91c1c !important;
+}
+
+.show-validation-errors .field-required-invalid {
+  border-color: var(--status-error) !important;
+  background: rgba(239, 68, 68, 0.045) !important;
+}
+
 /* Selector tipo Switch Táctil */
 .pill-switch {
   display: inline-flex;

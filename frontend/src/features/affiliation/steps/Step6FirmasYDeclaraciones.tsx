@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { SignaturePad } from '../SignaturePad';
 import {
   DeclaracionesFirmasSection,
@@ -15,6 +15,7 @@ interface Step6Props {
   intermediario: IntermediarioSection;
   titular: PersonaNaturalData;
   contratante: contractorSection;
+  suggestedPlace: string;
   onChangeFirmas: (firmas: DeclaracionesFirmasSection) => void;
   onChangeIntermediario: (intermediario: IntermediarioSection) => void;
 }
@@ -24,9 +25,18 @@ export const Step6FirmasYDeclaraciones: React.FC<Step6Props> = ({
   intermediario,
   titular,
   contratante,
+  suggestedPlace,
   onChangeFirmas,
   onChangeIntermediario,
 }) => {
+  useEffect(() => {
+    if (!(firmas.lugar || '').trim() && suggestedPlace) {
+      onChangeFirmas({ ...firmas, lugar: suggestedPlace });
+    }
+    // Solo completa un lugar vacío; una edición manual no se sobrescribe.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firmas.lugar, suggestedPlace]);
+
   const updateFirmas = (fields: Partial<DeclaracionesFirmasSection>) => {
     onChangeFirmas({ ...firmas, ...fields });
   };
@@ -164,17 +174,21 @@ export const Step6FirmasYDeclaraciones: React.FC<Step6Props> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="previasis-input-group">
-              <label className="previasis-label">Lugar de Suscripción</label>
+              <label className="previasis-label">
+                Lugar de Suscripción <span className="previasis-label-required">*</span>
+              </label>
               <input
                 type="text"
                 className="previasis-input"
-                value={firmas.lugar}
+                value={firmas.lugar || suggestedPlace}
                 onChange={(e) => updateFirmas({ lugar: e.target.value })}
                 required
               />
             </div>
             <div className="previasis-input-group">
-              <label className="previasis-label">Fecha de Suscripción</label>
+              <label className="previasis-label">
+                Fecha de Suscripción <span className="previasis-label-required">*</span>
+              </label>
               <input
                 type="date"
                 className="previasis-input"

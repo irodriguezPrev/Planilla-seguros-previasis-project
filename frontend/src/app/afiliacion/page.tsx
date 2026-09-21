@@ -172,7 +172,7 @@ const INITIAL_STATE: SolicitudAfiliacionFormState = {
     modalidadPago: 'Pago en Oficina',
   },
   firmas: {
-    lugar: 'Caracas, Dto. Capital',
+    lugar: '',
     fecha: new Date().toISOString().slice(0, 10),
     firmaTitularBase64: null,
     firmaContratanteBase64: null,
@@ -204,6 +204,14 @@ const getApprovalSnapshot = (data: SolicitudAfiliacionFormState): string => JSON
 
 const uppercaseName = (value: string | undefined) =>
   (value || '').toLocaleUpperCase('es-VE'); //#TODO mover a helpers 
+
+const getSubscriptionPlace = (
+  titular: SolicitudAfiliacionFormState['titular'],
+): string => {
+  const city = titular.ciudadResidencia?.trim();
+  const state = titular.estadoResidencia?.trim();
+  return [city, state].filter(Boolean).join(', ');
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -245,38 +253,49 @@ const mergeChangedValues = <T,>(latest: T, rendered: T, proposed: T): T => {
 
 const normalizeFormNames = (
   data: SolicitudAfiliacionFormState,
-): SolicitudAfiliacionFormState => ({
-  ...data,
-  titular: {
-    ...data.titular,
-    nombres: uppercaseName(data.titular.nombres),
-    apellidos: uppercaseName(data.titular.apellidos),
-  },
-  contratante: {
-    ...data.contratante,
-    personaNatural: {
-      ...data.contratante.personaNatural,
-      nombres: uppercaseName(data.contratante.personaNatural.nombres),
-      apellidos: uppercaseName(data.contratante.personaNatural.apellidos),
+): SolicitudAfiliacionFormState => {
+  const suggestedPlace = getSubscriptionPlace(data.titular);
+  const shouldUseSuggestedPlace = suggestedPlace && (
+    !data.firmas.lugar?.trim() || data.firmas.lugar === 'Caracas, Dto. Capital'
+  );
+
+  return {
+    ...data,
+    titular: {
+      ...data.titular,
+      nombres: uppercaseName(data.titular.nombres),
+      apellidos: uppercaseName(data.titular.apellidos),
     },
-    personaJuridica: {
-      ...data.contratante.personaJuridica,
-      representanteLegal: {
-        ...data.contratante.personaJuridica.representanteLegal,
-        nombres: uppercaseName(data.contratante.personaJuridica.representanteLegal.nombres),
-        apellidos: uppercaseName(data.contratante.personaJuridica.representanteLegal.apellidos),
+    contratante: {
+      ...data.contratante,
+      personaNatural: {
+        ...data.contratante.personaNatural,
+        nombres: uppercaseName(data.contratante.personaNatural.nombres),
+        apellidos: uppercaseName(data.contratante.personaNatural.apellidos),
+      },
+      personaJuridica: {
+        ...data.contratante.personaJuridica,
+        representanteLegal: {
+          ...data.contratante.personaJuridica.representanteLegal,
+          nombres: uppercaseName(data.contratante.personaJuridica.representanteLegal.nombres),
+          apellidos: uppercaseName(data.contratante.personaJuridica.representanteLegal.apellidos),
+        },
       },
     },
-  },
-  afiliados: data.afiliados.map((afiliado) => ({
-    ...afiliado,
-    nombreCompleto: uppercaseName(afiliado.nombreCompleto),
-  })),
-  intermediario: {
-    ...data.intermediario,
-    nombreApellido: uppercaseName(data.intermediario.nombreApellido),
-  },
-});
+    afiliados: data.afiliados.map((afiliado) => ({
+      ...afiliado,
+      nombreCompleto: uppercaseName(afiliado.nombreCompleto),
+    })),
+    intermediario: {
+      ...data.intermediario,
+      nombreApellido: uppercaseName(data.intermediario.nombreApellido),
+    },
+    firmas: {
+      ...data.firmas,
+      lugar: shouldUseSuggestedPlace ? suggestedPlace : data.firmas.lugar,
+    },
+  };
+};
 
 const reconcileAffiliateHealthData = (
   salud: DeclaracionSaludSection,
@@ -387,6 +406,7 @@ export default function AfiliacionPage() {
   const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
   const [formData, setFormData] = useState<SolicitudAfiliacionFormState>(INITIAL_STATE);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [validationAttemptedSteps, setValidationAttemptedSteps] = useState<number[]>([]);
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('draft');
   const [approvalSnapshot, setApprovalSnapshot] = useState<string | null>(null);
@@ -436,7 +456,8 @@ export default function AfiliacionPage() {
           };
         }
 
-        const pago = { ...legacyPago, otrosContratos: '' };
+        const pago = { ...legacyPago };
+        delete pago.otrosContratos;
         delete pago.negativaPrevia;
 
         setFormData(normalizeFormNames({
@@ -542,6 +563,17 @@ export default function AfiliacionPage() {
   };
 
   const validateStep = (step: number): boolean => {
+    const firstInvalidField = document.querySelector<HTMLElement>(
+      `[data-form-step="${step}"] input:invalid, ` +
+      `[data-form-step="${step}"] select:invalid, ` +
+      `[data-form-step="${step}"] textarea:invalid`,
+    );
+    if (firstInvalidField) {
+      firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      window.setTimeout(() => firstInvalidField.focus({ preventScroll: true }), 350);
+      return false;
+    }
+
     if (step === 1) {
       const t = formData.titular;
       const validCities = getCitiesByState(t.estadoResidencia);
@@ -680,6 +712,9 @@ export default function AfiliacionPage() {
   };
 
   const handleNext = () => {
+    setValidationAttemptedSteps((steps) =>
+      steps.includes(currentStep) ? steps : [...steps, currentStep],
+    );
     if (!validateStep(currentStep)) return;
 
     if (!completedSteps.includes(currentStep)) {
@@ -892,6 +927,7 @@ export default function AfiliacionPage() {
       setFormData(INITIAL_STATE);
       setCompletedSteps([]);
       setStepDirection('backward');
+      setValidationAttemptedSteps([]);
       setCurrentStep(1);
       setApprovalSnapshot(null);
       setPreviewMode('draft');
@@ -1183,7 +1219,10 @@ export default function AfiliacionPage() {
         {/* Step Contents */}
         <div
           key={currentStep}
-          className={`afiliacion-step-transition afiliacion-step-transition--${stepDirection}`}
+          data-form-step={currentStep}
+          className={`afiliacion-step-transition afiliacion-step-transition--${stepDirection} ${
+            validationAttemptedSteps.includes(currentStep) ? 'show-validation-errors' : ''
+          }`}
         >
           {currentStep === 1 && (
             <Step1HeaderAndTitular
@@ -1199,14 +1238,25 @@ export default function AfiliacionPage() {
                   nombres: uppercaseName(titular.nombres),
                   apellidos: uppercaseName(titular.apellidos),
                 };
-                setFormData((previous) => ({
-                  ...previous,
-                  titular: mergeChangedValues(
+                setFormData((previous) => {
+                  const mergedTitular = mergeChangedValues(
                     previous.titular,
                     formData.titular,
                     normalizedTitular,
-                  ),
-                }));
+                  );
+                  const nextSuggestedPlace = getSubscriptionPlace(mergedTitular);
+                  const locationChanged =
+                    normalizedTitular.estadoResidencia !== formData.titular.estadoResidencia ||
+                    normalizedTitular.ciudadResidencia !== formData.titular.ciudadResidencia;
+
+                  return {
+                    ...previous,
+                    titular: mergedTitular,
+                    firmas: locationChanged
+                      ? { ...previous.firmas, lugar: nextSuggestedPlace }
+                      : previous.firmas,
+                  };
+                });
               }}
             />
           )}
@@ -1302,6 +1352,7 @@ export default function AfiliacionPage() {
               intermediario={formData.intermediario}
               titular={formData.titular}
               contratante={formData.contratante}
+              suggestedPlace={getSubscriptionPlace(formData.titular)}
               onChangeFirmas={(firmas) => setFormData((previous) => ({
                 ...previous,
                 firmas: mergeChangedValues(previous.firmas, formData.firmas, firmas),
