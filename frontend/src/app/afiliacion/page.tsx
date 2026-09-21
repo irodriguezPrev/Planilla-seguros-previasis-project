@@ -1374,7 +1374,7 @@ export default function AfiliacionPage() {
                   className="btn-pill btn-pill-primary"
                 >
                   <span className="afiliacion-bottom-label-desktop">Siguiente Paso</span>
-                  <span className="afiliacion-bottom-label-mobile">Siguiente</span>
+                  <span className="afiliacion-bottom-label-mobile">Siguiente Paso</span>
                   <ArrowRight size={16} />
                 </button>
               ) : (
