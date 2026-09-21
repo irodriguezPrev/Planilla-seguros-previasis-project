@@ -6,7 +6,7 @@ import {
 
 export const FRECUENCIA_BY_MONEDA: Record<MonedaPago, FrecuenciaPago[]> = {
   Bolívares: ['Mensual', 'Trimestral'],
-  Dólares: ['Semestral', 'Anual'],
+  Dólares: ['Mensual', 'Trimestral', 'Semestral', 'Anual'],
 };
 
 export const MODALIDAD_PAGO_BY_MONEDA: Record<MonedaPago, ModalidadPago[]> = {

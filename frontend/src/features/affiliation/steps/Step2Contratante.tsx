@@ -8,7 +8,7 @@ import {
   contractorSection,
   PersonaNaturalData,
   PersonaJuridicaData,
-  // TipoPersonacontractor,
+  // TipoPersonaContratista,
   TipoDocumento,
   TipoRif,
   EstadoCivil,
@@ -18,48 +18,48 @@ import {
 } from '@/core/interfaces/affiliation.interfaces';
 
 interface Step2Props {
-  contractor: contractorSection;
-  onChangeContractor: (contractor: contractorSection) => void;
+  contratista: contractorSection;
+  onChangeContratista: (contratista: contractorSection) => void;
 }
 
 export const Step2contractor: React.FC<Step2Props> = ({
-  contractor,
-  onChangeContractor,
+  contratista,
+  onChangeContratista,
 }) => {
-  const updatecontractor = (fields: Partial<contractorSection>) => {
-    onChangeContractor({ ...contractor, ...fields, tipoPersona: 'Natural' });
+  const updateContratista = (fields: Partial<contractorSection>) => {
+    onChangeContratista({ ...contratista, ...fields, tipoPersona: 'Natural' });
   };
 
   const updateNatural = (fields: Partial<PersonaNaturalData>) => {
-    onChangeContractor({
-      ...contractor,
+    onChangeContratista({
+      ...contratista,
       tipoPersona: 'Natural',
-      personaNatural: { ...contractor.personaNatural, ...fields },
+      personaNatural: { ...contratista.personaNatural, ...fields },
     });
   };
 
   const updateJuridica = (fields: Partial<PersonaJuridicaData>) => {
-    onChangeContractor({
-      ...contractor,
-      personaJuridica: { ...contractor.personaJuridica, ...fields },
+    onChangeContratista({
+      ...contratista,
+      personaJuridica: { ...contratista.personaJuridica, ...fields },
     });
   };
 
   const updateTutor = (fields: Partial<PersonaNaturalData>) => {
-    onChangeContractor({
-      ...contractor,
+    onChangeContratista({
+      ...contratista,
       personaJuridica: {
-        ...contractor.personaJuridica,
+        ...contratista.personaJuridica,
         representanteLegal: {
-          ...contractor.personaJuridica.representanteLegal,
+          ...contratista.personaJuridica.representanteLegal,
           ...fields,
         },
       },
     });
   };
 
-  const nat = contractor.personaNatural;
-  const jur = contractor.personaJuridica;
+  const nat = contratista.personaNatural;
+  const jur = contratista.personaJuridica;
   const rep = jur.representanteLegal;
 
   return (
@@ -68,14 +68,14 @@ export const Step2contractor: React.FC<Step2Props> = ({
         <div>
           <Badge variant="info">Sección 3</Badge>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.25rem' }}>
-            Datos del contractor
+            Datos del contratista
           </h3>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
             Persona natural responsable de la contratación y pago del plan
           </p>
         </div>
 
-        {/* Toggle si el contractor es diferente al titular */}
+        {/* Toggle si el contratista es diferente al titular */}
         <div
           style={{
             display: 'flex',
@@ -89,17 +89,17 @@ export const Step2contractor: React.FC<Step2Props> = ({
         >
           <input
             type="checkbox"
-            id="contractorDiferente"
+            id="contratistaDiferente"
             style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-            checked={contractor.esDiferente}
-            onChange={(e) => updatecontractor({ esDiferente: e.target.checked })}
+            checked={contratista.esDiferente}
+            onChange={(e) => updateContratista({ esDiferente: e.target.checked })}
           />
-          <label htmlFor="contractorDiferente" style={{ fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}>
-            ¿El contractor es diferente al Propuesto Afiliado Titular?
+          <label htmlFor="contratistaDiferente" style={{ fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}>
+            ¿El contratista es diferente al Propuesto Afiliado Titular?
           </label>
         </div>
 
-        {!contractor.esDiferente ? (
+        {!contratista.esDiferente ? (
           <div
             style={{
               padding: '1.25rem',
@@ -110,16 +110,16 @@ export const Step2contractor: React.FC<Step2Props> = ({
             }}
           >
             <p style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--accent-primary)' }}>
-              El contractor es el mismo Afiliado Titular.
+              El contratista es el mismo Afiliado Titular.
             </p>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
               Los datos personales, fiscales y de contacto capturados en el Paso 1 se utilizarán automáticamente en el documento oficial.
             </p>
           </div>
         ) : (
-          /* Renderizado si el contractor es DIFERENTE */
+          /* Renderizado si el contratista es DIFERENTE */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* PERSONA NATURAL contractor */}
+            {/* PERSONA NATURAL contratista */}
             {(
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="grid grid-cols-3 gap-4">
@@ -313,8 +313,8 @@ export const Step2contractor: React.FC<Step2Props> = ({
               </div>
             )}
 
-            {/* PERSONA JURÍDICA contractor */}
-            {contractor.tipoPersona === 'Juridica' && (
+            {/* PERSONA JURÍDICA contratista */}
+            {contratista.tipoPersona === 'Juridica' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <h4 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
                   Datos de la Empresa / Persona Jurídica

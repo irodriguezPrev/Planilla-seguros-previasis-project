@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   AfiliadoRow,
   PlanSolicitado,
@@ -54,8 +54,8 @@ const planOptions: PlanOption[] = [
   },
   {
     id: 'Abuelos',
-    name: 'Plan Abuelos - Bronze',
-    classStyle: 'plan-abuelos',
+    name: 'Plan Abuelos - Bronce',
+    classStyle: 'plan-bronce',
     features: ['Personas de 61 a 80 años', 'Telemedicina 24 horas', 'Atención domiciliaria'],
     defaultCoverage: '$3.000',
     monthlyPrices: { '61-80': 35 },
@@ -63,7 +63,7 @@ const planOptions: PlanOption[] = [
   {
     id: 'Abuelos',
     name: 'Plan Abuelos - Plata',
-    classStyle: 'plan-abuelos',
+    classStyle: 'plan-plata',
     features: ['Personas de 61 a 80 años', 'Cobertura ampliada', 'Atención domiciliaria'],
     defaultCoverage: '$5.000',
     monthlyPrices: { '61-80': 50 },
@@ -71,7 +71,7 @@ const planOptions: PlanOption[] = [
   {
     id: 'Abuelos',
     name: 'Plan Abuelos - Oro',
-    classStyle: 'plan-abuelos',
+    classStyle: 'plan-oro',
     features: ['Personas de 61 a 80 años', 'Cobertura máxima', 'Atención domiciliaria'],
     defaultCoverage: '$10.000',
     monthlyPrices: { '61-80': 70 },
@@ -123,6 +123,22 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
   onChangeAfiliados,
 }) => {
   const [selectedMemberIndex, setSelectedMemberIndex] = useState<number>(0);
+  const memberNameInputRef = useRef<HTMLInputElement | null>(null);
+
+  const selectMemberForEditing = (index: number) => {
+    setSelectedMemberIndex(index);
+
+    window.requestAnimationFrame(() => {
+      memberNameInputRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+
+      window.setTimeout(() => {
+        memberNameInputRef.current?.focus({ preventScroll: true });
+      }, 500);
+    });
+  };
 
   const normalizeAfiliados = (items: AfiliadoRow[]) =>
     items.map((item, index) => {
@@ -152,7 +168,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
     };
     const updated = normalizeAfiliados([...afiliados, newAfiliado]);
     onChangeAfiliados(updated);
-    setSelectedMemberIndex(updated.length - 1);
+    selectMemberForEditing(updated.length - 1);
   };
 
   const updateAfiliado = (index: number, fields: Partial<AfiliadoRow>) => {
@@ -229,7 +245,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
       <div className="grid grid-cols-2 gap-6">
         {/* GRUPO FAMILIAR (Izquierda) */}
         <div className="previasis-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="family-group-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
               <div
                 style={{
@@ -269,7 +285,16 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
               return (
                 <div
                   key={af.id}
-                  onClick={() => setSelectedMemberIndex(idx)}
+                  className="family-member-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => selectMemberForEditing(idx)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      selectMemberForEditing(idx);
+                    }
+                  }}
                   style={{
                     padding: '0.875rem 1rem',
                     borderRadius: 'var(--radius-lg)',
@@ -284,7 +309,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                     boxShadow: isSelected ? '0 4px 12px var(--previasis-green-glow)' : 'none',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div className="family-member-main" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div
                       style={{
                         width: '28px',
@@ -318,7 +343,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="family-member-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {idx === 0 ? (
                       <span className="pill-badge" style={{ fontSize: '0.6875rem' }}>
                         Titular
@@ -424,7 +449,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                         </span>
                       )}
                     </div>
-                    <h4 style={{ fontWeight: 800, fontSize: '0.9375rem', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                    <h4 style={{ fontWeight: 800, fontSize: '0.9375rem', textTransform: 'uppercase', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
                       {plan.name}
                     </h4>
                     <p style={{ fontSize: '0.75rem', fontWeight: 700, marginTop: '0.2rem' }}>
@@ -458,6 +483,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
               Nombre(s) y Apellido(s) <span className="previasis-label-required">*</span>
             </label>
             <input
+              ref={memberNameInputRef}
               type="text"
               className="previasis-input"
               placeholder="Nombre completo"

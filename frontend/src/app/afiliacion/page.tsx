@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StepProgress, StepItem } from '@/features/affiliation/StepProgress';
 import { Step1HeaderAndTitular } from '@/features/affiliation/steps/Step1HeaderAndTitular';
 import { Step2contractor } from '@/features/affiliation/steps/Step2Contratante';
@@ -8,12 +8,17 @@ import { Step3AfiliadosPlan } from '@/features/affiliation/steps/Step3AfiliadosP
 import { Step4DeclaracionSalud } from '@/features/affiliation/steps/Step4DeclaracionSalud';
 import { Step5PagoYOtros } from '@/features/affiliation/steps/Step5PagoYOtros';
 import { Step6FirmasYDeclaraciones } from '@/features/affiliation/steps/Step6FirmasYDeclaraciones';
-import { DocumentUploader, UploadedFileItem } from '@/features/affiliation/DocumentUploader';
 import { PdfPreviewModal } from '@/features/affiliation/PdfPreviewModal';
 import { PreviasisLogo } from '@/core/components/common/PreviasisLogo';
-import { SolicitudAfiliacionFormState } from '@/core/interfaces/affiliation.interfaces';
+import {
+  AfiliadoRow,
+  DeclaracionSaludSection,
+  SolicitudAfiliacionFormState,
+} from '@/core/interfaces/affiliation.interfaces';
 import { HEALTH_QUESTIONS } from '@/core/config/health-questions.config';
+import { getCitiesByState } from '@/core/config/venezuela-locations.config';
 import { calculateActuarialAge } from '@/core/utils/age.utils';
+import { getQuestionStatus } from '@/core/utils/health-progress.utils';
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,7 +27,7 @@ import {
   RotateCcw,
   Sparkles,
   ShieldCheck,
-  Camera,
+  FileText,
 } from 'lucide-react';
 
 const STEPS: StepItem[] = [
@@ -60,6 +65,8 @@ const INITIAL_STATE: SolicitudAfiliacionFormState = {
     pep: 'NO',
     pepDescripcion: '',
     clasificacionActividad: 'Dependiente',
+    estadoResidencia: '',
+    ciudadResidencia: '',
     direccionHabitacion: '',
     direccionOficina: '',
     direccionCobro: 'Habitación',
@@ -163,7 +170,6 @@ const INITIAL_STATE: SolicitudAfiliacionFormState = {
     frecuenciaPago: 'Mensual',
     moneda: 'Dólares',
     modalidadPago: 'Pago en Oficina',
-    otrosContratos: '',
   },
   firmas: {
     lugar: 'Caracas, Dto. Capital',
@@ -184,6 +190,185 @@ const INITIAL_STATE: SolicitudAfiliacionFormState = {
 
 const STORAGE_KEY = 'previasis_afiliacion_draft_v2';
 
+type PreviewMode = 'draft' | 'final';
+
+const getApprovalSnapshot = (data: SolicitudAfiliacionFormState): string => JSON.stringify({
+  header: data.header,
+  titular: data.titular,
+  contratante: data.contratante,
+  afiliados: data.afiliados,
+  salud: data.salud,
+  pago: data.pago,
+  intermediario: data.intermediario,
+});
+
+const uppercaseName = (value: string | undefined) =>
+  (value || '').toLocaleUpperCase('es-VE'); //#TODO mover a helpers 
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * Applies only the fields changed by a child component over the latest state.
+ * This prevents rapid mobile events from restoring values from an older render.
+ */
+const mergeChangedValues = <T,>(latest: T, rendered: T, proposed: T): T => {
+  if (Object.is(rendered, proposed)) return latest;
+
+  if (Array.isArray(rendered) && Array.isArray(proposed) && Array.isArray(latest)) {
+    if (rendered.length !== proposed.length || latest.length !== rendered.length) return proposed as T;
+
+    const sameItems = proposed.every((item, index) => {
+      const renderedItem = rendered[index];
+      if (!isRecord(item) || !isRecord(renderedItem)) return true;
+      const itemKey = item.id ?? item.codigoAfiliado;
+      const renderedKey = renderedItem.id ?? renderedItem.codigoAfiliado;
+      return itemKey === undefined || renderedKey === undefined || itemKey === renderedKey;
+    });
+    if (!sameItems) return proposed as T;
+
+    return proposed.map((item, index) =>
+      mergeChangedValues(latest[index], rendered[index], item),
+    ) as T;
+  }
+
+  if (isRecord(rendered) && isRecord(proposed) && isRecord(latest)) {
+    const merged: Record<string, unknown> = { ...latest };
+    Object.keys(proposed).forEach((key) => {
+      merged[key] = mergeChangedValues(latest[key], rendered[key], proposed[key]);
+    });
+    return merged as T;
+  }
+
+  return proposed;
+};
+
+const normalizeFormNames = (
+  data: SolicitudAfiliacionFormState,
+): SolicitudAfiliacionFormState => ({
+  ...data,
+  titular: {
+    ...data.titular,
+    nombres: uppercaseName(data.titular.nombres),
+    apellidos: uppercaseName(data.titular.apellidos),
+  },
+  contratante: {
+    ...data.contratante,
+    personaNatural: {
+      ...data.contratante.personaNatural,
+      nombres: uppercaseName(data.contratante.personaNatural.nombres),
+      apellidos: uppercaseName(data.contratante.personaNatural.apellidos),
+    },
+    personaJuridica: {
+      ...data.contratante.personaJuridica,
+      representanteLegal: {
+        ...data.contratante.personaJuridica.representanteLegal,
+        nombres: uppercaseName(data.contratante.personaJuridica.representanteLegal.nombres),
+        apellidos: uppercaseName(data.contratante.personaJuridica.representanteLegal.apellidos),
+      },
+    },
+  },
+  afiliados: data.afiliados.map((afiliado) => ({
+    ...afiliado,
+    nombreCompleto: uppercaseName(afiliado.nombreCompleto),
+  })),
+  intermediario: {
+    ...data.intermediario,
+    nombreApellido: uppercaseName(data.intermediario.nombreApellido),
+  },
+});
+
+const reconcileAffiliateHealthData = (
+  salud: DeclaracionSaludSection,
+  previousAffiliates: AfiliadoRow[],
+  nextAffiliates: AfiliadoRow[],
+): DeclaracionSaludSection => {
+  const previousCodeById = new Map(
+    previousAffiliates.map((afiliado) => [afiliado.id, afiliado.codigoAfiliado]),
+  );
+  const codeMap = new Map<number, number>();
+
+  nextAffiliates.forEach((afiliado) => {
+    const previousCode = previousCodeById.get(afiliado.id);
+    if (previousCode !== undefined) codeMap.set(previousCode, afiliado.codigoAfiliado);
+  });
+
+  const remapRecord = <T,>(record?: Partial<Record<number, T>>) => {
+    if (!record) return undefined;
+    const remapped: Partial<Record<number, T>> = {};
+    Object.entries(record).forEach(([rawCode, value]) => {
+      const nextCode = codeMap.get(Number(rawCode));
+      if (nextCode !== undefined && value !== undefined) remapped[nextCode] = value;
+    });
+    return remapped;
+  };
+
+  const preguntas = Object.fromEntries(
+    Object.entries(salud.preguntas).map(([questionId, state]) => {
+      const hasAffiliateData =
+        state.respuestasAfiliados !== undefined ||
+        state.detallesExtraPorAfiliado !== undefined ||
+        state.codigosAfiliados !== undefined;
+
+      if (!hasAffiliateData) return [questionId, state];
+
+      const respuestasAfiliados = remapRecord(state.respuestasAfiliados);
+      const detallesExtraPorAfiliado = remapRecord(state.detallesExtraPorAfiliado);
+      const mappedSelectedCodes = (state.codigosAfiliados || [])
+        .map((code) => codeMap.get(code))
+        .filter((code): code is number => code !== undefined);
+      const affirmativeCodes = Object.entries(respuestasAfiliados || {})
+        .filter(([, answer]) => answer === 'SÍ')
+        .map(([code]) => Number(code));
+      const codigosAfiliados = Array.from(new Set([
+        ...mappedSelectedCodes,
+        ...affirmativeCodes,
+      ])).sort((a, b) => a - b);
+      const detallesExtra = Object.entries(detallesExtraPorAfiliado || {})
+        .filter(([, value]) => value?.trim())
+        .map(([code, value]) => `#${code}: ${value}`)
+        .join(' | ');
+
+      return [questionId, {
+        ...state,
+        respuesta: codigosAfiliados.length > 0 ? 'SÍ' as const : 'NO' as const,
+        respuestasAfiliados,
+        detallesExtraPorAfiliado,
+        codigosAfiliados,
+        detallesExtra: detallesExtra || undefined,
+      }];
+    }),
+  ) as DeclaracionSaludSection['preguntas'];
+
+  return {
+    ...salud,
+    preguntas,
+    afeccionesDetalles: salud.afeccionesDetalles
+      .filter((detail) => codeMap.has(Number(detail.codigoAfiliado)))
+      .map((detail) => ({
+        ...detail,
+        codigoAfiliado: codeMap.get(Number(detail.codigoAfiliado))!,
+      })),
+    detallesDeportivos: (salud.detallesDeportivos || [])
+      .filter((detail) => codeMap.has(detail.codigoAfiliado))
+      .map((detail) => ({
+        ...detail,
+        codigoAfiliado: codeMap.get(detail.codigoAfiliado)!,
+      })),
+    detallesAclaracion: Object.fromEntries(
+      Object.entries(salud.detallesAclaracion || {}).map(([questionId, details]) => [
+        questionId,
+        details
+          .filter((detail) => codeMap.has(detail.codigoAfiliado))
+          .map((detail) => ({
+            ...detail,
+            codigoAfiliado: codeMap.get(detail.codigoAfiliado)!,
+          })),
+      ]),
+    ),
+  };
+};
+
 type LegacyAntecedent = {
   tiene?: 'SÍ' | 'NO';
   numContrato?: string;
@@ -202,6 +387,8 @@ export default function AfiliacionPage() {
   const [formData, setFormData] = useState<SolicitudAfiliacionFormState>(INITIAL_STATE);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('draft');
+  const [approvalSnapshot, setApprovalSnapshot] = useState<string | null>(null);
   const [savedAlert, setSavedAlert] = useState<boolean>(false);
 
   useEffect(() => {
@@ -251,18 +438,31 @@ export default function AfiliacionPage() {
         const pago = { ...legacyPago, otrosContratos: '' };
         delete pago.negativaPrevia;
 
-        setFormData({
+        setFormData(normalizeFormNames({
           ...parsed,
           salud: {
             ...salud,
             preguntas,
+            afeccionesDetalles: (salud.afeccionesDetalles || [])
+              .filter((detail) => {
+                const padecimiento = detail.padecimiento.trim().toLocaleLowerCase('es-VE');
+                return !(
+                  detail.preguntaId === 6 &&
+                  (padecimiento === 'y otros similares' || padecimiento === 'otros similares')
+                );
+              })
+              .map((detail) =>
+                detail.padecimiento.trim().toLocaleLowerCase('es-VE') === 'presbicia o similares'
+                  ? { ...detail, padecimiento: 'Presbicia' }
+                  : detail,
+              ),
           },
           pago: pago as SolicitudAfiliacionFormState['pago'],
           contratante: {
             ...parsed.contratante,
             tipoPersona: 'Natural',
           },
-        });
+        }));
       }
     } catch (e) {
       console.error('Error cargando borrador:', e);
@@ -309,10 +509,53 @@ export default function AfiliacionPage() {
     formData.titular.sexo,
   ]);
 
+  const handleAfiliadosChange = (nextAffiliates: AfiliadoRow[]) => {
+    const normalizedAffiliates = nextAffiliates.map((afiliado) => ({
+      ...afiliado,
+      nombreCompleto: uppercaseName(afiliado.nombreCompleto),
+    }));
+    const compositionChanged =
+      formData.afiliados.length !== normalizedAffiliates.length ||
+      formData.afiliados.some((afiliado, index) => afiliado.id !== normalizedAffiliates[index]?.id);
+
+    if (compositionChanged) {
+      setCompletedSteps((steps) => steps.filter((step) => step < 4));
+    }
+
+    setFormData((previous) => {
+      const mergedAffiliates = mergeChangedValues(
+        previous.afiliados,
+        formData.afiliados,
+        normalizedAffiliates,
+      );
+      return {
+        ...previous,
+        afiliados: mergedAffiliates,
+        salud: reconcileAffiliateHealthData(
+          previous.salud,
+          previous.afiliados,
+          mergedAffiliates,
+        ),
+      };
+    });
+  };
+
   const validateStep = (step: number): boolean => {
     if (step === 1) {
       const t = formData.titular;
-      if (!t.nombres || !t.apellidos || !t.numDoc || !t.numRif || !t.fechaNacimiento || !t.telefonoMovil || !t.email) {
+      const validCities = getCitiesByState(t.estadoResidencia);
+      if (
+        !t.nombres ||
+        !t.apellidos ||
+        !t.numDoc ||
+        !t.numRif ||
+        !t.fechaNacimiento ||
+        !t.estadoResidencia ||
+        !t.ciudadResidencia ||
+        !validCities.includes(t.ciudadResidencia) ||
+        !t.telefonoMovil ||
+        !t.email
+      ) {
         alert('Por favor complete los campos obligatorios del Titular.');
         return false;
       }
@@ -339,75 +582,49 @@ export default function AfiliacionPage() {
       }
     }
     if (step === 6) {
-      if (!formData.firmas.firmaTitularBase64) {
-        alert('La firma digital del Titular es obligatoria.');
-        return false;
-      }
       if (!formData.firmas.aceptaDeclaracionTitular) {
         alert('Debe marcar la casilla de aceptación de la Declaración del Titular.');
         return false;
       }
+      if (!formData.firmas.aceptaOrigenFondosContratante) {
+        alert('Debe marcar la casilla de aceptación del Origen Lícito de los Fondos del Contratante.');
+        return false;
+      }
+      if (!formData.firmas.firmaTitularBase64) {
+        alert('La firma digital del Titular es obligatoria.');
+        return false;
+      }
+      if (formData.contratante.esDiferente && !formData.firmas.firmaContratanteBase64) {
+        alert('La firma digital del Contratante es obligatoria.');
+        return false;
+      }
+      if (!formData.firmas.lugar || !formData.firmas.fecha) {
+        alert('Complete el lugar y la fecha de suscripción.');
+        return false;
+      }
+      const intermediary = formData.intermediario;
+      if (
+        !intermediary.nombreApellido ||
+        !intermediary.numCredencial ||
+        !intermediary.ciRifPasaporte
+      ) {
+        alert('Complete los datos obligatorios del intermediario.');
+        return false;
+      }
     }
     if (step === 4) {
-      const preguntas = formData.salud.preguntas;
-      const beneficiaryDetailIds = HEALTH_QUESTIONS
-        .filter((q) => q.beneficiaryDetail)
-        .map((q) => q.id);
-
-      for (const [id, pregunta] of Object.entries(preguntas)) {
-        if (
-          pregunta.respuesta === 'SÍ' &&
-          beneficiaryDetailIds.includes(Number(id)) &&
-          (!pregunta.codigosAfiliados || pregunta.codigosAfiliados.length === 0)
-        ) {
-          const qTitle = HEALTH_QUESTIONS.find((q) => q.id === Number(id))?.title || `Pregunta ${id}`;
-          alert(`Debe seleccionar al menos un beneficiario para: ${qTitle}`);
-          return false;
-        }
-      }
-      if (preguntas[17]?.respuesta === 'SÍ') {
-        const detalles = formData.salud.detallesDeportivos || [];
-        const codigosSeleccionados = preguntas[17].codigosAfiliados || [];
-        for (const codigo of codigosSeleccionados) {
-          const detalle = detalles.find((d) => d.codigoAfiliado === codigo);
-          if (!detalle || !detalle.deporte.trim() || !detalle.frecuencia.trim() || !detalle.nivel) {
-            alert('Debe completar deporte, frecuencia y nivel para cada beneficiario en Práctica Deportiva.');
-            return false;
-          }
-        }
-      }
-
-      const aclaracionQuestionIds = HEALTH_QUESTIONS
-        .filter((q) => q.beneficiaryDetail && q.id !== 17)
-        .map((q) => q.id);
-
-      for (const qid of aclaracionQuestionIds) {
-        const pregunta = preguntas[qid];
-        if (!pregunta || pregunta.respuesta !== 'SÍ') continue;
-        const codigos = pregunta.codigosAfiliados || [];
-        if (codigos.length === 0) continue;
-        const detalles = formData.salud.detallesAclaracion?.[qid] || [];
-        if (detalles.length === 0) {
-          const qTitle = HEALTH_QUESTIONS.find((q) => q.id === qid)?.title || `Pregunta ${qid}`;
-          alert(`Debe completar los campos de aclaración para cada beneficiario en: ${qTitle}`);
-          return false;
-        }
-        const allCodigosHaveDetalle = codigos.every((c) =>
-          detalles.some((d) => d.codigoAfiliado === c)
+      const firstIncompleteQuestion = HEALTH_QUESTIONS.find(
+        (question) => getQuestionStatus(formData.salud, question, formData.afiliados) !== 'complete',
+      );
+      if (firstIncompleteQuestion) {
+        const status = getQuestionStatus(formData.salud, firstIncompleteQuestion, formData.afiliados);
+        alert(
+          status === 'pending'
+            ? `Debe responder la pregunta ${firstIncompleteQuestion.id}: ${firstIncompleteQuestion.title}.`
+            : `Debe completar los detalles de la pregunta ${firstIncompleteQuestion.id}: ${firstIncompleteQuestion.title}.`,
         );
-        if (!allCodigosHaveDetalle) {
-          const qTitle = HEALTH_QUESTIONS.find((q) => q.id === qid)?.title || `Pregunta ${qid}`;
-          alert(`Debe completar los campos de aclaración para cada beneficiario en: ${qTitle}`);
-          return false;
-        }
-        for (const dt of detalles) {
-          if (!dt.campo1.trim() || !dt.campo2.trim()) {
-            const qTitle = HEALTH_QUESTIONS.find((q) => q.id === qid)?.title || `Pregunta ${qid}`;
-            alert(`Debe completar los campos de aclaración para cada beneficiario en: ${qTitle}`);
-            return false;
-          }
-        }
-       }
+        return false;
+      }
      }
      if (step === 5) {
        if (!formData.pago.frecuenciaPago) {
@@ -426,17 +643,74 @@ export default function AfiliacionPage() {
      return true;
    };
 
+  useEffect(() => {
+    if (!approvalSnapshot) return;
+
+    if (getApprovalSnapshot(formData) !== approvalSnapshot) {
+      setApprovalSnapshot(null);
+    }
+  }, [approvalSnapshot, formData]);
+
+  const handleApprovePreview = () => {
+    if (previewMode !== 'draft') return;
+
+    setApprovalSnapshot(getApprovalSnapshot(formData));
+    setCompletedSteps((steps) =>
+      steps.includes(5) ? steps : [...steps, 5],
+    );
+    setShowPreviewModal(false);
+    setCurrentStep(6);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePreviewClose = () => {
+    setShowPreviewModal(false);
+  };
+
+  const handlePreviewBack = () => {
+    setShowPreviewModal(false);
+    setCurrentStep(5);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleReviewDraft = () => {
+    setPreviewMode('draft');
+    setShowPreviewModal(true);
+  };
+
   const handleNext = () => {
     if (!validateStep(currentStep)) return;
+
     if (!completedSteps.includes(currentStep)) {
       setCompletedSteps([...completedSteps, currentStep]);
     }
     saveDraft();
+
+    if (currentStep === 5) {
+      setPreviewMode('draft');
+      setShowPreviewModal(true);
+      return;
+    }
+
+    if (currentStep === 6) {
+      if (
+        !approvalSnapshot ||
+        getApprovalSnapshot(formData) !== approvalSnapshot
+      ) {
+        setApprovalSnapshot(null);
+        setPreviewMode('draft');
+        setShowPreviewModal(true);
+        return;
+      }
+
+      setPreviewMode('final');
+      setShowPreviewModal(true);
+      return;
+    }
+
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      setShowPreviewModal(true);
     }
   };
 
@@ -448,7 +722,34 @@ export default function AfiliacionPage() {
   };
 
   const handleLoadSampleData = () => {
-    setFormData({
+    const allNoAnswers = { 1: 'NO' as const, 2: 'NO' as const, 3: 'NO' as const };
+    const sampleQuestions = Object.fromEntries(
+      HEALTH_QUESTIONS.map((question) => [
+        question.id,
+        question.requiresBeneficiarySelection === false
+          ? { respuesta: 'NO' as const }
+          : { respuesta: 'NO' as const, respuestasAfiliados: { ...allNoAnswers } },
+      ]),
+    ) as SolicitudAfiliacionFormState['salud']['preguntas'];
+    sampleQuestions[3] = {
+      respuesta: 'SÍ',
+      codigosAfiliados: [1],
+      respuestasAfiliados: { 1: 'SÍ', 2: 'NO', 3: 'NO' },
+    };
+    sampleQuestions[15] = {
+      respuesta: 'SÍ',
+      codigosAfiliados: [2],
+      respuestasAfiliados: { 1: 'NO', 2: 'SÍ', 3: 'NO' },
+      detallesExtraPorAfiliado: { 2: '1 embarazo a término sin complicaciones' },
+      detallesExtra: '#2: 1 embarazo a término sin complicaciones',
+    };
+    sampleQuestions[17] = {
+      respuesta: 'SÍ',
+      codigosAfiliados: [1],
+      respuestasAfiliados: { 1: 'SÍ', 2: 'NO', 3: 'NO' },
+    };
+
+    setFormData(normalizeFormNames({
       header: {
         tipoOperacion: 'Emisión',
         tipoContrato: 'Individual',
@@ -473,6 +774,8 @@ export default function AfiliacionPage() {
         pep: 'NO',
         pepDescripcion: '',
         clasificacionActividad: 'Independiente',
+        estadoResidencia: 'Lara',
+        ciudadResidencia: 'Barquisimeto',
         direccionHabitacion: 'Av. Pedro León Torres, Res. París, Apto 5-A, Barquisimeto, Lara',
         direccionOficina: 'Edificio Centro Empresarial, Piso 4, Barquisimeto',
         direccionCobro: 'Habitación',
@@ -534,32 +837,7 @@ export default function AfiliacionPage() {
         },
       ],
       salud: {
-        preguntas: {
-          1: { respuesta: 'NO' },
-          2: { respuesta: 'NO' },
-          3: { respuesta: 'SÍ', detallesExtra: 'Miopía leve (lentes correctivos)' },
-          4: { respuesta: 'NO' },
-          5: { respuesta: 'NO' },
-          6: { respuesta: 'NO' },
-          7: { respuesta: 'NO' },
-          8: { respuesta: 'NO' },
-          9: { respuesta: 'NO' },
-          10: { respuesta: 'NO' },
-          11: { respuesta: 'NO' },
-          12: { respuesta: 'NO' },
-          13: { respuesta: 'NO' },
-          14: { respuesta: 'NO' },
-          15: { respuesta: 'SÍ', detallesExtra: '1 embarazo a término sin complicaciones' },
-          16: { respuesta: 'NO' },
-          17: { respuesta: 'SÍ', codigosAfiliados: [1], detallesExtra: 'Ciclismo de ruta 2 veces por semana' },
-          18: { respuesta: 'NO' },
-          19: { respuesta: 'NO' },
-          20: { respuesta: 'NO' },
-          21: { respuesta: 'NO' },
-          22: { respuesta: 'NO' },
-          23: { respuesta: 'NO' },
-          24: { respuesta: 'NO' },
-        },
+        preguntas: sampleQuestions,
         detallesDeportivos: [
           { codigoAfiliado: 1, deporte: 'Ciclismo de ruta', frecuencia: '2 veces por semana', nivel: 'Amateur' },
         ],
@@ -567,6 +845,7 @@ export default function AfiliacionPage() {
         afeccionesDetalles: [
           {
             id: 'af1',
+            preguntaId: 3,
             codigoAfiliado: 1,
             padecimiento: 'Defecto de refracción visual (Miopía)',
             fechaDiagnostico: '05/2020',
@@ -580,7 +859,6 @@ export default function AfiliacionPage() {
         frecuenciaPago: 'Anual',
         moneda: 'Dólares',
         modalidadPago: 'Pago en Oficina',
-        otrosContratos: '',
       },
       firmas: {
         lugar: 'Barquisimeto, Edo. Lara',
@@ -597,8 +875,11 @@ export default function AfiliacionPage() {
         ciRifPasaporte: '15889922',
       },
       documentosAdjuntos: [],
-    });
+    }));
     setCompletedSteps([1, 2, 3, 4, 5]);
+    setApprovalSnapshot(null);
+    setPreviewMode('draft');
+    setShowPreviewModal(false);
     alert('¡Datos de demostración cargados exitosamente!');
   };
 
@@ -608,11 +889,14 @@ export default function AfiliacionPage() {
       setFormData(INITIAL_STATE);
       setCompletedSteps([]);
       setCurrentStep(1);
+      setApprovalSnapshot(null);
+      setPreviewMode('draft');
+      setShowPreviewModal(false);
     }
   };
 
   return (
-    <div style={{ backgroundColor: 'var(--bg-app)', minHeight: '100vh', paddingBottom: '6rem' }}>
+    <div className="afiliacion-page" style={{ backgroundColor: 'var(--bg-app)', minHeight: '100vh', paddingBottom: '6rem' }}>
       <style suppressHydrationWarning>{`
         .afiliacion-hero {
           background: var(--grad-hero);
@@ -671,6 +955,7 @@ export default function AfiliacionPage() {
           left: 0;
           right: 0;
           z-index: 40;
+          transition: transform 180ms ease, opacity 180ms ease;
         }
         .afiliacion-bottom-inner {
           display: flex;
@@ -683,6 +968,16 @@ export default function AfiliacionPage() {
           border: 1px solid var(--border-card);
           box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
         }
+        .afiliacion-bottom-action {
+          display: flex;
+          flex: 1;
+        }
+        .afiliacion-bottom-action:last-child {
+          justify-content: flex-end;
+        }
+        .afiliacion-bottom-label-mobile {
+          display: none;
+        }
         .afiliacion-bottom-step {
           font-size: 0.8125rem;
           font-weight: 700;
@@ -690,6 +985,14 @@ export default function AfiliacionPage() {
         }
 
         @media (max-width: 768px) {
+          .afiliacion-page:has(input:focus, select:focus, textarea:focus) .afiliacion-bottom-bar {
+            transform: translateY(calc(100% + 2rem));
+            opacity: 0;
+            pointer-events: none;
+          }
+          .afiliacion-progress-card {
+            padding: 1rem !important;
+          }
           .afiliacion-hero {
             padding: 1.5rem 1rem 2.5rem 1rem;
           }
@@ -697,15 +1000,27 @@ export default function AfiliacionPage() {
             flex-direction: column;
             align-items: flex-start;
             gap: 0.75rem;
+            min-width: 0;
+            width: 100%;
+          }
+          .afiliacion-hero-brand > div:last-child {
+            min-width: 0;
+            width: 100%;
+          }
+          .afiliacion-hero-brand .pill-badge {
+            max-width: 100%;
+            white-space: normal;
           }
           .afiliacion-hero-logo {
             display: none;
           }
           .afiliacion-hero-actions {
             width: 100%;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
           .afiliacion-hero-action-btn {
-            flex: 1;
+            width: 100%;
             min-width: 0;
             justify-content: center;
             font-size: 0.75rem;
@@ -716,7 +1031,7 @@ export default function AfiliacionPage() {
             gap: 1.25rem;
           }
           .afiliacion-bottom-bar {
-            bottom: 0.5rem;
+            bottom: max(0.5rem, env(safe-area-inset-bottom));
           }
           .afiliacion-bottom-inner {
             padding: 0.75rem 1rem;
@@ -728,7 +1043,10 @@ export default function AfiliacionPage() {
           }
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
+          .afiliacion-page {
+            padding-bottom: calc(8rem + env(safe-area-inset-bottom)) !important;
+          }
           .afiliacion-hero {
             padding: 1.25rem 0.75rem 2rem 0.75rem;
           }
@@ -738,8 +1056,40 @@ export default function AfiliacionPage() {
           .afiliacion-hero-actions {
             gap: 0.375rem;
           }
+          .afiliacion-hero-actions .afiliacion-reset-button {
+            grid-column: 1 / -1;
+          }
           .afiliacion-bottom-inner {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            grid-template-areas:
+              "progress progress"
+              "previous next";
             padding: 0.625rem 0.75rem;
+            row-gap: 0.45rem;
+          }
+          .afiliacion-bottom-action {
+            min-width: 0;
+          }
+          .afiliacion-bottom-action:first-child {
+            grid-area: previous;
+          }
+          .afiliacion-bottom-action:last-child {
+            grid-area: next;
+          }
+          .afiliacion-bottom-progress {
+            grid-area: progress;
+            justify-content: center;
+          }
+          .afiliacion-bottom-action .btn-pill {
+            width: 100%;
+            min-width: 0;
+          }
+          .afiliacion-bottom-label-desktop {
+            display: none;
+          }
+          .afiliacion-bottom-label-mobile {
+            display: inline;
           }
         }
       `}</style>
@@ -752,7 +1102,7 @@ export default function AfiliacionPage() {
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                 <span className="pill-badge" style={{ backgroundColor: 'rgba(132, 204, 22, 0.2)', color: '#84CC16', borderColor: 'rgba(132, 204, 22, 0.4)' }}>
                   <ShieldCheck size={13} /> Sudeaseg Providencia Nº SAA-09-1585
                 </span>
@@ -778,21 +1128,26 @@ export default function AfiliacionPage() {
               onClick={handleLoadSampleData}
               className="btn-pill btn-pill-secondary afiliacion-hero-action-btn"
             >
-              <Sparkles size={14} color="#84CC16" /> Cargar Ejemplo
+              <Sparkles size={14} color="#84CC16" />
+              <span className="afiliacion-bottom-label-desktop">Cargar Ejemplo</span>
+              <span className="afiliacion-bottom-label-mobile">Ejemplo</span>
             </button>
             <button
               type="button"
               onClick={saveDraft}
               className="btn-pill btn-pill-secondary afiliacion-hero-action-btn"
             >
-              <Save size={14} /> Guardar borrador
+              <Save size={14} />
+              <span className="afiliacion-bottom-label-desktop">Guardar borrador</span>
+              <span className="afiliacion-bottom-label-mobile">Guardar</span>
             </button>
             <button
               type="button"
               onClick={handleReset}
-              className="btn-pill btn-pill-secondary afiliacion-hero-action-btn"
+              className="btn-pill btn-pill-secondary afiliacion-hero-action-btn afiliacion-reset-button"
+              aria-label="Reiniciar formulario"
             >
-              <RotateCcw size={14} />
+              <RotateCcw size={14} /> Reiniciar
             </button>
           </div>
         </div>
@@ -806,7 +1161,7 @@ export default function AfiliacionPage() {
       {/* CONTENIDO PRINCIPAL FLUIDO */}
       <div className="container afiliacion-content">
         {/* Stepper Progress */}
-        <div className="previasis-card" style={{ padding: '1.25rem 1.5rem' }}>
+        <div className="previasis-card afiliacion-progress-card" style={{ padding: '1.25rem 1.5rem' }}>
           <StepProgress
             steps={STEPS}
             currentStep={currentStep}
@@ -826,25 +1181,65 @@ export default function AfiliacionPage() {
             <Step1HeaderAndTitular
               header={formData.header}
               titular={formData.titular}
-              onChangeHeader={(header) => setFormData({ ...formData, header })}
-              onChangeTitular={(titular) => setFormData({ ...formData, titular })}
+              onChangeHeader={(header) => setFormData((previous) => ({
+                ...previous,
+                header: mergeChangedValues(previous.header, formData.header, header),
+              }))}
+              onChangeTitular={(titular) => {
+                const normalizedTitular = {
+                  ...titular,
+                  nombres: uppercaseName(titular.nombres),
+                  apellidos: uppercaseName(titular.apellidos),
+                };
+                setFormData((previous) => ({
+                  ...previous,
+                  titular: mergeChangedValues(
+                    previous.titular,
+                    formData.titular,
+                    normalizedTitular,
+                  ),
+                }));
+              }}
             />
           )}
 
           {currentStep === 2 && (
             <Step2contractor
-              contractor={formData.contratante}
-              onChangeContractor={(contratante) => setFormData({
-                ...formData,
-                contratante: { ...contratante, tipoPersona: 'Natural' },
-              })}
+              contratista={formData.contratante}
+              onChangeContratista={(contratante) => {
+                const normalizedContratante = {
+                  ...contratante,
+                  tipoPersona: 'Natural',
+                  personaNatural: {
+                    ...contratante.personaNatural,
+                    nombres: uppercaseName(contratante.personaNatural.nombres),
+                    apellidos: uppercaseName(contratante.personaNatural.apellidos),
+                  },
+                  personaJuridica: {
+                    ...contratante.personaJuridica,
+                    representanteLegal: {
+                      ...contratante.personaJuridica.representanteLegal,
+                      nombres: uppercaseName(contratante.personaJuridica.representanteLegal.nombres),
+                      apellidos: uppercaseName(contratante.personaJuridica.representanteLegal.apellidos),
+                    },
+                  },
+                } as typeof contratante;
+                setFormData((previous) => ({
+                  ...previous,
+                  contratante: mergeChangedValues(
+                    previous.contratante,
+                    formData.contratante,
+                    normalizedContratante,
+                  ),
+                }));
+              }}
             />
           )}
 
           {currentStep === 3 && (
             <Step3AfiliadosPlan
               afiliados={formData.afiliados}
-              onChangeAfiliados={(afiliados) => setFormData({ ...formData, afiliados })}
+              onChangeAfiliados={handleAfiliadosChange}
               titularNombreCompleto={`${formData.titular.nombres} ${formData.titular.apellidos}`}
               titularDoc={formData.titular.numDoc}
             />
@@ -854,7 +1249,10 @@ export default function AfiliacionPage() {
             <Step4DeclaracionSalud
               salud={formData.salud}
               afiliados={formData.afiliados}
-              onChangeSalud={(salud) => setFormData({ ...formData, salud })}
+              onChangeSalud={(salud) => setFormData((previous) => ({
+                ...previous,
+                salud: mergeChangedValues(previous.salud, formData.salud, salud),
+              }))}
             />
           )}
 
@@ -862,7 +1260,10 @@ export default function AfiliacionPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <Step5PagoYOtros
                 pago={formData.pago}
-                onChangePago={(pago) => setFormData({ ...formData, pago })}
+                onChangePago={(pago) => setFormData((previous) => ({
+                  ...previous,
+                  pago: mergeChangedValues(previous.pago, formData.pago, pago),
+                }))}
               />
 
               {/* <div className="previasis-card">
@@ -887,8 +1288,24 @@ export default function AfiliacionPage() {
               intermediario={formData.intermediario}
               titular={formData.titular}
               contratante={formData.contratante}
-              onChangeFirmas={(firmas) => setFormData({ ...formData, firmas })}
-              onChangeIntermediario={(intermediario) => setFormData({ ...formData, intermediario })}
+              onChangeFirmas={(firmas) => setFormData((previous) => ({
+                ...previous,
+                firmas: mergeChangedValues(previous.firmas, formData.firmas, firmas),
+              }))}
+              onChangeIntermediario={(intermediario) => {
+                const normalizedIntermediario = {
+                  ...intermediario,
+                  nombreApellido: uppercaseName(intermediario.nombreApellido),
+                };
+                setFormData((previous) => ({
+                  ...previous,
+                  intermediario: mergeChangedValues(
+                    previous.intermediario,
+                    formData.intermediario,
+                    normalizedIntermediario,
+                  ),
+                }));
+              }}
             />
           )}
         </div>
@@ -898,16 +1315,29 @@ export default function AfiliacionPage() {
       <div className="afiliacion-bottom-bar">
         <div className="container" style={{ maxWidth: '1200px' }}>
           <div className="afiliacion-bottom-inner">
-            <button
-              type="button"
-              onClick={handlePrev}
-              disabled={currentStep === 1}
-              className="btn-pill btn-pill-secondary"
-            >
-              <ArrowLeft size={16} /> Anterior
-            </button>
+            <div className="afiliacion-bottom-action">
+              {currentStep === 6 && (
+                <button
+                  type="button"
+                  onClick={handleReviewDraft}
+                  className="btn-pill btn-pill-secondary"
+                  style={{ marginRight: '0.5rem' }}
+                >
+                  <FileText size={16} /> Revisar preview
+                </button>
+              )}
+              {currentStep > 1 && (
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  className="btn-pill btn-pill-secondary"
+                >
+                  <ArrowLeft size={16} /> Anterior
+                </button>
+              )}
+            </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="afiliacion-bottom-progress" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <button
                 type="button"
                 onClick={saveDraft}
@@ -922,32 +1352,41 @@ export default function AfiliacionPage() {
               </span>
             </div>
 
-            {currentStep < STEPS.length ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="btn-pill btn-pill-primary"
-              >
-                Siguiente Paso <ArrowRight size={16} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="btn-pill btn-pill-primary"
-                style={{ backgroundColor: 'var(--previasis-green)', boxShadow: '0 4px 16px var(--previasis-green-glow)' }}
-              >
-                <Send size={16} /> Enviar solicitud / Generar PDF
-              </button>
-            )}
+            <div className="afiliacion-bottom-action">
+              {currentStep < STEPS.length ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="btn-pill btn-pill-primary"
+                >
+                  <span className="afiliacion-bottom-label-desktop">Siguiente Paso</span>
+                  <span className="afiliacion-bottom-label-mobile">Siguiente</span>
+                  <ArrowRight size={16} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="btn-pill btn-pill-primary"
+                  style={{ backgroundColor: 'var(--previasis-green)', boxShadow: '0 4px 16px var(--previasis-green-glow)' }}
+                >
+                  <Send size={16} />
+                  <span className="afiliacion-bottom-label-desktop">Enviar solicitud / Generar PDF</span>
+                  <span className="afiliacion-bottom-label-mobile">Generar PDF</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* PDF Modal */}
       <PdfPreviewModal
+        mode={previewMode}
         isOpen={showPreviewModal}
-        onClose={() => setShowPreviewModal(false)}
+        onClose={handlePreviewClose}
+        onBack={previewMode === 'draft' ? handlePreviewBack : undefined}
+        onApprove={previewMode === 'draft' ? handleApprovePreview : undefined}
         formData={formData}
       />
     </div>

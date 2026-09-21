@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { RotateCcw, Check, PenTool, Upload, Image as ImageIcon } from 'lucide-react';
+import { RotateCcw, Check, PenTool } from 'lucide-react';
 
 export interface SignaturePadProps {
   label: string;
@@ -19,7 +19,6 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
   required = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(!!initialSignature);
 
@@ -114,30 +113,6 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     onSave(null);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        const rect = canvas.getBoundingClientRect();
-        ctx.clearRect(0, 0, rect.width, rect.height);
-        ctx.drawImage(img, 0, 0, rect.width, rect.height);
-        const dataUrl = canvas.toDataURL('image/png');
-        onSave(dataUrl);
-        setHasDrawn(true);
-      };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -210,16 +185,8 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         )}
       </div>
 
-      {/* Botones Borrar y Cargar Imagen */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleImageUpload}
-          style={{ display: 'none' }}
-        />
-
+      {/* Acción para limpiar la firma dibujada */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
         <button
           type="button"
           onClick={clear}
@@ -228,15 +195,6 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
           disabled={!hasDrawn}
         >
           <RotateCcw size={12} /> Borrar
-        </button>
-
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="btn-pill btn-pill-secondary"
-          style={{ fontSize: '0.75rem', padding: '0.35rem 0.85rem' }}
-        >
-          <Upload size={12} /> Cargar imagen
         </button>
       </div>
     </div>

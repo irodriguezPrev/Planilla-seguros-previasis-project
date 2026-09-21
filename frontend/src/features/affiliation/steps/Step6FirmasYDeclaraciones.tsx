@@ -157,7 +157,7 @@ export const Step6FirmasYDeclaraciones: React.FC<Step6Props> = ({
                 Firma Electrónica
               </h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Dibuje su firma o cargue una imagen
+                Dibuje su firma con el dedo o el mouse
               </p>
             </div>
           </div>

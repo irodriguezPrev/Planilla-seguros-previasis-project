@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Check } from 'lucide-react';
 
 export interface StepItem {
@@ -23,9 +23,15 @@ export const StepProgress: React.FC<StepProgressProps> = ({
   onSelectStep,
   completedSteps,
 }) => {
+  const tabsRef = useRef<HTMLDivElement | null>(null);
   const currentStepData = steps.find((s) => s.id === currentStep) || steps[0];
   //Porcentaje completacion del formulario
   const progressPercent = Math.round(((currentStep - 1) / (steps.length - 1)) * 100);
+
+  useEffect(() => {
+    const activeTab = tabsRef.current?.querySelector<HTMLElement>('[aria-current="step"]');
+    activeTab?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [currentStep]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
@@ -70,6 +76,8 @@ export const StepProgress: React.FC<StepProgressProps> = ({
 
       {/* Interactive Tabs / Steps Grid (scrollable on mobile) */}
       <div
+        className="step-progress-tabs"
+        ref={tabsRef}
         style={{
           display: 'flex',
           gap: '0.5rem',
@@ -81,12 +89,17 @@ export const StepProgress: React.FC<StepProgressProps> = ({
         {steps.map((step) => {
           const isActive = step.id === currentStep;
           const isCompleted = completedSteps.includes(step.id);
+          const canSelect = step.id <= currentStep || isCompleted;
 
           return (
             <button
+              className="step-progress-tab"
               key={step.id}
               onClick={() => onSelectStep(step.id)}
               type="button"
+              disabled={!canSelect}
+              aria-current={isActive ? 'step' : undefined}
+              title={canSelect ? step.title : 'Complete el paso actual para continuar'}
               style={{
                 flex: '0 0 auto',
                 display: 'flex',
@@ -112,7 +125,8 @@ export const StepProgress: React.FC<StepProgressProps> = ({
                   : isCompleted
                   ? 'var(--status-success)'
                   : 'var(--text-secondary)',
-                cursor: 'pointer',
+                cursor: canSelect ? 'pointer' : 'not-allowed',
+                opacity: canSelect ? 1 : 0.62,
                 transition: 'all var(--transition-fast)',
                 whiteSpace: 'nowrap',
               }}

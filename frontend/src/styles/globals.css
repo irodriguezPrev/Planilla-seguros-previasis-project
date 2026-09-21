@@ -75,7 +75,13 @@ html, body {
   color: var(--text-body);
   font-family: var(--font-sans);
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
+}
+
+html {
+  scroll-padding-top: 72px;
 }
 
 a {
@@ -329,6 +335,578 @@ button {
   min-width: 0;
 }
 
+/* Asistente de declaración de salud */
+.health-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.health-assistant-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.health-assistant-header,
+.health-title-block,
+.health-navigator-title,
+.health-positive-details-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.health-assistant-header {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.health-title-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--previasis-green);
+  background: var(--previasis-green-light);
+}
+
+.health-title-block h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--previasis-dark-green);
+}
+
+.health-title-block p,
+.health-navigator-title span,
+.health-positive-details-title span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.health-progress-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  color: var(--previasis-dark-green);
+}
+
+.health-progress-copy strong {
+  font-size: 1.05rem;
+}
+
+.health-progress-copy span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.health-progress-track {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.health-progress-track > div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--previasis-green), #22c55e);
+  transition: width 300ms ease;
+}
+
+.health-member-progress-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.65rem;
+}
+
+.health-member-progress {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+  color: var(--previasis-green);
+}
+
+.health-member-avatar,
+.health-affiliate-name > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--previasis-green);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.health-member-progress strong,
+.health-member-progress span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.health-member-progress strong {
+  color: var(--previasis-dark-green);
+  font-size: 0.8rem;
+}
+
+.health-member-progress span {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.health-status-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.health-status-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.health-status-legend .incomplete { color: #b45309; }
+.health-status-legend .complete { color: var(--previasis-green); }
+.health-status-legend strong { margin-left: auto; color: #b45309; }
+
+.health-workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.health-question-navigator {
+  position: sticky;
+  top: 1rem;
+  padding: 1rem;
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.health-navigator-title {
+  flex: 0 0 auto;
+  padding: 0.15rem 0.25rem 0.85rem;
+  color: var(--previasis-green);
+}
+
+.health-navigator-title strong {
+  display: block;
+  color: var(--previasis-dark-green);
+  font-size: 0.9rem;
+}
+
+.health-question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.health-question-nav-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.health-question-nav-item:hover,
+.health-question-nav-item.active {
+  border-color: rgba(0, 139, 71, 0.35);
+  background: var(--previasis-green-light);
+}
+
+.health-question-nav-item.active {
+  box-shadow: inset 3px 0 0 var(--previasis-green);
+}
+
+.health-question-number,
+.health-question-badge {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--previasis-green);
+  color: #fff;
+  font-weight: 800;
+}
+
+.health-question-number {
+  width: 26px;
+  height: 26px;
+  font-size: 0.7rem;
+}
+
+.health-question-nav-copy {
+  min-width: 0;
+}
+
+.health-question-nav-copy > strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--previasis-dark-green);
+  font-size: 0.76rem;
+}
+
+.health-question-nav-copy small {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+  font-size: 0.65rem;
+}
+
+.health-affiliate-dots {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.health-affiliate-dots i {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 0.58rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.health-affiliate-dots i[data-status='complete'] { background: #dcfce7; color: #08783f; }
+.health-affiliate-dots i[data-status='incomplete'] { background: #ffedd5; color: #b45309; }
+
+.health-question-status-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.health-question-editor {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.health-editor-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.85rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-card);
+  scroll-margin-top: 1rem;
+}
+
+.health-question-badge {
+  width: 38px;
+  height: 38px;
+}
+
+.health-editor-heading > div:nth-child(2) > span {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.health-editor-heading h4 {
+  color: var(--previasis-dark-green);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0.15rem 0 0.3rem;
+}
+
+.health-editor-heading p {
+  color: var(--text-muted);
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+.health-editor-status,
+.health-affiliate-answer-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.health-editor-status { padding: 0.45rem 0.7rem; }
+
+.health-answer-toolbar,
+.health-detail-heading,
+.health-editor-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.health-answer-toolbar {
+  padding: 0.8rem;
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+}
+
+.health-answer-toolbar > div {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--previasis-dark-green);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.health-affiliate-answer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.health-affiliate-answer {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(120px, auto);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.health-affiliate-name {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.health-affiliate-name strong,
+.health-affiliate-name small {
+  display: block;
+}
+
+.health-affiliate-name strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--previasis-dark-green);
+  font-size: 0.8rem;
+}
+
+.health-affiliate-name small { color: var(--text-muted); font-size: 0.68rem; }
+
+.health-answer-buttons {
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.health-answer-buttons button {
+  min-width: 54px;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.health-answer-buttons button.selected.no { background: #e2e8f0; color: #334155; }
+.health-answer-buttons button.selected.yes { background: var(--previasis-green); color: #fff; }
+
+.health-positive-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding-top: 0.5rem;
+}
+
+.health-positive-details-title {
+  color: var(--previasis-green);
+}
+
+.health-positive-details-title strong { display: block; color: var(--previasis-dark-green); font-size: 0.9rem; }
+
+.health-detail-panel,
+.health-global-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid rgba(0, 139, 71, 0.22);
+  border-radius: var(--radius-lg);
+  background: rgba(0, 139, 71, 0.035);
+}
+
+.health-detail-heading > div span,
+.health-detail-heading > div strong {
+  display: block;
+}
+
+.health-detail-heading > div span { color: var(--text-muted); font-size: 0.68rem; }
+.health-detail-heading strong { color: var(--previasis-dark-green); font-size: 0.84rem; }
+
+.health-condition-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.health-condition-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.38rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: var(--transition);
+}
+
+.health-condition-chip:hover,
+.health-condition-chip.selected {
+  border-color: var(--previasis-green);
+  background: var(--previasis-green-light);
+  color: var(--previasis-dark-green);
+}
+
+.health-other-condition-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.65rem;
+}
+
+.health-helper-text { margin-top: -0.55rem; color: var(--text-muted); font-size: 0.67rem; }
+
+.health-inline-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: #fff7ed;
+  color: #b45309;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.health-clinical-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.health-clinical-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.health-clinical-wide { grid-column: 1 / -1; }
+
+.health-delete-button,
+.health-delete-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 0;
+  background: transparent;
+  color: var(--status-error);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.health-special-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.health-special-detail-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.health-beneficiary-detail {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.health-detail-number {
+  align-self: center;
+  color: var(--previasis-green);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.health-editor-navigation {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-card);
+}
+
+@media (max-width: 1050px) {
+  .health-workspace { grid-template-columns: 1fr; }
+  .health-question-navigator { position: static; max-height: 360px; }
+}
+
 @media (max-width: 640px) {
   .health-sport-detail-grid {
     grid-template-columns: 1fr !important;
@@ -359,6 +937,43 @@ button {
   .health-selected-beneficiaries {
     margin-left: 0;
   }
+
+  .health-progress-copy { align-items: flex-start; }
+  .health-status-legend strong { width: 100%; margin-left: 0; }
+  .health-question-editor,
+  .health-assistant-summary { padding: 1rem; }
+  .health-question-navigator {
+    max-height: none;
+    overflow: visible;
+  }
+  .health-question-list {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(2, minmax(0, auto));
+    grid-auto-columns: minmax(230px, 82vw);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 0.65rem;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .health-question-nav-item {
+    scroll-snap-align: start;
+  }
+  .health-editor-heading { grid-template-columns: auto minmax(0, 1fr); }
+  .health-editor-status { grid-column: 1 / -1; justify-self: start; }
+  .health-affiliate-answer { grid-template-columns: 1fr auto; }
+  .health-affiliate-answer-status { grid-column: 1 / -1; }
+  .health-other-condition-row,
+  .health-clinical-grid,
+  .health-special-detail-grid,
+  .health-special-detail-grid-3,
+  .health-beneficiary-detail { grid-template-columns: 1fr; }
+  .health-clinical-wide { grid-column: auto; }
+  .health-detail-number { display: none; }
+  .health-delete-icon { justify-self: end; }
+  .health-editor-navigation .btn-pill { width: 100%; justify-content: center; }
 }
 
 .previasis-label {
@@ -458,6 +1073,23 @@ button {
 .plan-previasis { background: var(--grad-previasis); }
 .plan-abuelos { background: var(--grad-abuelos); }
 
+.family-member-card,
+.family-member-main {
+  min-width: 0;
+}
+
+.family-member-main > div:last-child {
+  min-width: 0;
+}
+
+.family-member-main p {
+  overflow-wrap: anywhere;
+}
+
+.pdf-preview-viewer {
+  min-height: 0;
+}
+
 /* Insignias estilo Plan Abuelos */
 .pill-badge {
   display: inline-flex;
@@ -498,6 +1130,16 @@ button {
 .gap-6 { gap: 1.5rem; }
 
 @media (max-width: 768px) {
+  html {
+    scroll-padding-top: 64px;
+  }
+
+  input,
+  select,
+  textarea {
+    scroll-margin-block: 5rem 9rem;
+  }
+
   .grid-cols-2, .grid-cols-3, .grid-cols-4 {
     grid-template-columns: 1fr;
   }
@@ -523,20 +1165,145 @@ button {
   .btn {
     font-size: 0.8125rem;
     padding: 0.5rem 1rem;
+    min-height: 44px;
   }
 
   /* Inputs: comfortable touch targets */
   .previasis-input,
   .input-field {
     min-width: 0;
+    min-height: 44px;
     padding: 0.75rem 0.875rem;
-    font-size: 0.9375rem;
+    font-size: 1rem;
+  }
+
+  .pill-switch-btn,
+  .health-answer-buttons button,
+  .health-question-nav-item {
+    min-height: 44px;
+  }
+
+  .step-progress-tabs {
+    margin-inline: -0.25rem;
+    padding-inline: 0.25rem;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .step-progress-tab {
+    min-height: 44px;
+    scroll-snap-align: start;
   }
 
   /* Plan cards: tighter on mobile */
   .plan-gradient-card {
     padding: 1rem;
     border-radius: var(--radius-md);
+  }
+
+  .family-group-header {
+    align-items: stretch !important;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .family-group-header > .btn-pill {
+    width: 100%;
+  }
+
+  .family-member-card {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .family-member-main {
+    align-items: flex-start !important;
+    width: 100%;
+  }
+
+  .family-member-actions {
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .family-member-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .pdf-preview-overlay {
+    align-items: stretch !important;
+    padding: 0 !important;
+  }
+
+  .pdf-preview-dialog {
+    width: 100vw !important;
+    height: 100dvh !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .pdf-preview-header {
+    position: relative;
+    align-items: stretch !important;
+    flex-direction: column;
+    flex-wrap: nowrap !important;
+    gap: 0.65rem !important;
+    padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem 0.75rem !important;
+  }
+
+  .pdf-preview-title {
+    flex-wrap: nowrap !important;
+    padding-right: 2.5rem;
+  }
+
+  .pdf-preview-title h3 {
+    font-size: 0.95rem !important;
+    line-height: 1.2;
+  }
+
+  .pdf-preview-title p {
+    display: none;
+  }
+
+  .pdf-preview-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem !important;
+    width: 100%;
+  }
+
+  .pdf-preview-action {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.45rem 0.35rem !important;
+    white-space: normal;
+    line-height: 1.1;
+  }
+
+  .pdf-preview-close {
+    position: absolute;
+    top: max(0.6rem, env(safe-area-inset-top));
+    right: 0.6rem;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+  }
+
+  .pdf-preview-viewer {
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+
+  .pdf-preview-viewer iframe {
+    touch-action: pan-x pan-y;
   }
 }
 
@@ -555,6 +1322,14 @@ button {
   .btn {
     font-size: 0.75rem;
     padding: 0.45rem 0.85rem;
+  }
+
+  .pdf-preview-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pdf-preview-action-primary {
+    grid-column: 1 / -1;
   }
 }
 
@@ -576,6 +1351,14 @@ button {
   flex-wrap: wrap;
   gap: 0.625rem;
   margin-bottom: 1rem;
+}
+
+.step1-section-header > :first-child {
+  min-width: 0;
+}
+
+.step1-section-header h3 {
+  overflow-wrap: anywhere;
 }
 
 .step1-section-header-large {
@@ -644,6 +1427,10 @@ button {
   gap: 0.75rem;
 }
 
+.step1-address-group .step1-form-grid {
+  margin-bottom: 0;
+}
+
 @media (max-width: 900px) {
   .step1-form-grid-2,
   .step1-form-grid-3,
@@ -674,4 +1461,3 @@ button {
     padding: 0.75rem 0.875rem;
   }
 }
-

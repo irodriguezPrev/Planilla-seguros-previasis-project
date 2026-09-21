@@ -3,12 +3,34 @@ import { SolicitudAfiliacionFormState } from '@/core/interfaces/affiliation.inte
 import { HEALTH_QUESTIONS } from '@/core/config/health-questions.config';
 
 
+export type PdfGenerationMode = 'draft' | 'final';
+
+export interface PdfGenerationOptions {
+  mode?: PdfGenerationMode;
+}
+
 export class PdfGeneratorService {
   /**
    * Genera el documento oficial Sudeaseg en PDF de alta fidelidad
    * Conforme a la Providencia Administrativa Nº SAA-09-1585 del 04/03/2026
    */
-  static async generateSolicitudPdf(data: SolicitudAfiliacionFormState): Promise<jsPDF> {
+  static async generateSolicitudPdf(
+    sourceData: SolicitudAfiliacionFormState,
+    options: PdfGenerationOptions = {},
+  ): Promise<jsPDF> {
+    const data = options.mode === 'draft'
+      ? {
+          ...sourceData,
+          firmas: {
+            ...sourceData.firmas,
+            firmaTitularBase64: null,
+            firmaContratanteBase64: null,
+            aceptaDeclaracionTitular: false,
+            aceptaOrigenFondosContratante: false,
+          },
+        }
+      : sourceData;
+    const isDraft = options.mode === 'draft';
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -267,12 +289,17 @@ export class PdfGeneratorService {
       currentY += rowHeight;
     }
 
-    // ----- Fila 4: Dirección de Residencia y Oficina -----
+    // ----- Fila 4: Ubicación de residencia -----
+    drawCell('Estado', tit.estadoResidencia || '-', margin, currentY, halfW);
+    drawCell('Ciudad', tit.ciudadResidencia || '-', margin + halfW, currentY, halfW);
+    currentY += rowHeight;
+
+    // ----- Fila 5: Dirección de Residencia y Oficina -----
     drawCell('Dirección de Residencia / Habitación', tit.direccionHabitacion, margin, currentY, contentWidth * 0.5);
     drawCell('Dirección de Oficina / Trabajo', tit.direccionOficina, margin + contentWidth * 0.5, currentY, contentWidth * 0.5);
     currentY += rowHeight;
 
-    // ----- Fila 5: Dirección Cobro, Teléfonos, Correo -----
+    // ----- Fila 6: Dirección Cobro, Teléfonos, Correo -----
     const wCobro = contentWidth * 0.20;
     const wTelHab = contentWidth * 0.20;
     const wTelMov = contentWidth * 0.20;
@@ -306,60 +333,60 @@ export class PdfGeneratorService {
 
     if (cont.esDiferente) {
       const cnat = cont.personaNatural;
-      const contractorRowHeight = 8.5;
+      const contratistaRowHeight = 8.5;
 
       drawCell('Nombres y Apellidos Contratante', `${cnat.nombres} ${cnat.apellidos}`, margin, currentY, halfW);
       drawCell('C.I. / Pasaporte', `${cnat.tipoDoc}-${cnat.numDoc}`, margin + halfW, currentY, fourthW);
       drawCell('R.I.F.', `${cnat.tipoRif}-${cnat.numRif}`, margin + halfW + fourthW, currentY, fourthW);
-      currentY += contractorRowHeight;
+      currentY += contratistaRowHeight;
 
-      const contractorNationalityW = contentWidth * 0.17;
-      const contractorCivilStatusW = contentWidth * 0.17;
-      const contractorSexW = contentWidth * 0.12;
-      const contractorBirthDateW = contentWidth * 0.18;
-      const contractorBirthPlaceW = contentWidth - contractorNationalityW - contractorCivilStatusW - contractorSexW - contractorBirthDateW;
-      drawCell('Nacionalidad', cnat.nacionalidad, margin, currentY, contractorNationalityW);
-      drawCell('Estado Civil', cnat.estadoCivil, margin + contractorNationalityW, currentY, contractorCivilStatusW);
-      drawCell('Sexo', cnat.sexo, margin + contractorNationalityW + contractorCivilStatusW, currentY, contractorSexW);
-      drawCell('Fecha de Nacimiento', cnat.fechaNacimiento, margin + contractorNationalityW + contractorCivilStatusW + contractorSexW, currentY, contractorBirthDateW);
-      drawCell('Lugar de Nacimiento', cnat.lugarNacimiento, margin + contractorNationalityW + contractorCivilStatusW + contractorSexW + contractorBirthDateW, currentY, contractorBirthPlaceW);
-      currentY += contractorRowHeight;
+      const contratistaNationalityW = contentWidth * 0.17;
+      const contratistaCivilStatusW = contentWidth * 0.17;
+      const contratistaSexW = contentWidth * 0.12;
+      const contratistaBirthDateW = contentWidth * 0.18;
+      const contratistaBirthPlaceW = contentWidth - contratistaNationalityW - contratistaCivilStatusW - contratistaSexW - contratistaBirthDateW;
+      drawCell('Nacionalidad', cnat.nacionalidad, margin, currentY, contratistaNationalityW);
+      drawCell('Estado Civil', cnat.estadoCivil, margin + contratistaNationalityW, currentY, contratistaCivilStatusW);
+      drawCell('Sexo', cnat.sexo, margin + contratistaNationalityW + contratistaCivilStatusW, currentY, contratistaSexW);
+      drawCell('Fecha de Nacimiento', cnat.fechaNacimiento, margin + contratistaNationalityW + contratistaCivilStatusW + contratistaSexW, currentY, contratistaBirthDateW);
+      drawCell('Lugar de Nacimiento', cnat.lugarNacimiento, margin + contratistaNationalityW + contratistaCivilStatusW + contratistaSexW + contratistaBirthDateW, currentY, contratistaBirthPlaceW);
+      currentY += contratistaRowHeight;
 
-      const contractorProfessionW = contentWidth * 0.25;
-      const contractorOccupationW = contentWidth * 0.25;
-      const contractorIncomeW = contentWidth * 0.20;
-      const contractorPepW = contentWidth * 0.15;
-      const contractorActivityW = contentWidth - contractorProfessionW - contractorOccupationW - contractorIncomeW - contractorPepW;
-      drawCell('Profesión', cnat.profesion, margin, currentY, contractorProfessionW);
-      drawCell('Ocupación', cnat.ocupacion, margin + contractorProfessionW, currentY, contractorOccupationW);
-      drawCell('Ingreso Anual (Bs.)', cnat.ingresoAnualBs, margin + contractorProfessionW + contractorOccupationW, currentY, contractorIncomeW);
-      drawCell('PEP', `${cnat.pep}${cnat.pep === 'SÍ' && cnat.pepDescripcion ? `: ${cnat.pepDescripcion}` : ''}`, margin + contractorProfessionW + contractorOccupationW + contractorIncomeW, currentY, contractorPepW);
-      drawCell('Actividad', cnat.clasificacionActividad, margin + contractorProfessionW + contractorOccupationW + contractorIncomeW + contractorPepW, currentY, contractorActivityW);
-      currentY += contractorRowHeight;
+      const contratistaProfessionW = contentWidth * 0.25;
+      const contratistaOccupationW = contentWidth * 0.25;
+      const contratistaIncomeW = contentWidth * 0.20;
+      const contratistaPepW = contentWidth * 0.15;
+      const contratistaActivityW = contentWidth - contratistaProfessionW - contratistaOccupationW - contratistaIncomeW - contratistaPepW;
+      drawCell('Profesión', cnat.profesion, margin, currentY, contratistaProfessionW);
+      drawCell('Ocupación', cnat.ocupacion, margin + contratistaProfessionW, currentY, contratistaOccupationW);
+      drawCell('Ingreso Anual (Bs.)', cnat.ingresoAnualBs, margin + contratistaProfessionW + contratistaOccupationW, currentY, contratistaIncomeW);
+      drawCell('PEP', `${cnat.pep}${cnat.pep === 'SÍ' && cnat.pepDescripcion ? `: ${cnat.pepDescripcion}` : ''}`, margin + contratistaProfessionW + contratistaOccupationW + contratistaIncomeW, currentY, contratistaPepW);
+      drawCell('Actividad', cnat.clasificacionActividad, margin + contratistaProfessionW + contratistaOccupationW + contratistaIncomeW + contratistaPepW, currentY, contratistaActivityW);
+      currentY += contratistaRowHeight;
 
       if (cnat.clasificacionActividad === 'Dependiente' && cnat.empresa) {
         drawCell('Empresa donde labora', cnat.empresa, margin, currentY, halfW);
         drawCell('Dirección de Habitación', cnat.direccionHabitacion, margin + halfW, currentY, fourthW);
         drawCell('Dirección de Oficina', cnat.direccionOficina, margin + halfW + fourthW, currentY, fourthW);
-        currentY += contractorRowHeight;
+        currentY += contratistaRowHeight;
 
         drawCell('Dirección de Cobro', cnat.direccionCobro, margin, currentY, halfW);
         drawCell('Teléfono Habitación', cnat.telefonoHabitacion, margin + halfW, currentY, fourthW);
         drawCell('Teléfono Móvil', cnat.telefonoMovil, margin + halfW + fourthW, currentY, fourthW);
-        currentY += contractorRowHeight;
+        currentY += contratistaRowHeight;
 
         drawCell('Correo Electrónico', cnat.email, margin, currentY, contentWidth);
-        currentY += contractorRowHeight + 2;
+        currentY += contratistaRowHeight + 2;
       } else {
         drawCell('Dirección de Habitación', cnat.direccionHabitacion, margin, currentY, halfW);
         drawCell('Dirección de Oficina', cnat.direccionOficina, margin + halfW, currentY, fourthW);
         drawCell('Dirección de Cobro', cnat.direccionCobro, margin + halfW + fourthW, currentY, fourthW);
-        currentY += contractorRowHeight;
+        currentY += contratistaRowHeight;
 
         drawCell('Teléfono Local', cnat.telefonoHabitacion, margin, currentY, contentWidth * 0.20);
         drawCell('Teléfono Móvil', cnat.telefonoMovil, margin + contentWidth * 0.20, currentY, contentWidth * 0.20);
         drawCell('Correo Electrónico', cnat.email, margin + contentWidth * 0.40, currentY, contentWidth * 0.60);
-        currentY += contractorRowHeight + 2;
+        currentY += contratistaRowHeight + 2;
       }
     }
     // SECCIÓN 3: PERSONAS A AFILIAR Y PLAN SOLICITADO
@@ -886,7 +913,7 @@ export class PdfGeneratorService {
     const linesTitular = doc.splitTextToSize(textoTitular, contentWidth - 6);
     doc.text(linesTitular, margin + 3, currentY + 8.5);
 
-    drawCheckbox('Acepto y ratifico la declaración del Afiliado Titular', true, margin + 3, currentY + 32);
+    drawCheckbox('Acepto y ratifico la declaración del Afiliado Titular', data.firmas.aceptaDeclaracionTitular, margin + 3, currentY + 32);
     currentY += 38;
 
     // Declaración Contratante
@@ -913,7 +940,7 @@ export class PdfGeneratorService {
         : `${data.contratante.personaJuridica.tipoRif}-${data.contratante.personaJuridica.numRif}`
       : docTit;
 
-    const textoFondos = `Yo, ${nomCont}, titular de la identificación Nº ${docCont}, en mi condición de CONTRATANTE, doy fe de que el dinero utilizado para el pago de las cuotas del plan de salud proviene de una fuente lícita y legítima, no vinculada con actividades ilícitas ni de legitimación de capitales, de conformidad con la Ley Orgánica contra la Delincuencia Organizada y las normas de la Superintendencia de la Actividad Aseguradora.`;
+    const textoFondos = `Yo, ${nomCont}, titular de la identificación Nº ${docCont}, en mi condición de CONTRATANTE, doy fe de que el dinero utilizado para el pago de las cuotas del PLAN DE SALUD proviene de una fuente lícita y legítima, no vinculada con actividades ilícitas ni de legitimación de capitales, de conformidad con la Ley Orgánica contra la Delincuencia Organizada y las normas de la Superintendencia de la Actividad Aseguradora.`;
     const linesFondos = doc.splitTextToSize(textoFondos, contentWidth - 6);
     doc.text(linesFondos, margin + 3, currentY + 8.5);
 
@@ -1016,14 +1043,33 @@ export class PdfGeneratorService {
     drawCell('Nº Credencial Sudeaseg', inter.numCredencial, margin + thirdW * 1.2, currentY, thirdW * 0.8);
     drawCell('C.I. / R.I.F. / Pasaporte', `${inter.tipoDoc}-${inter.ciRifPasaporte}`, margin + thirdW * 2, currentY, thirdW);
 
+    if (isDraft) {
+      const totalPages = doc.getNumberOfPages();
+      for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+        doc.setPage(pageNumber);
+        doc.save();
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(34);
+        doc.setTextColor(220, 220, 220);
+        doc.text('BORRADOR - SIN FIRMA', pageWidth / 2, pageHeight / 2, {
+          align: 'center',
+          angle: -30,
+        });
+      }
+    }
+
     return doc;
   }
 
   /**
    * Descarga directa del PDF
    */
-  static async downloadPdf(data: SolicitudAfiliacionFormState, filename?: string): Promise<void> {
-    const doc = await this.generateSolicitudPdf(data);
+  static async downloadPdf(
+    data: SolicitudAfiliacionFormState,
+    filename?: string,
+    options: PdfGenerationOptions = {},
+  ): Promise<void> {
+    const doc = await this.generateSolicitudPdf(data, options);
     const name = filename || `Solicitud_Afiliacion_Previasis_${data.titular.numDoc || 'Doc'}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(name);
   }
@@ -1031,8 +1077,11 @@ export class PdfGeneratorService {
   /**
    * Obtiene la URL blob del PDF para vista previa
    */
-  static async getPdfBlobUrl(data: SolicitudAfiliacionFormState): Promise<string> {
-    const doc = await this.generateSolicitudPdf(data);
+  static async getPdfBlobUrl(
+    data: SolicitudAfiliacionFormState,
+    options: PdfGenerationOptions = {},
+  ): Promise<string> {
+    const doc = await this.generateSolicitudPdf(data, options);
     return doc.output('bloburl').toString();
   }
 

@@ -14,8 +14,13 @@ export interface HealthQuestionItem {
     campo1: string;
     campo2: string;
   };
+  beneficiaryDetailOptions?: {
+    campo1?: string[];
+    campo2?: string[];
+  };
   requiresBeneficiarySelection?: boolean;
   requiresClinicalDetail?: boolean;
+  detailMode?: 'clinical' | 'sport' | 'beneficiary' | 'extra' | 'antecedent';
   antecedentFields?: {
     campo1Label: string;
     campo2Label: string;
@@ -33,12 +38,12 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
   {
     id: 2,
     title: 'Enfermedades de la piel, ojos, nariz o garganta',
-    description: 'Desviación del tabique nasal, amigdalitis, rinitis, sinusitis, otitis recurrente, cataratas, desórdenes de la piel, psoriasis, eccema, verrugas, vitiligo.',
+    description: 'Desviación del tabique nasal, amigdalitis, rinitis, sinusitis, otitis recurrente, cataratas, desórdenes de la piel, psoriasis, eccema, verrugas, vitíligo.',
   },
   {
     id: 3,
     title: 'Defectos de refracción visual',
-    description: 'Miopía, hipermetropía, astigmatismo, presbicia o similares.',
+    description: 'Miopía, hipermetropía, astigmatismo, presbicia.',
   },
   {
     id: 4,
@@ -50,6 +55,8 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Enfermedades Vasculares',
     description: 'Accidentes cerebrovasculares, hemorragias cerebrales.',
     beneficiaryDetail: true,
+    detailMode: 'beneficiary',
+    requiresClinicalDetail: false,
     beneficiaryDetailLabels: {
       campo1: 'Tipo de evento',
       campo2: 'Fecha diagnóstico',
@@ -58,11 +65,14 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
       campo1: 'Ej: Accidente cerebrovascular',
       campo2: 'Ej: 03/2021',
     },
+    beneficiaryDetailOptions: {
+      campo1: ['Accidente cerebrovascular', 'Hemorragia cerebral'],
+    },
   },
   {
     id: 6,
     title: 'Enfermedades del sistema nervioso',
-    description: 'Convulsiones, epilepsia, parálisis cerebral, retardo mental, vértigo, autismo, y otros similares.',
+    description: 'Convulsiones, epilepsia, parálisis cerebral, retardo mental, vértigo, autismo.',
   },
   {
     id: 7,
@@ -109,6 +119,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Embarazo / Antecedentes Obstétricos',
     description: '¿Alguna(s) de las mujeres incluidas en esta solicitud está embarazada o ha tenido abortos?',
     hasExtraInput: true,
+    detailMode: 'extra',
     extraInputLabel: 'Indicar número de embarazos / Semanas / Abortos',
     extraInputPlaceholder: 'Ej: 2 embarazos a término, 0 abortos, actualmente no embarazada',
   },
@@ -122,12 +133,15 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Práctica Deportiva',
     description: '¿Usted o alguna persona a incluir practica algún deporte?',
     beneficiaryDetail: true,
+    detailMode: 'sport',
+    requiresClinicalDetail: false,
   },
   {
     id: 18,
     title: 'Enfermedades Congénitas o Hereditarias',
     description: '¿Usted o alguno de los solicitantes padece alguna enfermedad congénita o hereditaria, defecto físico, anomalía, trastorno de desarrollo, desórdenes mentales, síndrome de down?',
     hasExtraInput: true,
+    detailMode: 'extra',
     extraInputLabel: 'Indique nombre, apellido del afectado y condición',
     extraInputPlaceholder: 'Ej: Nombre y apellido del afectado y descripción',
   },
@@ -136,6 +150,8 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Cirugías Previas',
     description: '¿Usted o alguna persona a incluir se ha practicado alguna cirugía? (Funcional o Estética).',
     beneficiaryDetail: true,
+    detailMode: 'beneficiary',
+    requiresClinicalDetail: false,
     beneficiaryDetailLabels: {
       campo1: 'Tipo de cirugía',
       campo2: 'Año',
@@ -150,6 +166,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Hábitos Psicobiológicos',
     description: '¿Usted o alguna de las personas a incluir usa o ha usado productos de nicotina, bebidas alcohólicas o drogas adictivas?',
     hasExtraInput: true,
+    detailMode: 'extra',
     extraInputLabel: 'Indique productos y cantidad por día/semana',
     extraInputPlaceholder: 'Ej: Tabaco 5 cigarrillos/día, alcohol social ocasional',
   },
@@ -158,6 +175,8 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Tratamiento Médico Actual',
     description: '¿Usted u otra persona a incluir en el contrato se encuentra bajo un tratamiento con algún medicamento?',
     beneficiaryDetail: true,
+    detailMode: 'beneficiary',
+    requiresClinicalDetail: false,
     beneficiaryDetailLabels: {
       campo1: 'Medicamento',
       campo2: 'Dosis / Frecuencia',
@@ -172,6 +191,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Transfusiones de Sangre',
     description: '¿Usted u otra persona a incluir en el contrato ha donado o recibido transfusiones de sangre?',
     hasExtraInput: true,
+    detailMode: 'extra',
     extraInputLabel: 'Especifique fecha y motivo',
     extraInputPlaceholder: 'Ej: Recibida por intervención en 2019',
   },
@@ -180,6 +200,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Intervenciones o Tratamientos Planificados',
     description: '¿Usted u otra persona a incluir en el contrato tiene planeado alguna intervención quirúrgica o tratamiento médico?',
     hasExtraInput: true,
+    detailMode: 'extra',
     extraInputLabel: 'Especifique procedimiento programado y fecha estimada',
     extraInputPlaceholder: 'Ej: Cirugía programada de rodilla',
   },
@@ -188,6 +209,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Historial Familiar',
     description: '¿Usted u otra persona a incluir en el contrato tiene historial familiar de diabetes, hipertensión, desórdenes del corazón o riñones, cáncer o enfermedad congénita o hereditaria, tuberculosis, enfermedad mental o suicidio?',
     hasExtraInput: true,
+    detailMode: 'extra',
     extraInputLabel: 'Especifique parentesco y diagnóstico familiar',
     extraInputPlaceholder: 'Ej: Padre con Hipertensión, Madre con Diabetes tipo 2',
   },
@@ -197,6 +219,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     description: '¿Mantiene usted o algún familiar contrato de salud vigente con otra compañía?',
     requiresBeneficiarySelection: false,
     requiresClinicalDetail: false,
+    detailMode: 'antecedent',
     antecedentFields: {
       campo1Label: 'Nº de Contrato',
       campo2Label: 'Nombre de la Compañía',
@@ -210,6 +233,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     description: '¿En alguna oportunidad le ha sido negado o anulado un contrato de salud?',
     requiresBeneficiarySelection: false,
     requiresClinicalDetail: false,
+    detailMode: 'antecedent',
     antecedentFields: {
       campo1Label: 'Tipo de Seguro',
       campo2Label: 'Compañía que Rechazó',

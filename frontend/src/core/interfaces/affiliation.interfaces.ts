@@ -55,6 +55,8 @@ export interface PersonaNaturalData {
   pepDescripcion?: string;
   clasificacionActividad: ClasificacionActividad;
   empresa?: string;
+  estadoResidencia?: string;
+  ciudadResidencia?: string;
   direccionHabitacion: string;
   direccionOficina: string;
   direccionCobro: string;
@@ -105,6 +107,7 @@ export interface AfiliadoRow {
 
 export interface AfeccionMedicaDetalle {
   id: string;
+  preguntaId?: number;
   codigoAfiliado: number | string;
   padecimiento: string;
   fechaDiagnostico: string;
@@ -130,6 +133,7 @@ export interface DetalleDeportivo {
 }
 
 export interface DetalleAclaracion {
+  id?: string;
   codigoAfiliado: number;
   campo1: string;
   campo2: string;
@@ -144,6 +148,8 @@ export interface DeclaracionSaludSection {
   preguntas: Record<number, {
     respuesta: 'SÍ' | 'NO';
     detallesExtra?: string;
+    respuestasAfiliados?: Partial<Record<number, 'SÍ' | 'NO'>>;
+    detallesExtraPorAfiliado?: Partial<Record<number, string>>;
     codigosAfiliados?: number[];
     detalleAntecedente?: DetalleAntecedente;
   }>;
@@ -157,7 +163,6 @@ export interface FormaDePagoSection {
   moneda: MonedaPago;
   modalidadPago: ModalidadPago;
   especifiqueOtroPago?: string;
-  otrosContratos: string;
 }
 
 export interface DeclaracionesFirmasSection {

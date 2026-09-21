@@ -12,6 +12,7 @@ import {
   Sexo,
   ClasificacionActividad,
 } from '@/core/interfaces/affiliation.interfaces';
+import { getCitiesByState, VENEZUELA_STATES } from '@/core/config/venezuela-locations.config';
 import { User, Shield, MapPin, Phone, Mail } from 'lucide-react';
 
 interface Step1Props {
@@ -36,6 +37,7 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
   };
 
   const esComerciante = (titular.ocupacion || '').trim().toLowerCase().includes('comerciante');
+  const availableCities = getCitiesByState(titular.estadoResidencia);
 
   return (
     <div className="step1-layout">
@@ -310,6 +312,50 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
           </div>
         </div>
 
+        {/* Estado y Ciudad de residencia */}
+        <div className="step1-form-grid step1-form-grid-2">
+          <div className="previasis-input-group">
+            <label className="previasis-label">
+              Estado <span className="previasis-label-required">*</span>
+            </label>
+            <select
+              className="previasis-input"
+              value={titular.estadoResidencia || ''}
+              onChange={(e) => updateTitular({
+                estadoResidencia: e.target.value,
+                ciudadResidencia: '',
+              })}
+              required
+            >
+              <option value="">Seleccione un estado</option>
+              {VENEZUELA_STATES.map((state) => (
+                <option key={state} value={state}>{state}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="previasis-input-group">
+            <label className="previasis-label">
+              Ciudad <span className="previasis-label-required">*</span>
+            </label>
+            <select
+              key={titular.estadoResidencia || 'sin-estado'}
+              className="previasis-input"
+              value={titular.ciudadResidencia || ''}
+              onChange={(e) => updateTitular({ ciudadResidencia: e.target.value })}
+              disabled={!titular.estadoResidencia}
+              required
+            >
+              <option value="">
+                {titular.estadoResidencia ? 'Seleccione una ciudad' : 'Seleccione primero un estado'}
+              </option>
+              {availableCities.map((city) => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {/* Lugar y Fecha Nacimiento */}
         <div className="step1-form-grid step1-form-grid-2">
           <div className="previasis-input-group">
@@ -485,8 +531,6 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
 
         {/* Direcciones */}
         <div className="step1-address-group">
-         
-
           <div className="step1-form-grid step1-form-grid-3">
              <div className="previasis-input-group">
             <label className="previasis-label">
