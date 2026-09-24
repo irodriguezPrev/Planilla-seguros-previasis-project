@@ -17,6 +17,7 @@
 # misc
 .DS_Store
 *.pem
+/.kilo
 
 # debug
 npm-debug.log*
@@ -29,3 +30,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.next
