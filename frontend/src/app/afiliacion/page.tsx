@@ -468,7 +468,8 @@ export default function AffiliationPage() {
     const timeout = window.setTimeout(() => setCelebrationStep(null), 2800);
     return () => window.clearTimeout(timeout);
   }, [celebrationStep]);
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const successTimeoutRef = useRef<number | null>(null);
+  const hasShownFinalCelebrationRef = useRef(false);
 
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has('touchdebug')) return;
@@ -922,29 +923,26 @@ export default function AffiliationPage() {
 
     if (currentStep === 6) {
       const openFinalPreview = () => {
-        if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
-        setShowSuccessMessage(true);
-        successTimeoutRef.current = setTimeout(() => {
-          successTimeoutRef.current = null;
-          setShowSuccessMessage(false);
-          if (
-            !approvalSnapshot ||
-            getApprovalSnapshot(formData) !== approvalSnapshot
-          ) {
-            setApprovalSnapshot(null);
-            setPreviewMode('draft');
-            setShowPreviewModal(true);
-            return;
-          }
-
-          setPreviewMode('final');
+        if (
+          !approvalSnapshot ||
+          getApprovalSnapshot(formData) !== approvalSnapshot
+        ) {
+          setApprovalSnapshot(null);
+          setPreviewMode('draft');
           setShowPreviewModal(true);
-        }, 3000);
+          return;
+        }
+
+        setPreviewMode('final');
+        setShowPreviewModal(true);
       };
 
-      if (isFirstCompletion) {
+      if (!hasShownFinalCelebrationRef.current) {
+        hasShownFinalCelebrationRef.current = true;
+        if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
         setShowSuccessMessage(true);
-        window.setTimeout(() => {
+        successTimeoutRef.current = window.setTimeout(() => {
+          successTimeoutRef.current = null;
           setShowSuccessMessage(false);
           openFinalPreview();
         }, 2500);
@@ -1144,6 +1142,12 @@ export default function AffiliationPage() {
       setPreviewMode('draft');
       setShowPreviewModal(false);
       setCelebrationStep(null);
+      setShowSuccessMessage(false);
+      hasShownFinalCelebrationRef.current = false;
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+        successTimeoutRef.current = null;
+      }
     }
   };
 

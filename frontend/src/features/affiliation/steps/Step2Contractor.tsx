@@ -261,7 +261,6 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                     label={t('localPhone')}
                     value={naturalPerson.homePhone}
                     onChange={(e) => updateNaturalPerson({ homePhone: e.target.value })}
-                    required
                   />
                   <Input
                     label={t('mobilePhone')}
@@ -603,7 +602,6 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                       label={t('localPhone')}
                       value={legalRepresentative.homePhone}
                       onChange={(e) => updateLegalRepresentative({ homePhone: e.target.value })}
-                      required
                     />
                     <Input
                       label={t('mobilePhone')}
