@@ -1,31 +1,31 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
-  AfiliadoRow,
-  FrecuenciaPago,
-  PlanSolicitado,
-  Parentesco,
-  TipoDocumento,
+  AffiliateRow,
+  PaymentFrequency,
+  RequestedPlan,
+  Relationship,
 } from '@/core/interfaces/affiliation.interfaces';
 import { calculateActuarialAge as calculateAge } from '@/core/utils/age.utils';
-import { UserPlus, Trash2, Users, Award, Check, Calculator, Flame, Pencil } from 'lucide-react';
-
-type PricingStyle = 'cards' | 'segmented' | 'compact';
+import { applyMinorDocument } from '@/core/utils/minor-document.utils';
+import { PAYMENT_FREQUENCY_TRANSLATION_KEYS } from '@/core/config/payment-options.config';
+import { ContextualTooltip } from '@/components/common/ContextualTooltip';
+import { UserPlus, Trash2, Users, Award, Check, Flame, Pencil } from 'lucide-react';
 
 const billingPeriods: Array<{
-  id: FrecuenciaPago;
-  shortLabel: string;
+  id: PaymentFrequency;
   months: number;
 }> = [
-  { id: 'Mensual', shortLabel: '1 mes', months: 1 },
-  { id: 'Trimestral', shortLabel: '3 meses', months: 3 },
-  { id: 'Semestral', shortLabel: '6 meses', months: 6 },
-  { id: 'Anual', shortLabel: '12 meses', months: 12 },
+  { id: 'Mensual', months: 1 },
+  { id: 'Trimestral', months: 3 },
+  { id: 'Semestral', months: 6 },
+  { id: 'Anual', months: 12 },
 ];
 
 type PlanOption = {
-  id: PlanSolicitado;
+  id: RequestedPlan;
   name: string;
   classStyle: string;
   features: string[];
@@ -116,33 +116,48 @@ function getMonthlyPrice(plan: PlanOption | undefined, age: number | null): numb
     : null;
 }
 
-// Obtiene la cuota sin impuestos de un beneficiario según su plan y edad actuarial
-function getAfiliadoCuota(afiliado: AfiliadoRow): number {
-  const age = calculateAge(afiliado.fechaNacimiento);
+function getAffiliateFee(affiliate: AffiliateRow): number {
+  const age = calculateAge(affiliate.birthDate);
   const plan = planOptions.find(
-    (p) => p.id === afiliado.planSolicitado && p.defaultCoverage === afiliado.limiteCobertura
+    (p) => p.id === affiliate.requestedPlan && p.defaultCoverage === affiliate.coverageLimit
   );
   return getMonthlyPrice(plan, age) || 0;
 }
 
 interface Step3Props {
-  afiliados: AfiliadoRow[];
-  onChangeAfiliados: (afiliados: AfiliadoRow[]) => void;
-  frecuenciaPago: FrecuenciaPago;
-  onChangeFrecuenciaPago: (frecuencia: FrecuenciaPago) => void;
-  titularNombreCompleto?: string;
-  titularDoc?: string;
+  affiliates: AffiliateRow[];
+  onAffiliatesChange: (affiliates: AffiliateRow[]) => void;
+  paymentFrequency: PaymentFrequency;
+  onPaymentFrequencyChange: (frequency: PaymentFrequency) => void;
+  policyholderFullName?: string;
+  policyholderDocument?: string;
 }
 
-export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
-  afiliados,
-  onChangeAfiliados,
-  frecuenciaPago,
-  onChangeFrecuenciaPago,
+export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
+  affiliates,
+  onAffiliatesChange,
+  paymentFrequency,
+  onPaymentFrequencyChange,
+  policyholderDocument = '',
 }) => {
   const [selectedMemberIndex, setSelectedMemberIndex] = useState<number>(0);
-  const [pricingStyle, setPricingStyle] = useState<PricingStyle>('cards');
   const memberNameInputRef = useRef<HTMLInputElement | null>(null);
+  const tValidation = useTranslations('validation');
+  const t = useTranslations('step3');
+  const tPayment = useTranslations('paymentOptions');
+  const getRelationshipLabel = (relationship: Relationship) => t(
+    relationship === 'Titular'
+      ? 'holder'
+      : relationship === 'Cónyuge'
+        ? 'spouse'
+        : relationship === 'Hijo/a'
+          ? 'child'
+          : relationship === 'Padre/Madre'
+            ? 'parent'
+            : relationship === 'Hermano/a'
+              ? 'sibling'
+              : 'other',
+  );
 
   const selectMember = (index: number) => {
     setSelectedMemberIndex(index);
@@ -163,45 +178,82 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
     });
   };
 
-  const normalizeAfiliados = (items: AfiliadoRow[]) =>
+  const normalizeAffiliates = (items: AffiliateRow[]) =>
     items.map((item, index) => {
-      const cuotaCalculada = getAfiliadoCuota(item);
+      const calculatedFee = getAffiliateFee(item);
       return {
         ...item,
-        codigoAfiliado: index + 1,
-        cuota: cuotaCalculada,
+        affiliateCode: index + 1,
+        fee: calculatedFee,
       };
     });
 
-  const addAfiliado = () => {
-    const newAfiliado: AfiliadoRow = {
+  useEffect(() => {
+    const updated = affiliates.map((affiliate) => applyMinorDocument(affiliate, policyholderDocument));
+    const documentsChanged = updated.some((affiliate, index) => (
+      affiliate.documentType !== affiliates[index].documentType ||
+      affiliate.documentNumber !== affiliates[index].documentNumber
+    ));
+
+    if (documentsChanged) {
+      onAffiliatesChange(normalizeAffiliates(updated));
+    }
+  // The remaining affiliate changes are normalized by updateAffiliate.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [policyholderDocument]);
+
+  const addAffiliate = () => {
+    const newAffiliate: AffiliateRow = {
       id: Math.random().toString(36).substring(2, 9),
-      codigoAfiliado: 0,
-      nombreCompleto: '',
-      tipoDoc: 'V',
-      numDoc: '',
-      fechaNacimiento: '',
-      parentesco: 'Hijo/a',
-      sexo: 'M',
-      pesoKg: '',
-      estaturaCm: '',
-      planSolicitado: 'Plan Oro',
-      limiteCobertura: '$25.000',
-      cuota: 0,
+      affiliateCode: 0,
+      fullName: '',
+      documentType: 'V',
+      documentNumber: '',
+      birthDate: '',
+      relationship: 'Hijo/a',
+      sex: 'M',
+      weightKg: '',
+      heightCm: '',
+      requestedPlan: 'Plan Oro',
+      coverageLimit: '$25.000',
+      fee: 0,
     };
-    const updated = normalizeAfiliados([...afiliados, newAfiliado]);
-    onChangeAfiliados(updated);
+    const updated = normalizeAffiliates([...affiliates, newAffiliate]);
+    onAffiliatesChange(updated);
     editMember(updated.length - 1);
   };
 
-  const updateAfiliado = (index: number, fields: Partial<AfiliadoRow>) => {
-    const updated = [...afiliados];
-    updated[index] = { ...updated[index], ...fields };
-    onChangeAfiliados(normalizeAfiliados(updated));
+  const updateAffiliate = (index: number, fields: Partial<AffiliateRow>) => {
+    const updated = [...affiliates];
+    const currentAffiliate = updated[index];
+    let nextAffiliate = { ...currentAffiliate, ...fields };
+
+    if (fields.documentType !== undefined) {
+      const selectsAutomaticDocument = fields.documentType === 'M';
+      nextAffiliate = {
+        ...nextAffiliate,
+        documentNumber: currentAffiliate.documentType === 'M' && !selectsAutomaticDocument
+          ? ''
+          : nextAffiliate.documentNumber,
+        usesOwnDocument: !selectsAutomaticDocument,
+      };
+    } else if (fields.documentNumber !== undefined && currentAffiliate.documentType === 'M') {
+      nextAffiliate = {
+        ...nextAffiliate,
+        documentType: 'V',
+        usesOwnDocument: true,
+      };
+    }
+
+    updated[index] = applyMinorDocument(
+      nextAffiliate,
+      policyholderDocument,
+    );
+    onAffiliatesChange(normalizeAffiliates(updated));
   };
 
-  const currentMember = afiliados[selectedMemberIndex] || afiliados[0];
-  const currentAge = calculateAge(currentMember?.fechaNacimiento || '');
+  const currentMember = affiliates[selectedMemberIndex] || affiliates[0];
+  const currentAge = calculateAge(currentMember?.birthDate || '');
   const currentRange = getAgeRange(currentAge);
   const availablePlans = currentRange === '61-80'
     ? planOptions.filter((plan) => plan.id === 'Abuelos')
@@ -209,64 +261,63 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
 
   const selectPlan = (plan: PlanOption) => {
     const monthlyPrice = getMonthlyPrice(plan, currentAge) || 0;
-    updateAfiliado(selectedMemberIndex, {
-      planSolicitado: plan.id,
-      limiteCobertura: plan.defaultCoverage,
-      cuota: monthlyPrice,
+    updateAffiliate(selectedMemberIndex, {
+      requestedPlan: plan.id,
+      coverageLimit: plan.defaultCoverage,
+      fee: monthlyPrice,
     });
   };
 
-  const validateBirthDate = (fechaNacimiento: string) => {
-    const age = calculateAge(fechaNacimiento);
+  const validateBirthDate = (birthDate: string) => {
+    const age = calculateAge(birthDate);
 
     if (age === null || age > 80) {
-      alert('No se puede registrar como beneficiario a una persona mayor de 80 años.');
+      alert(tValidation('ageLimit80Beneficiary'));
       return;
     }
 
     const range = getAgeRange(age);
     const currentPlan = planOptions.find(
-      (plan) => plan.id === currentMember.planSolicitado && plan.defaultCoverage === currentMember.limiteCobertura,
+      (plan) => plan.id === currentMember?.requestedPlan && plan.defaultCoverage === currentMember?.coverageLimit,
     );
 
     if (range === '61-80') {
-      updateAfiliado(selectedMemberIndex, {
-        planSolicitado: 'Abuelos',
-        limiteCobertura: '$3.000',
+      updateAffiliate(selectedMemberIndex, {
+        requestedPlan: 'Abuelos',
+        coverageLimit: '$3.000',
       });
       return;
     }
 
     if (currentPlan?.id === 'Abuelos') {
-      updateAfiliado(selectedMemberIndex, {
-        planSolicitado: 'Plan Bronce',
-        limiteCobertura: '$10.000',
+      updateAffiliate(selectedMemberIndex, {
+        requestedPlan: 'Plan Bronce',
+        coverageLimit: '$10.000',
       });
     } else {
-      updateAfiliado(selectedMemberIndex, { fechaNacimiento });
+      updateAffiliate(selectedMemberIndex, { birthDate });
     }
   };
 
-  const removeAfiliado = (index: number) => {
-    if (afiliados.length <= 1) {
-      alert('Debe existir al menos una persona en el grupo a afiliar (el Titular).');
+  const removeAffiliate = (index: number) => {
+    if (affiliates.length <= 1) {
+      alert(tValidation('atLeastOnePerson'));
       return;
     }
-    const filtered = normalizeAfiliados(afiliados.filter((_, i) => i !== index));
-    onChangeAfiliados(filtered);
+    const filtered = normalizeAffiliates(affiliates.filter((_, i) => i !== index));
+    onAffiliatesChange(filtered);
     if (selectedMemberIndex >= filtered.length) {
       setSelectedMemberIndex(filtered.length - 1);
     }
   };
 
-  // Sumatoria total de las cuotas de todos los beneficiarios sin impuestos
-  const subtotalGrupo = afiliados.reduce((sum, item) => sum + getAfiliadoCuota(item), 0);
+  const groupSubtotal = affiliates.reduce((sum, item) => sum + getAffiliateFee(item), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Top Grid: Grupo Familiar y Selección de Plan */}
+
       <div className="grid grid-cols-2 gap-6">
-        {/* GRUPO FAMILIAR (Izquierda) */}
+
         <div className="previasis-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="family-group-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -285,25 +336,25 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                 <Users size={20} />
               </div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--previasis-dark-green)' }}>
-                Grupo Familiar
+                {t('familyGroup')}
               </h3>
             </div>
 
             <button
               type="button"
-              onClick={addAfiliado}
+              onClick={addAffiliate}
               className="btn-pill btn-pill-outline"
               style={{ fontSize: '0.8125rem', padding: '0.45rem 1rem' }}
             >
-              <UserPlus size={14} /> + Agregar Familiar
+              <UserPlus size={14} /> + {t('addAffiliate')}
             </button>
           </div>
 
-          {/* Lista de Miembros */}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {afiliados.map((af, idx) => {
+            {affiliates.map((af, idx) => {
               const isSelected = idx === selectedMemberIndex;
-              const cuotaAfiliado = getAfiliadoCuota(af);
+              const affiliateFee = getAffiliateFee(af);
 
               return (
                 <div
@@ -347,12 +398,12 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                         fontSize: '0.8125rem',
                       }}
                     >
-                      {af.codigoAfiliado}
+                      {af.affiliateCode}
                     </div>
                     <div>
                       <div className="family-member-name-row">
                         <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--previasis-dark-green)' }}>
-                          {af.nombreCompleto || `Persona #${af.codigoAfiliado}`}
+                          {af.fullName || t('personPlaceholder', { number: af.affiliateCode })}
                         </p>
                         <button
                           type="button"
@@ -361,21 +412,21 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                             event.stopPropagation();
                             editMember(idx);
                           }}
-                          aria-label={`Editar ${af.nombreCompleto || `Persona #${af.codigoAfiliado}`}`}
-                          title="Editar datos del familiar"
+                            aria-label={`${t('editMemberAria')}: ${af.fullName || t('personPlaceholder', { number: af.affiliateCode })}`}
+                            title={t('editData')}
                         >
-                          <Pencil size={12} /> Editar
+                          <Pencil size={12} /> {t('editMember')}
                         </button>
                       </div>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {af.parentesco} • {af.planSolicitado} ({af.limiteCobertura})
+                        {getRelationshipLabel(af.relationship)} • {af.requestedPlan} ({af.coverageLimit})
                         {' · '}
-                        {calculateAge(af.fechaNacimiento) === null
-                          ? 'Edad pendiente'
-                          : `${calculateAge(af.fechaNacimiento)} años`}
+                        {calculateAge(af.birthDate) === null
+                          ? t('agePending')
+                          : t('yearsOld', { age: calculateAge(af.birthDate) ?? 0 })}
                       </p>
                       <p style={{ fontWeight: 800, fontSize: '0.8125rem', color: 'var(--previasis-green)', marginTop: '2px' }}>
-                        Cuota: ${cuotaAfiliado} / mes
+                        {t('monthlyRate')}: ${affiliateFee} {t('perMonth')}
                       </p>
                     </div>
                   </div>
@@ -383,7 +434,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                   <div className="family-member-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {idx === 0 ? (
                       <span className="pill-badge" style={{ fontSize: '0.6875rem' }}>
-                        Titular
+                        {t('holderBadge')}
                       </span>
                     ) : (
                       <>
@@ -394,13 +445,13 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                             color: 'var(--text-muted)',
                           }}
                         >
-                          CÓDIGO: #{af.codigoAfiliado}
+                          {t('memberCode')} #{af.affiliateCode}
                         </span>
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            removeAfiliado(idx);
+                            removeAffiliate(idx);
                           }}
                           style={{
                             background: 'transparent',
@@ -409,7 +460,7 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                             cursor: 'pointer',
                             padding: '0.375rem',
                           }}
-                          title="Eliminar familiar"
+                          title={t('removeMember')}
                         >
                           <Trash2 size={16} />
                         </button>
@@ -422,63 +473,45 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
           </div>
           <section className="billing-preview" aria-labelledby="billing-preview-title">
             <div className="billing-preview-heading">
-              <span className="billing-preview-eyebrow">Subtotal del grupo familiar</span>
+              <span className="billing-preview-eyebrow">{t('subtotal')}</span>
               <h4 id="billing-preview-title">
-                ${subtotalGrupo * (billingPeriods.find((period) => period.id === frecuenciaPago)?.months || 1)}<sup>*</sup>
+                ${groupSubtotal * (billingPeriods.find((period) => period.id === paymentFrequency)?.months || 1)}
               </h4>
-              <p>
-                Pago {frecuenciaPago.toLocaleLowerCase('es-VE')} · equivalente a ${subtotalGrupo} al mes
-              </p>
+              {paymentFrequency !== 'Mensual' && (
+                <p>
+                  {t('payment')} {tPayment(PAYMENT_FREQUENCY_TRANSLATION_KEYS[paymentFrequency])} · {t('equivalentTo')} ${groupSubtotal} {t('perMonth')}
+                </p>
+              )}
             </div>
 
-            <div className="billing-style-picker" aria-label="Comparar estilos del selector">
-              <span>Vista para evaluación:</span>
-              {([
-                ['cards', 'Opción 1'],
-                ['segmented', 'Opción 2'],
-                ['compact', 'Opción 3'],
-              ] as Array<[PricingStyle, string]>).map(([style, label]) => (
-                <button
-                  key={style}
-                  type="button"
-                  className={pricingStyle === style ? 'active' : ''}
-                  onClick={() => setPricingStyle(style)}
-                  aria-pressed={pricingStyle === style}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div className={`billing-periods billing-periods--${pricingStyle}`}>
+            <div className="billing-periods">
               {billingPeriods.map((period) => {
-                const isSelected = frecuenciaPago === period.id;
+                const isSelected = paymentFrequency === period.id;
                 return (
                   <button
                     key={period.id}
                     type="button"
                     className={`billing-period ${isSelected ? 'selected' : ''}`}
-                    onClick={() => onChangeFrecuenciaPago(period.id)}
+                    onClick={() => onPaymentFrequencyChange(period.id)}
                     aria-pressed={isSelected}
                   >
-                    {period.id === 'Mensual' && (
+                    {period.id === 'Trimestral' && (
                       <span className="billing-popular-badge">
-                        <Flame size={13} fill="currentColor" /> Más solicitado
+                        <Flame size={13} fill="currentColor" /> {t('mostRequested')}
                       </span>
                     )}
-                    <span className="billing-period-name">{period.id}</span>
-                    <strong>${subtotalGrupo * period.months}</strong>
-                    <small>{period.shortLabel}</small>
+                    <span className="billing-period-name">{tPayment(PAYMENT_FREQUENCY_TRANSLATION_KEYS[period.id])}</span>
+                    <strong>${groupSubtotal * period.months}</strong>
+                    <small>{t('monthCount', { count: period.months })}</small>
                     {isSelected && <Check className="billing-period-check" size={16} strokeWidth={3} />}
                   </button>
                 );
               })}
             </div>
-            <p className="billing-tax-note">* Los precios indicados no incluyen impuestos.</p>
           </section>
         </div>
 
-        {/* SELECCIÓN DE PLAN (Derecha) */}
+
         <div className="previasis-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <div
@@ -496,29 +529,29 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
               <Award size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--previasis-dark-green)' }}>
-                Selección de Plan
-              </h3>
-              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                Para: <strong>{currentMember.nombreCompleto || `Persona #${currentMember.codigoAfiliado}`}</strong>
-              </p>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--previasis-dark-green)' }}>
+              {t('planSelection')}
+            </h3>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              {t('for')} <strong>{currentMember?.fullName || t('personPlaceholder', { number: currentMember?.affiliateCode || 1 })}</strong>
+            </p>
             </div>
           </div>
 
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             {currentAge === null
-              ? 'Ingresa una fecha de nacimiento para calcular la tarifa.'
+              ? t('enterBirthDate')
               : currentRange === '61-80'
-                ? 'Plan Abuelos · válido para personas de 61 a 80 años.'
+                ? t('abuelosPlan')
                 : currentRange === null
-                  ? 'Edad fuera de los rangos tarifarios publicados.'
-                  : `Tarifas para el rango de edad ${currentRange} años.`}
+                  ? t('ageOutOfRange')
+                  : t('ageRangeF', { range: currentRange })}
           </p>
 
           <div className={`grid ${availablePlans.length > 4 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
             {availablePlans.map((plan) => {
-              const isPlanSelected = currentMember.planSolicitado === plan.id
-                && currentMember.limiteCobertura === plan.defaultCoverage;
+              const isPlanSelected = currentMember?.requestedPlan === plan.id
+                && currentMember?.coverageLimit === plan.defaultCoverage;
               const monthlyPrice = getMonthlyPrice(plan, currentAge);
 
               return (
@@ -542,17 +575,17 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
                     <h4 style={{ fontWeight: 800, fontSize: '0.9375rem', textTransform: 'uppercase', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
                       {plan.name}
                     </h4>
-                    <p style={{ fontSize: '0.75rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                      {plan.defaultCoverage} cobertura anual
-                    </p>
+                      <p style={{ fontSize: '0.75rem', fontWeight: 700, marginTop: '0.2rem' }}>
+                        {plan.defaultCoverage} {t('annualCoverage')}
+                      </p>
                   </div>
 
                   <div style={{ marginTop: '0.75rem' }}>
-                    <p style={{ fontSize: '0.6875rem', opacity: 0.9 }}>Cuota mensual</p>
+                    <p style={{ fontSize: '0.6875rem', opacity: 0.9 }}>{t('monthlyFee')}</p>
                     <strong style={{ fontSize: '1.25rem' }}>
-                      {monthlyPrice === null ? 'Consultar' : `$${monthlyPrice}`}
+                      {monthlyPrice === null ? t('consult') : `$${monthlyPrice}`}
                     </strong>
-                    
+
                   </div>
                 </button>
               );
@@ -561,49 +594,58 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
         </div>
       </div>
 
-      {/* DETALLES DEL MIEMBRO SELECCIONADO */}
+
       <div className="previasis-card">
         <h4 style={{ fontSize: '1.0625rem', fontWeight: 800, color: 'var(--previasis-dark-green)', marginBottom: '1.25rem' }}>
-          Datos de: {currentMember.nombreCompleto || `Persona #${currentMember.codigoAfiliado}`}
+          {t('memberData')} {currentMember?.fullName || t('personPlaceholder', { number: currentMember?.affiliateCode || 1 })}
         </h4>
 
         <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '1rem' }}>
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Nombre(s) y Apellido(s) <span className="previasis-label-required">*</span>
+              {t('fullName')} <span className="previasis-label-required">*</span>
             </label>
             <input
               ref={memberNameInputRef}
               type="text"
               className="previasis-input"
-              placeholder="Nombre completo"
-              value={currentMember.nombreCompleto}
-              onChange={(e) => updateAfiliado(selectedMemberIndex, { nombreCompleto: e.target.value })}
+               placeholder={t('fullNamePlaceholder')}
+              value={currentMember?.fullName}
+              onChange={(e) => updateAffiliate(selectedMemberIndex, { fullName: e.target.value })}
               required
             />
           </div>
 
-          <div className="previasis-input-group">
-            <label className="previasis-label">
-              Cédula de Identidad / R.I.F. <span className="previasis-label-required">*</span>
-            </label>
+          <div className="previasis-input-group contextual-tooltip-host">
+            <div className="previasis-label">
+              <label htmlFor="affiliate-document-number">
+                {t('idCard')} <span className="previasis-label-required">*</span>
+              </label>
+              <ContextualTooltip text={t('minorDocumentHint')} label={t('showFieldHelp')} />
+            </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <select
                 className="previasis-input"
                 style={{ width: '85px', flex: '0 0 auto', fontWeight: 700 }}
-                value={currentMember.tipoDoc}
-                onChange={(e) => updateAfiliado(selectedMemberIndex, { tipoDoc: e.target.value as TipoDocumento })}
+                value={currentMember?.documentType}
+                onChange={(e) => updateAffiliate(selectedMemberIndex, {
+                  documentType: e.target.value as AffiliateRow['documentType'],
+                })}
               >
-                <option value="V">V-</option>
-                <option value="E">E-</option>
-                <option value="P">P-</option>
+                <option value="M">M-</option>
+                <option value="V">{t('idPrefix')}</option>
+                <option value="E">{t('idPrefixE')}</option>
+                <option value="P">{t('idPrefixP')}</option>
               </select>
               <input
+                id="affiliate-document-number"
                 type="text"
                 className="previasis-input"
-                placeholder="12345678"
-                value={currentMember.numDoc}
-                onChange={(e) => updateAfiliado(selectedMemberIndex, { numDoc: e.target.value })}
+                placeholder={t('idPlaceholder')}
+                value={currentMember?.documentNumber}
+                onChange={(e) => updateAffiliate(selectedMemberIndex, {
+                  documentNumber: e.target.value.replace(/\D/g, ''),
+                })}
                 required
               />
             </div>
@@ -611,71 +653,75 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
         </div>
 
         <div className="grid grid-cols-4 gap-4" style={{ marginBottom: '1rem' }}>
-          <div className="previasis-input-group">
-            <label className="previasis-label">
-              Fecha de Nacimiento <span className="previasis-label-required">*</span>
-            </label>
+          <div className="previasis-input-group contextual-tooltip-host">
+            <div className="previasis-label">
+              <label htmlFor="affiliate-birth-date">
+                {t('birthDate')} <span className="previasis-label-required">*</span>
+              </label>
+              <ContextualTooltip text={t('actuarialAgeHint')} label={t('showFieldHelp')} />
+            </div>
             <input
+              id="affiliate-birth-date"
               type="date"
               className="previasis-input"
               min={getMinimumBirthDate()}
               max={new Date().toISOString().slice(0, 10)}
-              value={currentMember.fechaNacimiento}
-              onChange={(e) => updateAfiliado(selectedMemberIndex, { fechaNacimiento: e.target.value })}
-              onBlur={() => validateBirthDate(currentMember.fechaNacimiento)}
+              value={currentMember?.birthDate}
+              onChange={(e) => updateAffiliate(selectedMemberIndex, { birthDate: e.target.value })}
+              onBlur={() => validateBirthDate(currentMember?.birthDate)}
               required
             />
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Parentesco <span className="previasis-label-required">*</span>
+              {t('relationship')} <span className="previasis-label-required">*</span>
             </label>
             <select
               className="previasis-input"
-              value={currentMember.parentesco}
-              onChange={(e) => updateAfiliado(selectedMemberIndex, { parentesco: e.target.value as Parentesco })}
+              value={currentMember?.relationship}
+              onChange={(e) => updateAffiliate(selectedMemberIndex, { relationship: e.target.value as Relationship })}
             >
-              <option value="Titular">Titular</option>
-              <option value="Cónyuge">Cónyuge / Esposo(a)</option>
-              <option value="Hijo/a">Hijo/a</option>
-              <option value="Padre/Madre">Padre/Madre</option>
-              <option value="Hermano/a">Hermano/a</option>
-              <option value="Otro">Otro</option>
+               <option value="Titular">{t('holder')}</option>
+               <option value="Cónyuge">{t('spouse')}</option>
+               <option value="Hijo/a">{t('child')}</option>
+               <option value="Padre/Madre">{t('parent')}</option>
+               <option value="Hermano/a">{t('sibling')}</option>
+               <option value="Otro">{t('other')}</option>
             </select>
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Sexo <span className="previasis-label-required">*</span>
+              {t('gender')} <span className="previasis-label-required">*</span>
             </label>
             <div className="pill-switch">
               <button
                 type="button"
-                onClick={() => updateAfiliado(selectedMemberIndex, { sexo: 'M' })}
-                className={`pill-switch-btn ${currentMember.sexo === 'M' ? 'active' : ''}`}
+                onClick={() => updateAffiliate(selectedMemberIndex, { sex: 'M' })}
+                className={`pill-switch-btn ${currentMember?.sex === 'M' ? 'active' : ''}`}
               >
-                M
+                {t('male')}
               </button>
               <button
                 type="button"
-                onClick={() => updateAfiliado(selectedMemberIndex, { sexo: 'F' })}
-                className={`pill-switch-btn ${currentMember.sexo === 'F' ? 'active' : ''}`}
+                onClick={() => updateAffiliate(selectedMemberIndex, { sex: 'F' })}
+                className={`pill-switch-btn ${currentMember?.sex === 'F' ? 'active' : ''}`}
               >
-                F
+                {t('female')}
               </button>
             </div>
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Límite de Cobertura <span className="previasis-label-required">*</span>
+              {t('coverageLimit')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
               readOnly
-              value={currentMember.limiteCobertura}
+              value={currentMember?.coverageLimit}
             />
           </div>
         </div>
@@ -683,28 +729,28 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Peso (kg) <span className="previasis-label-required">*</span>
+              {t('weight')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="70"
-              value={currentMember.pesoKg}
-              onChange={(e) => updateAfiliado(selectedMemberIndex, { pesoKg: e.target.value })}
+              placeholder={t('weightPlaceholder')}
+              value={currentMember?.weightKg}
+              onChange={(e) => updateAffiliate(selectedMemberIndex, { weightKg: e.target.value })}
               required
             />
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Estatura (cm) <span className="previasis-label-required">*</span>
+              {t('height')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="175"
-              value={currentMember.estaturaCm}
-              onChange={(e) => updateAfiliado(selectedMemberIndex, { estaturaCm: e.target.value })}
+              placeholder={t('heightPlaceholder')}
+              value={currentMember?.heightCm}
+              onChange={(e) => updateAffiliate(selectedMemberIndex, { heightCm: e.target.value })}
               required
             />
           </div>
@@ -714,4 +760,4 @@ export const Step3AfiliadosPlan: React.FC<Step3Props> = ({
   );
 };
 
-export default Step3AfiliadosPlan;
+export default Step3AffiliatesPlan;

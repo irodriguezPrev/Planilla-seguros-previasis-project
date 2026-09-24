@@ -1,47 +1,81 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   HeaderSection,
-  PersonaNaturalData,
-  TipoOperacion,
-  TipoContrato,
-  TipoDocumento,
-  TipoRif,
-  EstadoCivil,
-  Sexo,
-  ClasificacionActividad,
+  NaturalPersonData,
+  OperationType,
+  ContractType,
+  DocumentType,
+  TaxIdType,
+  MaritalStatus,
+  ActivityClassification,
 } from '@/core/interfaces/affiliation.interfaces';
 import { getCitiesByState, VENEZUELA_STATES } from '@/core/config/venezuela-locations.config';
+import {
+  isValidEmail,
+  isValidVenezuelanMobilePhone,
+  normalizePhoneNumber,
+} from '@/core/utils/contact-validation.utils';
 import { User, Shield, MapPin, Phone, Mail } from 'lucide-react';
 
 interface Step1Props {
   header: HeaderSection;
-  titular: PersonaNaturalData;
+  policyholder: NaturalPersonData;
   onChangeHeader: (header: HeaderSection) => void;
-  onChangeTitular: (titular: PersonaNaturalData) => void;
+  onPolicyholderChange: (policyholder: NaturalPersonData) => void;
 }
 
-export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
+export const Step1HeaderAndPolicyholder: React.FC<Step1Props> = ({
   header,
-  titular,
+  policyholder,
   onChangeHeader,
-  onChangeTitular,
+  onPolicyholderChange,
 }) => {
+  const t = useTranslations('step1');
+  const tValidation = useTranslations('validation');
   const updateHeader = (fields: Partial<HeaderSection>) => {
     onChangeHeader({ ...header, ...fields });
   };
 
-  const updateTitular = (fields: Partial<PersonaNaturalData>) => {
-    onChangeTitular({ ...titular, ...fields });
+  const updatePolicyholder = (fields: Partial<NaturalPersonData>) => {
+    onPolicyholderChange({ ...policyholder, ...fields });
   };
 
-  const esComerciante = (titular.ocupacion || '').trim().toLowerCase().includes('comerciante');
-  const availableCities = getCitiesByState(titular.estadoResidencia);
+  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
+  const normalizedOccupation = (policyholder.occupation || '').trim().toLocaleLowerCase();
+  const isMerchant = normalizedOccupation.includes('comerciante') || normalizedOccupation.includes('merchant');
+  const availableCities = getCitiesByState(policyholder.residenceState);
+
+  const handleEmailBlur = (email: string) => {
+    setEmailError(email && !isValidEmail(email) ? tValidation('invalidEmail') : '');
+  };
+
+  const handleEmailChange = (email: string) => {
+    updatePolicyholder({ email });
+    if (!email || isValidEmail(email)) setEmailError('');
+  };
+
+  const handlePhoneBlur = (phone: string) => {
+    setPhoneError(
+      phone && !isValidVenezuelanMobilePhone(phone)
+        ? tValidation('invalidVenezuelanMobile')
+        : '',
+    );
+  };
+
+  const handlePhoneChange = (phone: string) => {
+    const normalizedPhone = normalizePhoneNumber(phone);
+    updatePolicyholder({ mobilePhone: normalizedPhone });
+    if (!normalizedPhone || isValidVenezuelanMobilePhone(normalizedPhone)) setPhoneError('');
+  };
 
   return (
     <div className="step1-layout">
-      {/* SECCIÓN 1: CABECERA Y CONTROL DE EMISIÓN */}
+
       <div className="previasis-card step1-card" style={{ borderLeft: '4px solid var(--previasis-green)' }}>
         <div className="step1-section-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -61,51 +95,51 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--previasis-dark-green)' }}>
-                Control de Emisión y Tipo de Contrato
+                {t('emissionControl')}
               </h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Providencia Sudeaseg Nº SAA-09-1585 • RIF J-412048970 
-                {/* TODO: el riff deberia ser una propiedad almacenada en alguna DB */}
+                {t('sudeasegRef')}
+
               </p>
             </div>
           </div>
-          <span className="pill-badge">Sección 1</span>
+          <span className="pill-badge">{t('section1')}</span>
         </div>
 
         <div className="step1-control-grid">
-          {/* Tipo de Operación Pill Switch */}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <label className="previasis-label">
-              Tipo de Operación <span className="previasis-label-required">*</span>
+              {t('operationType')} <span className="previasis-label-required">*</span>
             </label>
             <div className="pill-switch">
-              {(['Emisión', 'Inclusión'] as TipoOperacion[]).map((op) => (
+              {(['Emisión', 'Inclusión'] as OperationType[]).map((op) => (
                 <button
                   key={op}
                   type="button"
-                  onClick={() => updateHeader({ tipoOperacion: op })}
-                  className={`pill-switch-btn ${header.tipoOperacion === op ? 'active' : ''}`}
+                  onClick={() => updateHeader({ operationType: op })}
+                  className={`pill-switch-btn ${header.operationType === op ? 'active' : ''}`}
                 >
-                  {op}
+                  {t(op === 'Emisión' ? 'emission' : 'inclusion')}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Tipo de Contrato Pill Switch */}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <label className="previasis-label">
-              Tipo de Contrato <span className="previasis-label-required">*</span>
+              {t('contractType')} <span className="previasis-label-required">*</span>
             </label>
             <div className="pill-switch">
-              {(['Individual', 'Colectivo'] as TipoContrato[]).map((co) => (
+              {(['Individual', 'Colectivo'] as ContractType[]).map((co) => (
                 <button
                   key={co}
                   type="button"
-                  onClick={() => updateHeader({ tipoContrato: co })}
-                  className={`pill-switch-btn ${header.tipoContrato === co ? 'active' : ''}`}
+                  onClick={() => updateHeader({ contractType: co })}
+                  className={`pill-switch-btn ${header.contractType === co ? 'active' : ''}`}
                 >
-                  {co}
+                  {t(co === 'Individual' ? 'individual' : 'collective')}
                 </button>
               ))}
             </div>
@@ -116,32 +150,32 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
         <div className="step1-form-grid step1-identity-grid">
 
           <div className="previasis-input-group">
-            <label className="previasis-label">Nº de Solicitud (Opcional)</label>
+            <label className="previasis-label">{t('requestNumber')}</label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="Ej: SOL-2026-0001"
-              value={header.numSolicitud || ''}
-              onChange={(e) => updateHeader({ numSolicitud: e.target.value })}
+              placeholder={t('requestNumberPlaceholder')}
+              value={header.applicationNumber || ''}
+              onChange={(e) => updateHeader({ applicationNumber: e.target.value })}
             />
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Fecha de la Solicitud <span className="previasis-label-required">*</span>
+              {t('requestDate')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="date"
               className="previasis-input"
-              value={header.fechaSolicitud}
-              onChange={(e) => updateHeader({ fechaSolicitud: e.target.value })}
+              value={header.applicationDate}
+              onChange={(e) => updateHeader({ applicationDate: e.target.value })}
               required
             />
           </div>
         </div>
       </div>
 
-      {/* SECCIÓN 2: DATOS DEL PROPUESTO AFILIADO TITULAR */}
+
       <div className="previasis-card step1-card">
         <div className="step1-section-header step1-section-header-large">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -161,173 +195,173 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--previasis-dark-green)' }}>
-                Datos del Titular
+                {t('policyholderData')}
               </h3>
               <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                Información personal, fiscal y de contacto del proponente principal
+                {t('policyholderDescription')}
               </p>
             </div>
           </div>
-          <span className="pill-badge">Sección 2</span>
+          <span className="pill-badge">{t('section2')}</span>
         </div>
 
-        {/* Nombres y Apellidos */}
+
         <div className="step1-form-grid step1-form-grid-3">
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Cédula de Identidad / Pasaporte <span className="previasis-label-required">*</span>
+              {t('idCard')} <span className="previasis-label-required">*</span>
             </label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <select
                 className="previasis-input"
                 style={{ width: '85px', flex: '0 0 auto', fontWeight: 700 }}
-                value={titular.tipoDoc}
-                onChange={(e) => updateTitular({ tipoDoc: e.target.value as TipoDocumento })}
+                value={policyholder.documentType}
+                onChange={(e) => updatePolicyholder({ documentType: e.target.value as DocumentType })}
               >
-                <option value="V">V-</option>
-                <option value="E">E-</option>
-                <option value="P">P-</option>
+                <option value="V">{t('idPrefix')}</option>
+                <option value="E">{t('idPrefixE')}</option>
+                <option value="P">{t('idPrefixP')}</option>
               </select>
               <input
                 type="text"
                 className="previasis-input"
                 placeholder="12345678"
-                value={titular.numDoc}
-                onChange={(e) => updateTitular({ numDoc: e.target.value.replace(/\D/g, '') })}
+                value={policyholder.documentNumber}
+                onChange={(e) => updatePolicyholder({ documentNumber: e.target.value.replace(/\D/g, '') })}
                 required
               />
             </div>
           </div>
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Nombres <span className="previasis-label-required">*</span>
+              {t('firstName')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="Primer y segundo nombre"
-              value={titular.nombres}
-              onChange={(e) => updateTitular({ nombres: e.target.value })}
+              placeholder={t('firstNamePlaceholder')}
+              value={policyholder.firstNames}
+              onChange={(e) => updatePolicyholder({ firstNames: e.target.value })}
               required
             />
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Apellidos <span className="previasis-label-required">*</span>
+              {t('lastName')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="Primer y segundo apellido"
-              value={titular.apellidos}
-              onChange={(e) => updateTitular({ apellidos: e.target.value })}
+              placeholder={t('lastNamePlaceholder')}
+              value={policyholder.lastNames}
+              onChange={(e) => updatePolicyholder({ lastNames: e.target.value })}
               required
             />
           </div>
-          
+
         </div>
 
-        {/* Nacionalidad, Estado Civil, Sexo */}
+
         <div className="step1-form-grid step1-form-grid-4">
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Registro de Información Fiscal (R.I.F.) <span className="previasis-label-required">*</span>
+              {t('rif')} <span className="previasis-label-required">*</span>
             </label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <select
                 className="previasis-input"
                 style={{ width: '85px', flex: '0 0 auto', fontWeight: 700 }}
-                value={titular.tipoRif}
-                onChange={(e) => updateTitular({ tipoRif: e.target.value as TipoRif })}
+                value={policyholder.taxIdType}
+                onChange={(e) => updatePolicyholder({ taxIdType: e.target.value as TaxIdType })}
               >
-                <option value="V">V-</option>
-                <option value="E">E-</option>
-                <option value="J">J-</option>
-                <option value="G">G-</option>
+                <option value="V">{t('idPrefix')}</option>
+                <option value="E">{t('idPrefixE')}</option>
+                <option value="J">{t('rifPrefixJ')}</option>
+                <option value="G">{t('rifPrefixG')}</option>
               </select>
               <input
                 type="text"
                 className="previasis-input"
-                placeholder="12345678-0"
-                value={titular.numRif}
-                onChange={(e) => updateTitular({ numRif: e.target.value })}
+                placeholder={t('rifPlaceholder')}
+                value={policyholder.taxId}
+                onChange={(e) => updatePolicyholder({ taxId: e.target.value })}
                 required
               />
             </div>
           </div>
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Nacionalidad <span className="previasis-label-required">*</span>
+              {t('nationality')} <span className="previasis-label-required">*</span>
             </label>
             <select
               className="previasis-input"
-              value={titular.nacionalidad}
-              onChange={(e) => updateTitular({ nacionalidad: e.target.value })}
+              value={policyholder.nationality}
+              onChange={(e) => updatePolicyholder({ nationality: e.target.value })}
             >
-              <option value="Venezolana">Venezolano/a</option>
-              <option value="Extranjera">Extranjero/a</option>
+              <option value="Venezolana">{t('venezuelan')}</option>
+              <option value="Extranjera">{t('foreign')}</option>
             </select>
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Estado Civil <span className="previasis-label-required">*</span>
+              {t('civilStatus')} <span className="previasis-label-required">*</span>
             </label>
             <select
               className="previasis-input"
-              value={titular.estadoCivil}
-              onChange={(e) => updateTitular({ estadoCivil: e.target.value as EstadoCivil })}
+              value={policyholder.maritalStatus}
+              onChange={(e) => updatePolicyholder({ maritalStatus: e.target.value as MaritalStatus })}
             >
-              <option value="Soltero(a)">Soltero/a</option>
-              <option value="Casado(a)">Casado/a</option>
-              <option value="Divorciado(a)">Divorciado/a</option>
-              <option value="Viudo(a)">Viudo/a</option>
-              <option value="Concubinato">Concubinato</option>
+              <option value="Soltero(a)">{t('single')}</option>
+              <option value="Casado(a)">{t('married')}</option>
+              <option value="Divorciado(a)">{t('divorced')}</option>
+              <option value="Viudo(a)">{t('widowed')}</option>
+              <option value="Concubinato">{t('cohabiting')}</option>
             </select>
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Sexo <span className="previasis-label-required">*</span>
+              {t('gender')} <span className="previasis-label-required">*</span>
             </label>
             <div className="pill-switch" style={{ width: '100%' }}>
               <button
                 type="button"
                 style={{ flex: 1 }}
-                onClick={() => updateTitular({ sexo: 'M' })}
-                className={`pill-switch-btn ${titular.sexo === 'M' ? 'active' : ''}`}
+                onClick={() => updatePolicyholder({ sex: 'M' })}
+                className={`pill-switch-btn ${policyholder.sex === 'M' ? 'active' : ''}`}
               >
-                Masculino (M)
+                {t('male')}
               </button>
               <button
                 type="button"
                 style={{ flex: 1 }}
-                onClick={() => updateTitular({ sexo: 'F' })}
-                className={`pill-switch-btn ${titular.sexo === 'F' ? 'active' : ''}`}
+                onClick={() => updatePolicyholder({ sex: 'F' })}
+                className={`pill-switch-btn ${policyholder.sex === 'F' ? 'active' : ''}`}
               >
-                Femenino (F)
+                {t('female')}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Estado y Ciudad de residencia */}
+
         <div className="step1-form-grid step1-form-grid-2">
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Estado <span className="previasis-label-required">*</span>
+              {t('state')} <span className="previasis-label-required">*</span>
             </label>
             <select
               className="previasis-input"
-              value={titular.estadoResidencia || ''}
-              onChange={(e) => updateTitular({
-                estadoResidencia: e.target.value,
-                ciudadResidencia: '',
+              value={policyholder.residenceState || ''}
+              onChange={(e) => updatePolicyholder({
+                residenceState: e.target.value,
+                residenceCity: '',
               })}
               required
             >
-              <option value="">Seleccione un estado</option>
+              <option value="">{t('selectState')}</option>
               {VENEZUELA_STATES.map((state) => (
                 <option key={state} value={state}>{state}</option>
               ))}
@@ -336,18 +370,18 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Ciudad <span className="previasis-label-required">*</span>
+              {t('city')} <span className="previasis-label-required">*</span>
             </label>
             <select
-              key={titular.estadoResidencia || 'sin-estado'}
+              key={policyholder.residenceState || 'sin-estado'}
               className="previasis-input"
-              value={titular.ciudadResidencia || ''}
-              onChange={(e) => updateTitular({ ciudadResidencia: e.target.value })}
-              disabled={!titular.estadoResidencia}
+              value={policyholder.residenceCity || ''}
+              onChange={(e) => updatePolicyholder({ residenceCity: e.target.value })}
+              disabled={!policyholder.residenceState}
               required
             >
               <option value="">
-                {titular.estadoResidencia ? 'Seleccione una ciudad' : 'Seleccione primero un estado'}
+                {t(policyholder.residenceState ? 'selectCity' : 'selectStateFirst')}
               </option>
               {availableCities.map((city) => (
                 <option key={city} value={city}>{city}</option>
@@ -356,114 +390,114 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
           </div>
         </div>
 
-        {/* Lugar y Fecha Nacimiento */}
+
         <div className="step1-form-grid step1-form-grid-2">
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Lugar de Nacimiento <span className="previasis-label-required">*</span>
+              {t('birthPlace')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="Caracas, Dto. Capital, Venezuela"
-              value={titular.lugarNacimiento}
-              onChange={(e) => updateTitular({ lugarNacimiento: e.target.value })}
+              placeholder={t('birthPlacePlaceholder')}
+              value={policyholder.birthPlace}
+              onChange={(e) => updatePolicyholder({ birthPlace: e.target.value })}
               required
             />
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Fecha de Nacimiento <span className="previasis-label-required">*</span>
+              {t('birthDate')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="date"
               className="previasis-input"
-              value={titular.fechaNacimiento}
-              onChange={(e) => updateTitular({ fechaNacimiento: e.target.value })}
+              value={policyholder.birthDate}
+              onChange={(e) => updatePolicyholder({ birthDate: e.target.value })}
               required
             />
           </div>
         </div>
 
-        {/* Profesión, Ocupación, Ingreso Mensual/Anual */}
+
         <div className="step1-form-grid step1-form-grid-3">
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Profesión <span className="previasis-label-required">*</span>
+              {t('profession')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="Ingeniero, Médico, Abogado..."
-              value={titular.profesion}
-              onChange={(e) => updateTitular({ profesion: e.target.value })}
+              placeholder={t('professionPlaceholder')}
+              value={policyholder.profession}
+              onChange={(e) => updatePolicyholder({ profession: e.target.value })}
               required
             />
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Ocupación <span className="previasis-label-required">*</span>
+              {t('occupation')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="Ej: Comerciante, Ejecutivo, Tecnólogo..."
-              value={titular.ocupacion}
-              onChange={(e) => updateTitular({ ocupacion: e.target.value })}
+              placeholder={t('occupationPlaceholder')}
+              value={policyholder.occupation}
+              onChange={(e) => updatePolicyholder({ occupation: e.target.value })}
               required
             />
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
-              Ingreso Anual / Mensual (Bs. / USD) <span className="previasis-label-required">*</span>
+              {t('annualIncome')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="Monto sin cálculos (ej. $4.200,00)"
-              value={titular.ingresoAnualBs}
-              onChange={(e) => updateTitular({ ingresoAnualBs: e.target.value })}
+              placeholder={t('annualIncomePlaceholder')}
+              value={policyholder.annualIncomeBs}
+              onChange={(e) => updatePolicyholder({ annualIncomeBs: e.target.value })}
               required
             />
           </div>
         </div>
 
-        {esComerciante && (
+        {isMerchant && (
           <div className="step1-form-grid step1-form-grid-1">
             <div className="previasis-input-group">
               <label className="previasis-label">
-                Ramo al que se dedica <span className="previasis-label-required">*</span>
+                {t('economicSector')} <span className="previasis-label-required">*</span>
               </label>
               <input
                 type="text"
                 className="previasis-input"
-                placeholder="Ej: Ferretería, Textiles, Alimentos..."
-                value={titular.ramoComercial || ''}
-                onChange={(e) => updateTitular({ ramoComercial: e.target.value })}
+                placeholder={t('economicSectorPlaceholder')}
+                value={policyholder.businessSector || ''}
+                onChange={(e) => updatePolicyholder({ businessSector: e.target.value })}
                 required
               />
             </div>
           </div>
         )}
 
-        {/* Actividad y PEP */}
+
         <div className="step1-context-grid">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <label className="previasis-label">
-              Clasificación de Actividad <span className="previasis-label-required">*</span>
+              {t('activityClassification')} <span className="previasis-label-required">*</span>
             </label>
             <div className="pill-switch">
-              {(['Independiente', 'Dependiente', 'Societaria'] as ClasificacionActividad[]).map((act) => (
+              {(['Independiente', 'Dependiente', 'Societaria'] as ActivityClassification[]).map((act) => (
                 <button
                   key={act}
                   type="button"
-                  onClick={() => updateTitular({ clasificacionActividad: act })}
-                  className={`pill-switch-btn ${titular.clasificacionActividad === act ? 'active' : ''}`}
+                  onClick={() => updatePolicyholder({ activityClassification: act })}
+                  className={`pill-switch-btn ${policyholder.activityClassification === act ? 'active' : ''}`}
                 >
-                  {act}
+                  {t(act === 'Dependiente' ? 'dependent' : act === 'Independiente' ? 'independent' : 'corporate')}
                 </button>
               ))}
             </div>
@@ -472,151 +506,155 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label className="previasis-label">
-                Persona Expuesta Políticamente (PEP) <span className="previasis-label-required">*</span>
+                {t('pep')} <span className="previasis-label-required">*</span>
               </label>
               <div className="pill-switch">
                 <button
                   type="button"
-                  onClick={() => updateTitular({ pep: 'NO' })}
-                  className={`pill-switch-btn ${titular.pep === 'NO' ? 'active' : ''}`}
+                  onClick={() => updatePolicyholder({ politicallyExposed: 'NO' })}
+                  className={`pill-switch-btn ${policyholder.politicallyExposed === 'NO' ? 'active' : ''}`}
                 >
-                  NO
+                  {t('pepNo')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateTitular({ pep: 'SÍ' })}
-                  className={`pill-switch-btn ${titular.pep === 'SÍ' ? 'active' : ''}`}
+                  onClick={() => updatePolicyholder({ politicallyExposed: 'SÍ' })}
+                  className={`pill-switch-btn ${policyholder.politicallyExposed === 'SÍ' ? 'active' : ''}`}
                 >
-                  SÍ
+                  {t('pepYes')}
                 </button>
               </div>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Indique si usted o algún familiar ocupa cargo público relevante.
+              {t('pepHint')}
             </p>
           </div>
         </div>
 
-        {titular.clasificacionActividad === 'Dependiente' && (
+        {policyholder.activityClassification === 'Dependiente' && (
           <div className="previasis-input-group step1-field-wide">
             <label className="previasis-label">
-              Empresa donde labora <span className="previasis-label-required">*</span>
+              {t('companyWhereWork')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="Nombre de la empresa"
-              value={titular.empresa || ''}
-              onChange={(e) => updateTitular({ empresa: e.target.value })}
+              placeholder={t('companyWhereWorkPlaceholder')}
+              value={policyholder.company || ''}
+              onChange={(e) => updatePolicyholder({ company: e.target.value })}
               required
             />
           </div>
         )}
 
-        {titular.pep === 'SÍ' && (
+        {policyholder.politicallyExposed === 'SÍ' && (
           <div className="previasis-input-group step1-field-wide">
             <label className="previasis-label">
-              Descripción de la Actividad / Cargo PEP <span className="previasis-label-required">*</span>
+              {t('pepDescription')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="Indique cargo o institución"
-              value={titular.pepDescripcion || ''}
-              onChange={(e) => updateTitular({ pepDescripcion: e.target.value })}
+              placeholder={t('pepDescriptionPlaceholder')}
+              value={policyholder.politicallyExposedDescription || ''}
+              onChange={(e) => updatePolicyholder({ politicallyExposedDescription: e.target.value })}
               required
             />
           </div>
         )}
 
-        {/* Direcciones */}
+
         <div className="step1-address-group">
           <div className="step1-form-grid step1-form-grid-3">
              <div className="previasis-input-group">
             <label className="previasis-label">
               <MapPin size={16} color="var(--previasis-green)" />
-              Dirección de Residencia / Habitación <span className="previasis-label-required">*</span>
+              {t('residenceAddress')} <span className="previasis-label-required">*</span>
             </label>
             <input
               className="previasis-input"
               type="text"
-              placeholder="Av., Calle, Edificio/Casa, Apto., Sector, Parroquia, Ciudad, Estado"
-              value={titular.direccionHabitacion}
-              onChange={(e) => updateTitular({ direccionHabitacion: e.target.value })}
+              placeholder={t('residenceAddressPlaceholder')}
+              value={policyholder.homeAddress}
+              onChange={(e) => updatePolicyholder({ homeAddress: e.target.value })}
               required
             />
           </div>
             <div className="previasis-input-group">
-              <label className="previasis-label">Dirección de Oficina</label>
+              <label className="previasis-label">{t('officeAddress')}</label>
               <input
                 type="text"
                 className="previasis-input"
-                placeholder="Dirección laboral u oficina"
-                value={titular.direccionOficina}
-                onChange={(e) => updateTitular({ direccionOficina: e.target.value })}
+                placeholder={t('officeAddressPlaceholder')}
+                value={policyholder.officeAddress}
+                onChange={(e) => updatePolicyholder({ officeAddress: e.target.value })}
               />
             </div>
 
             <div className="previasis-input-group">
               <label className="previasis-label">
-                Dirección de Cobro <span className="previasis-label-required">*</span>
+                {t('paymentAddress')} <span className="previasis-label-required">*</span>
               </label>
               <input
                 type="text"
                 className="previasis-input"
-                placeholder="Habitación, Oficina u Otra"
-                value={titular.direccionCobro}
-                onChange={(e) => updateTitular({ direccionCobro: e.target.value })}
+                placeholder={t('paymentAddressPlaceholder')}
+                value={policyholder.billingAddress}
+                onChange={(e) => updatePolicyholder({ billingAddress: e.target.value })}
                 required
               />
             </div>
           </div>
         </div>
 
-        {/* Contacto: Teléfonos y Email */}
+
         <div className="step1-form-grid step1-form-grid-3 step1-contact-grid">
           <div className="previasis-input-group">
             <label className="previasis-label">
               <Phone size={16} color="var(--previasis-green)" />
-              Teléfono Local
+              {t('localPhone')}
             </label>
             <input
               type="text"
               className="previasis-input"
-              placeholder="0212-XXXXXXX"
-              value={titular.telefonoHabitacion}
-              onChange={(e) => updateTitular({ telefonoHabitacion: e.target.value })}
+              placeholder={t('localPhonePlaceholder')}
+              value={policyholder.homePhone}
+              onChange={(e) => updatePolicyholder({ homePhone: e.target.value })}
             />
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
               <Phone size={16} color="var(--previasis-green)" />
-              Teléfono Móvil <span className="previasis-label-required">*</span>
+              {t('mobilePhone')} <span className="previasis-label-required">*</span>
             </label>
             <input
-              type="text"
-              className="previasis-input"
-              placeholder="0412-1234567"
-              value={titular.telefonoMovil}
-              onChange={(e) => updateTitular({ telefonoMovil: e.target.value })}
+              type="tel"
+              className={`previasis-input ${phoneError ? 'input-error' : ''}`}
+              placeholder={t('mobilePhonePlaceholder')}
+              value={policyholder.mobilePhone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              onBlur={(e) => handlePhoneBlur(e.target.value)}
               required
             />
+            {phoneError && <span className="input-error-message">{phoneError}</span>}
           </div>
 
           <div className="previasis-input-group">
             <label className="previasis-label">
               <Mail size={16} color="var(--previasis-green)" />
-              Correo Electrónico <span className="previasis-label-required">*</span>
+              {t('email')} <span className="previasis-label-required">*</span>
             </label>
             <input
               type="email"
-              className="previasis-input"
-              placeholder="usuario@ejemplo.com"
-              value={titular.email}
-              onChange={(e) => updateTitular({ email: e.target.value })}
+              className={`previasis-input ${emailError ? 'input-error' : ''}`}
+              placeholder={t('emailPlaceholder')}
+              value={policyholder.email}
+              onChange={(e) => handleEmailChange(e.target.value)}
+              onBlur={(e) => handleEmailBlur(e.target.value)}
               required
             />
+            {emailError && <span className="input-error-message">{emailError}</span>}
           </div>
         </div>
       </div>
@@ -624,4 +662,4 @@ export const Step1HeaderAndTitular: React.FC<Step1Props> = ({
   );
 };
 
-export default Step1HeaderAndTitular;
+export default Step1HeaderAndPolicyholder;
