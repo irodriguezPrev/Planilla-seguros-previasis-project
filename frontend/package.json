@@ -2,7 +2,7 @@
   "name": "previasis-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "Plataforma oficial de afiliación digital para Previasis Medicina Prepagada S.A.",
+  "description": "Official digital affiliation platform for Previasis Medicina Prepagada S.A.",
   "scripts": {
     "dev": "next dev -p 3000 --hostname 0.0.0.0",
     "build": "next build",
@@ -16,6 +16,7 @@
     "jspdf": "^4.2.1",
     "lucide-react": "^0.475.0",
     "next": "^16.3.4",
+    "next-intl": "^4.14.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "socket.io-client": "^4.8.1"
