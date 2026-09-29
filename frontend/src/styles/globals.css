@@ -981,6 +981,22 @@ button {
   border: 1px solid var(--border-card);
   border-radius: var(--radius-md);
   background: #fff;
+  overflow: visible;
+}
+
+.health-beneficiary-detail--medication {
+  grid-template-columns: auto minmax(150px, 1.5fr) minmax(90px, 0.75fr) minmax(90px, 0.75fr) minmax(120px, 1fr) auto;
+  gap: 0.45rem;
+}
+
+.health-beneficiary-detail--medication .previasis-input-group {
+  min-width: 0;
+}
+
+.health-beneficiary-detail--medication .previasis-input,
+.health-beneficiary-detail--medication select {
+  width: 100%;
+  min-width: 0;
 }
 
 .health-detail-number {
@@ -1166,6 +1182,13 @@ button {
 .show-validation-errors .field-required-invalid {
   border-color: var(--status-error) !important;
   background: rgba(239, 68, 68, 0.045) !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
+.show-validation-errors .health-inline-warning {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
 }
 
 /* Selector tipo Switch Táctil */
@@ -1798,9 +1821,28 @@ button {
   }
 
   /* Plan cards: tighter on mobile */
+  .step3-plan-selection-card {
+    order: -1;
+  }
+
+  .plan-options-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
   .plan-gradient-card {
     padding: 1rem;
     border-radius: var(--radius-md);
+  }
+
+  .plan-options-grid .plan-gradient-card {
+    min-height: 118px !important;
+    padding: 0.75rem;
+  }
+
+  .plan-options-grid .plan-gradient-card h4 {
+    font-size: 0.8rem !important;
+    line-height: 1.15;
   }
 
   .family-group-header {
@@ -1825,7 +1867,7 @@ button {
   }
 
   .family-member-edit-button {
-    min-height: 36px;
+    min-height: 20px;
     padding-inline: 0.65rem;
   }
 
@@ -2236,5 +2278,271 @@ button {
 @media (max-width: 640px) {
   .contextual-tooltip-bubble {
     width: min(19rem, calc(100vw - 2.5rem));
+  }
+}
+
+/* Firma remota y enlaces de vendedores */
+.broker-referral-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  color: var(--previasis-green);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.previasis-input[readonly],
+.previasis-input:disabled {
+  background: #f1f5f3;
+  color: var(--previasis-dark-green);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.seller-referral-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-color: rgba(0, 153, 84, 0.28);
+}
+
+.seller-referral-url {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.client-signing-page {
+  flex: 1;
+  min-height: calc(100vh - 64px);
+  padding: clamp(1rem, 3vw, 2.5rem);
+  background:
+    radial-gradient(circle at top left, rgba(0, 153, 84, 0.08), transparent 38%),
+    var(--bg-primary);
+}
+
+.client-signing-access {
+  width: min(100%, 30rem);
+  margin: clamp(1.5rem, 8vh, 6rem) auto;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  text-align: center;
+}
+
+.client-signing-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  color: var(--previasis-green);
+  background: var(--previasis-green-light);
+}
+
+.client-signing-eyebrow {
+  display: block;
+  margin: 0.8rem 0 0.25rem;
+  color: var(--previasis-green);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.client-signing-access h1,
+.client-signing-header h1 {
+  color: var(--previasis-dark-green);
+  font-size: clamp(1.45rem, 4vw, 2rem);
+}
+
+.client-signing-access > p,
+.client-signing-header p,
+.client-signing-muted {
+  color: var(--text-muted);
+}
+
+.client-signing-access-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1.5rem;
+  text-align: left;
+}
+
+.client-signing-code-input {
+  height: 3.5rem;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.55em;
+}
+
+.client-signing-security-note,
+.client-signing-legal-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.client-signing-error {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: var(--radius-md);
+  color: #b91c1c;
+  background: #fef2f2;
+  font-size: 0.8125rem;
+}
+
+.client-signing-shell {
+  width: min(100%, 1380px);
+  margin: 0 auto;
+}
+
+.client-signing-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+}
+
+.client-signing-header .client-signing-eyebrow {
+  margin-top: 0;
+}
+
+.client-signing-header.is-complete {
+  border-color: rgba(0, 153, 84, 0.35);
+  background: #f4fbf7;
+}
+
+.client-signing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(20rem, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+.client-signing-grid.is-complete {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.client-signing-preview,
+.client-signing-form {
+  padding: 1rem;
+}
+
+.client-signing-preview iframe {
+  display: block;
+  width: 100%;
+  height: 72vh;
+  min-height: 34rem;
+  margin-top: 0.8rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: #334155;
+}
+
+.client-signing-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--previasis-dark-green);
+}
+
+.client-signing-pdf-loading {
+  display: grid;
+  min-height: 34rem;
+  place-items: center;
+  color: #ffffff;
+  background: #334155;
+}
+
+.client-signing-form {
+  position: sticky;
+  top: 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.client-signing-form h2 {
+  color: var(--previasis-dark-green);
+  font-size: 1.2rem;
+}
+
+.client-signing-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  color: var(--text-body);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.client-signing-checkbox input {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+  accent-color: var(--previasis-green);
+}
+
+.client-signing-complete-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .client-signing-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .client-signing-form {
+    position: static;
+  }
+
+  .seller-referral-url {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .seller-referral-url .btn-pill-primary {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .client-signing-page {
+    padding: 0.75rem;
+  }
+
+  .client-signing-header {
+    align-items: flex-start;
+  }
+
+  .client-signing-preview iframe,
+  .client-signing-pdf-loading {
+    min-height: 28rem;
+    height: 58vh;
+  }
+
+  .seller-referral-url {
+    grid-template-columns: 1fr;
+  }
+
+  .seller-referral-url .btn-pill-primary {
+    grid-column: auto;
   }
 }

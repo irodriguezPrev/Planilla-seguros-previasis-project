@@ -46,7 +46,17 @@
     "roleLabel": "ROL DE USUARIO",
     "defaultRole": "Asesor Comercial",
     "serviceCheck": "Verificación de Servicios y Endpoints",
-    "serviceCheckDesc": "Ejecuta llamadas reales a los endpoints del servidor para verificar respuestas"
+    "serviceCheckDesc": "Ejecuta llamadas reales a los endpoints del servidor para verificar respuestas",
+    "referralTitle": "Mi enlace de referido",
+    "referralSubtitle": "Compártelo para que el cliente complete la solicitud con tus datos de asesor protegidos.",
+    "referralLoading": "Cargando enlace personal...",
+    "copyReferral": "Copiar",
+    "shareReferral": "Compartir",
+    "referralCopied": "Enlace de referido copiado.",
+    "referralCopyPrompt": "Copie este enlace de referido:",
+    "referralError": "No fue posible cargar o compartir el enlace de referido.",
+    "referralShareText": "Completa tu solicitud de afiliación PREVIASIS con la asesoría de {name}.",
+    "referralAdvisor": "Asesor: {name} · Credencial Sudeaseg: {credential}"
   },
   "status": {
     "apiOnline": "Online",
@@ -73,7 +83,7 @@
   },
   "steps": {
     "step1": {
-      "title": "Datos del Titular y Control",
+      "title": "Datos del Titular",
       "shortTitle": "1. Titular",
       "description": "Identificación y datos del proponente titular"
     },
@@ -155,8 +165,8 @@
     "professionPlaceholder": "Ej: Ingeniero Civil",
     "occupation": "Ocupación",
     "occupationPlaceholder": "Ej: Consultor de Obras",
-    "annualIncome": "Ingreso Anual / Mensual (Bs. / USD)",
-    "annualIncomePlaceholder": "Ej: $4.200,00",
+    "annualIncome": "Ingreso Anual (Bs.)",
+    "annualIncomePlaceholder": "Ej: 10.000.000,00",
     "economicSector": "Ramo al que se dedica",
     "economicSectorPlaceholder": "Ej: Ferretería, Textiles, Alimentos...",
     "activityClassification": "Clasificación de Actividad",
@@ -187,11 +197,13 @@
     "emailPlaceholder": "Ej: usuario@dominio.com"
   },
   "step2": {
-    "contractorData": "Datos del contratista",
+    "contractorData": "Datos del Contratante",
     "contractorDesc": "Persona natural responsable de la contratación y pago del plan",
     "section3": "Sección 3",
-    "differentContractor": "¿El contratista es diferente al Propuesto Afiliado Titular?",
-    "sameAsHolder": "El contratista es el mismo Afiliado Titular.",
+    "differentContractor": "¿El Contratante es diferente al Propuesto Afiliado Titular?",
+    "yes": "Sí",
+    "no": "NO",
+    "sameAsHolder": "El Contratante es el mismo Afiliado Titular.",
     "sameAsHolderDesc": "Los datos personales, fiscales y de contacto capturados en el Paso 1 se utilizarán automáticamente en el documento oficial.",
     "idCard": "Cédula / Pasaporte",
     "idPrefix": "V-",
@@ -267,7 +279,7 @@
     "representativePhone": "Teléfono de Oficina",
     "pepDescription": "Descripción de la Actividad / Cargo PEP",
     "pepDescriptionPlaceholder": "Indique cargo o institución",
-    "noDifferentContractor": "El contratista es el mismo Titular."
+    "noDifferentContractor": "El Contratante es el mismo Titular."
   },
   "step3": {
     "familyGroup": "Grupo Familiar",
@@ -311,25 +323,31 @@
     "equivalentTo": "equivalente a",
     "monthlyAbbrev": "mes",
     "monthCount": "{count, plural, one {# mes} other {# meses}}",
-    "fullName": "Nombres y Apellidos",
-    "fullNamePlaceholder": "Nombres y Apellidos",
+    "firstNames": "Nombres",
+    "firstNamesPlaceholder": "Ej: Carlos Andrés",
+    "lastNames": "Apellidos",
+    "lastNamesPlaceholder": "Ej: Mendoza Ruiz",
     "idCard":"Cédula / Pasaporte",
     "idPrefix":"V-",
     "idPrefixE":"E-",
     "idPrefixP":"P-",
     "idPlaceholder":"12345678",
+    "hasIdentityCard": "¿Posee cédula?",
+    "yes": "Sí",
+    "no": "No",
+    "documentPrefix": "Prefijo del documento",
     "birthDate":"Fecha de Nacimiento",
-    "relationship":"Relacion del titular",
+    "relationship":"Parentesco",
     "gender":"Sexo",
     "male":"Masculino",
     "female":"Femenino",
     "coverageLimit":"Tope de Cobertura",
-    "weight":"Peso KG",
-    "weightPlaceholder":"Peso KG",
-    "height":"Altura",
-    "heightPlaceholder":"Altura",
+    "weight":"Peso (Kg)",
+    "weightPlaceholder":"Ej: 65",
+    "height":"Altura (cm)",
+    "heightPlaceholder":"Ej: 175",
     "showFieldHelp": "Mostrar ayuda del campo",
-    "minorDocumentHint": "Para beneficiarios de 10 años o menos sin cédula propia, se genera una identificación M- con la cédula del titular, los dos últimos dígitos del año de nacimiento y un consecutivo cuando corresponda.",
+    "minorDocumentHint": "Para beneficiarios de 13 años o menos sin cédula propia, se genera una identificación M- con la cédula del titular, los dos últimos dígitos del año de nacimiento y un consecutivo cuando corresponda.",
     "actuarialAgeHint": "La edad se calcula de forma actuarial: si faltan seis meses o menos para el próximo cumpleaños, se toma la edad siguiente. Esta edad determina el plan y la tarifa."
   },
   "affiliation": {
@@ -361,11 +379,16 @@
     "stepCelebrationTitle4": "¡Excelente avance!",
     "stepCelebrationMessage4": "La declaración de salud quedó completada.",
     "finalCelebrationEyebrow": "Solicitud completada",
-    "finalCelebrationTitle": "¡Lo lograste!"
+    "finalCelebrationTitle": "¡Lo lograste!",
+    "loadingAdvisor": "Cargando asesor...",
+    "referredBy": "Asesor: {name}",
+    "invalidReferral": "Referido no válido"
   },
   "validation": {
     "policyholderRequired": "Por favor complete los campos obligatorios del Titular.",
     "contractorRequired": "Por favor complete los datos obligatorios del Contratante.",
+    "contractorMinor": "El contratante no puede ser menor de edad (debe tener al menos 18 años).",
+    "contractorCannotBeAffiliate": "El contratante no puede agregarse como beneficiario: el documento coincide con una persona del grupo familiar.",
     "familyGroupRequired": "Debe completar al menos los datos del Titular en el grupo familiar.",
     "ageLimit80": "No se puede continuar: ningún beneficiario puede ser mayor de 80 años.",
     "policyholderDeclarationRequired": "Debe marcar la casilla de aceptación de la Declaración del Titular.",
@@ -384,7 +407,8 @@
     "ageLimit80Beneficiary": "No se puede registrar como beneficiario a una persona mayor de 80 años.",
     "atLeastOnePerson": "Debe existir al menos una persona en el grupo a afiliar (el Titular).",
     "invalidEmail": "Correo electrónico inválido.",
-    "invalidVenezuelanMobile": "Teléfono móvil venezolano inválido (ej: 04121234567)."
+    "invalidVenezuelanMobile": "Teléfono móvil venezolano inválido (ej: 04121234567).",
+    "invalidReferral": "El enlace de referido no existe o está inactivo."
   },
   "step5": {
     "frequencyHeading": "Frecuencia de Pago",
@@ -451,8 +475,8 @@
     "addAtLeastOneSport": "Agregue al menos un deporte para completar esta respuesta.",
     "sport": "Deporte *",
     "sportPlaceholder": "Ej: Natación",
-    "frequency": "Frecuencia *",
-    "frequencyPlaceholder": "3 veces por mes",
+    "frequency": "Frecuencia por mes *",
+    "frequencyPlaceholder": "10",
     "level": "Nivel *",
     "select": "Seleccionar",
     "amateur": "Amateur",
@@ -487,7 +511,7 @@
   },
   "healthGroups": {
     "1-3": { "title": "Vías respiratorias, piel y visión", "prompt": "¿Usted o algún integrante ha padecido enfermedades de las vías respiratorias, la piel, los ojos, la nariz o la garganta, o defectos de refracción visual?" },
-    "4-5": { "title": "Enfermedades cardiovasculares y vasculares", "prompt": "¿Usted o algún integrante ha padecido enfermedades cardiovasculares o vasculares, incluyendo accidentes cerebrovasculares o hemorragias cerebrales?" },
+    "4-5": { "title": "Enfermedades cardiovasculares y vasculares", "prompt": "¿Usted o algún integrante ha padecido enfermedades vasculares o cardiovasculares, incluyendo accidentes cerebrovasculares o hemorragias cerebrales?" },
     "6-11-12-13-22": { "title": "Sistema nervioso, endocrino, inmunológico y antecedentes relacionados", "prompt": "¿Usted o algún integrante ha presentado enfermedades del sistema nervioso, endocrinas, inmunológicas o de transmisión sexual, o ha donado o recibido transfusiones de sangre?" },
     "7-8": { "title": "Sistema digestivo, riñones y vías urinarias", "prompt": "¿Usted o algún integrante ha padecido enfermedades digestivas, de los riñones o de las vías urinarias?" },
     "9": { "title": "Enfermedades osteomusculares", "prompt": "¿Usted o algún integrante ha padecido alguna enfermedad osteomuscular?" },
@@ -510,7 +534,7 @@
     "5": {
       "title": "Enfermedades Vasculares",
       "description": "Accidentes cerebrovasculares, hemorragias cerebrales.",
-      "beneficiaryLabels": { "field1": "Tipo de evento", "field2": "Fecha diagnóstico" },
+      "beneficiaryLabels": { "field1": "Tipo de padecimiento", "field2": "Fecha diagnóstico (MM/AAAA)" },
       "beneficiaryPlaceholders": { "field1": "Ej: Accidente cerebrovascular", "field2": "Ej: 03/2021" },
       "strokeOption": "Accidente cerebrovascular",
       "hemorrhageOption": "Hemorragia cerebral"
@@ -528,13 +552,21 @@
       "title": "Embarazo / Antecedentes Obstétricos",
       "description": "¿Alguna(s) de las mujeres incluidas en esta solicitud está embarazada o ha tenido abortos?",
       "extraInputLabel": "Indicar número de embarazos / Semanas / Abortos",
-      "extraInputPlaceholder": "Ej: 2 embarazos a término, 0 abortos, actualmente no embarazada"
+      "extraInputPlaceholder": "Ej: 2 embarazos a término, 0 abortos, actualmente embarazada"
     },
     "16": { "title": "Masculino", "description": "Desórdenes de la próstata, fimosis o parafimosis, retención de orina.", "applicableSex": "M" },
     "17": { "title": "Práctica Deportiva", "description": "¿Usted o alguna persona a incluir practica algún deporte?", "beneficiaryDetail": true, "detailMode": "sport" },
     "18": {
       "title": "Enfermedades Congénitas o Hereditarias",
       "description": "¿Usted o alguno de los solicitantes padece alguna enfermedad congénita o hereditaria, defecto físico, anomalía, trastorno de desarrollo, desórdenes mentales, síndrome de down?",
+      "clinicalOptions": {
+        "congenitalOrHereditary": "Enfermedad congénita o hereditaria",
+        "physicalDefect": "Defecto físico",
+        "anomaly": "Anomalía",
+        "developmentalDisorder": "Trastorno del desarrollo",
+        "mentalDisorder": "Desorden mental",
+        "downSyndrome": "Síndrome de Down"
+      },
       "extraInputLabel": "Indique nombre, apellido del afectado y condición",
       "extraInputPlaceholder": "Ej: Nombre y apellido del afectado y descripción"
     },
@@ -627,7 +659,8 @@
     "brokerNamePlaceholder": "Asesor de Ventas",
     "credentialNumber": "Nº Credencial Sudeaseg",
     "credentialPlaceholder": "Ej: CR-008899",
-    "brokerDocument": "C.I. / RIF del Asesor"
+    "brokerDocument": "C.I. / RIF del Asesor",
+    "brokerReferralLocked": "Datos protegidos por el enlace del asesor"
   },
   "signaturePad": {
     "registered": "Firma registrada",
@@ -651,6 +684,44 @@
     "pdfTitle": "Vista previa de la solicitud de afiliación",
     "shareText": "Solicitud de Afiliación PREVIASIS firmada",
     "whatsappText": "{shareText}. El PDF fue descargado; adjúntelo a esta conversación.",
-    "pdfLoading": "Cargando documento PDF..."
+    "pdfLoading": "Cargando documento PDF...",
+    "sendForSignature": "Enviar al cliente",
+    "signerHolder": "Titular",
+    "signerContractor": "Contratante",
+    "signingShareTitle": "Solicitud PREVIASIS pendiente de firma",
+    "signingShareInstructions": "Abra su enlace e ingrese los últimos 4 caracteres de su documento. No reenvíe este enlace.",
+    "signingExpires": "Vence: {date}",
+    "signingLinkCopied": "Los enlaces de firma fueron copiados.",
+    "signingCopyPrompt": "Copie y envíe estos enlaces de firma:",
+    "signingRequestError": "No fue posible crear los enlaces de firma."
+  },
+  "clientSigning": {
+    "accessTitle": "Acceso seguro al documento",
+    "accessSubtitle": "Confirme su identidad para revisar la solicitud que le enviaron.",
+    "lastFourLabel": "Últimos 4 caracteres de su documento",
+    "securityHint": "Esta verificación protege sus datos personales y de salud.",
+    "openDocument": "Abrir documento",
+    "genericError": "No fue posible completar la operación.",
+    "pdfError": "No fue posible generar la vista del documento.",
+    "signedTitle": "Documento firmado",
+    "signedSubtitle": "Su firma fue registrada correctamente. Puede descargar su copia.",
+    "reviewTitle": "Revise y firme su solicitud",
+    "signerSummary": "Firmante: {name} · Documento: {document}",
+    "documentTitle": "Solicitud de afiliación",
+    "pdfLoading": "Preparando documento...",
+    "confirmTitle": "Confirmación y firma",
+    "confirmSubtitle": "Lea el documento completo antes de aceptar y firmar.",
+    "acceptHolder": "Declaro que la información suministrada es verdadera y acepto los términos y condiciones del titular.",
+    "acceptFunds": "Declaro que los fondos utilizados provienen de una fuente lícita.",
+    "place": "Lugar de suscripción",
+    "signatureLabel": "Firma electrónica",
+    "signatureHint": "Dibuje su firma con el dedo o el mouse.",
+    "legalNotice": "Al confirmar, se registrarán fecha, hora, dirección IP y versión exacta del documento como evidencia de la operación.",
+    "signDocument": "Aceptar y firmar",
+    "downloadSigned": "Descargar documento firmado",
+    "roles": {
+      "TITULAR": "Titular",
+      "CONTRATANTE": "Contratante"
+    }
   }
 }

@@ -86,6 +86,8 @@ export interface ContractorSection {
 export interface AffiliateRow {
   id: string;
   affiliateCode: number;
+  firstNames: string;
+  lastNames: string;
   fullName: string;
   documentType: DocumentType;
   documentNumber: string;
@@ -133,6 +135,8 @@ export interface ClarificationDetail {
   affiliateCode: number;
   field1: string;
   field2: string;
+  field2Number?: string;
+  field2Unit?: string;
 }
 
 export interface AntecedentDetail {
@@ -175,6 +179,9 @@ export interface BrokerSection {
   credentialNumber: string;
   documentType: DocumentType | TaxIdType;
   identityOrTaxNumber: string;
+  referralCode?: string;
+  sellerId?: string;
+  lockedByReferral?: boolean;
 }
 
 export interface AffiliationFormState {

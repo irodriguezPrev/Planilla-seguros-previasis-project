@@ -25,6 +25,10 @@ import {
   isQuestionApplicableToAffiliate,
 } from '@/core/utils/health-progress.utils';
 import {
+  monthInputValueToMonthYear,
+  monthYearToInputValue,
+} from '@/core/utils/format.utils';
+import {
   AlertCircle,
   Check,
   CheckCircle2,
@@ -39,6 +43,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
+import { getMedicationTimeUnitLabel } from '@/core/utils/constants';
 
 interface Step4Props {
   healthDeclaration: HealthDeclarationSection;
@@ -66,7 +71,9 @@ const capitalizeConditionText = (value: string): string =>
   );
 
 const getSuggestedConditions = (question: ResolvedHealthQuestionItem): string[] =>
-  question.description
+  question.clinicalDetailOptions?.length
+    ? question.clinicalDetailOptions
+    : question.description
     .replace(/\betc\.?$/i, '')
     .split(',')
     .map((condition) => capitalizeCondition(condition.replace(/[.?]+$/, '')))
@@ -610,7 +617,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
     currentQuestion: HealthQuestionItem,
     detailId: string | undefined,
     fallbackIndex: number,
-    field: 'field1' | 'field2',
+    field: 'field1' | 'field2' | 'field2Number' | 'field2Unit',
     value: string,
   ) => {
     const details = healthDeclaration.clarificationDetails || {};
@@ -915,6 +922,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
         Number(detail.affiliateCode) === affiliate.affiliateCode,
     );
     const suggestions = getSuggestedConditions(currentQuestion);
+    const showsDetailedClinicalFields = currentQuestion.clinicalDetailLevel === 'detailed';
 
     return (
       <div className="health-detail-panel" key={`${affiliate.id}-${currentQuestion.id}`}>
@@ -974,20 +982,36 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
               </div>
               <div className="previasis-input-group">
                 <label className="previasis-label">{t('clinicalDate')}</label>
-                <input className="previasis-input" placeholder={t('clinicalDatePlaceholder')} value={detail.diagnosisDate} onChange={(event) => updateClinicalDetail(detail.id, { diagnosisDate: event.target.value })} required />
+                {showsDetailedClinicalFields ? (
+                  <input className="previasis-input" placeholder={t('clinicalDatePlaceholder')} value={detail.diagnosisDate} onChange={(event) => updateClinicalDetail(detail.id, { diagnosisDate: event.target.value })} required />
+                ) : (
+                  <input
+                    type="month"
+                    className="previasis-input"
+                    value={monthYearToInputValue(detail.diagnosisDate)}
+                    onChange={(event) => updateClinicalDetail(detail.id, {
+                      diagnosisDate: monthInputValueToMonthYear(event.target.value),
+                    })}
+                    required
+                  />
+                )}
               </div>
-              <div className="previasis-input-group">
-                <label className="previasis-label">{t('clinicalTreatment')}</label>
-                <input className="previasis-input" placeholder={t('clinicalTreatmentPlaceholder')} value={detail.treatment} onChange={(event) => updateClinicalDetail(detail.id, { treatment: event.target.value })} required />
-              </div>
-              <div className="previasis-input-group">
-                <label className="previasis-label">{t('clinicalLastCheck')}</label>
-                <input type="date" className="previasis-input" value={detail.lastCheckupDate} onChange={(event) => updateClinicalDetail(detail.id, { lastCheckupDate: event.target.value })} />
-              </div>
-              <div className="previasis-input-group health-clinical-wide">
-                <label className="previasis-label">{t('clinicalInstitution')}</label>
-                <input className="previasis-input" placeholder={t('clinicalInstitutionPlaceholder')} value={detail.hospital} onChange={(event) => updateClinicalDetail(detail.id, { hospital: event.target.value })} />
-              </div>
+              {showsDetailedClinicalFields && (
+                <>
+                  <div className="previasis-input-group">
+                    <label className="previasis-label">{t('clinicalTreatment')}</label>
+                    <input className="previasis-input" placeholder={t('clinicalTreatmentPlaceholder')} value={detail.treatment} onChange={(event) => updateClinicalDetail(detail.id, { treatment: event.target.value })} required />
+                  </div>
+                  <div className="previasis-input-group">
+                    <label className="previasis-label">{t('clinicalLastCheck')}</label>
+                    <input type="date" className="previasis-input" value={detail.lastCheckupDate} onChange={(event) => updateClinicalDetail(detail.id, { lastCheckupDate: event.target.value })} />
+                  </div>
+                  <div className="previasis-input-group health-clinical-wide">
+                    <label className="previasis-label">{t('clinicalInstitution')}</label>
+                    <input className="previasis-input" placeholder={t('clinicalInstitutionPlaceholder')} value={detail.hospital} onChange={(event) => updateClinicalDetail(detail.id, { hospital: event.target.value })} />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -1026,7 +1050,18 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
               </div>
               <div className="previasis-input-group">
                 <label className="previasis-label">{t('frequency')}</label>
-                <input className="previasis-input" value={detail.frequency} placeholder={t('frequencyPlaceholder')} onChange={(event) => updateSportDetail(affiliate.affiliateCode, index, { frequency: event.target.value })} required />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]+"
+                  className="previasis-input"
+                  value={detail.frequency}
+                  placeholder={t('frequencyPlaceholder')}
+                  onChange={(event) => updateSportDetail(affiliate.affiliateCode, index, {
+                    frequency: event.target.value.replace(/\D/g, ''),
+                  })}
+                  required
+                />
               </div>
               <div className="previasis-input-group">
                 <label className="previasis-label">{t('level')}</label>
@@ -1084,24 +1119,108 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
             </div>
           </div>
         )}
-        {details.map(({ detail, originalIndex }, localIndex) => (
-          <div className="health-beneficiary-detail" key={detail.id || `${detail.affiliateCode}-${originalIndex}`}>
-            <span className="health-detail-number">#{localIndex + 1}</span>
-            <div className="previasis-input-group">
-              <label className="previasis-label">{currentQuestion.beneficiaryDetailLabels?.field1} *</label>
-              <input className="previasis-input" placeholder={currentQuestion.beneficiaryDetailPlaceholders?.field1} value={detail.field1} onChange={(event) => updateBeneficiaryDetail(currentQuestion, detail.id, originalIndex, 'field1', event.target.value)} required />
+        {details.map(({ detail, originalIndex }, localIndex) => {
+          const isMedicationQuestion = currentQuestion.id === 21;
+          const medicationQuantity = Number(detail.field2Number ?? 1);
+          const getMedicationUnitLabel = (unit: string) => {
+            const unitLabels: Record<string, string> = {
+              minuto: 'Minuto',
+              hora: 'Hora',
+              dia: 'Día',
+              semana: 'Semana',
+              mes: 'Mes',
+            };
+            const unitLabelsPlural: Record<string, string> = {
+              minuto: 'Minutos',
+              hora: 'Horas',
+              dia: 'Días',
+              semana: 'Semanas',
+              mes: 'Meses',
+            };
+            const label = unitLabels[unit] ?? unit;
+            return medicationQuantity > 1 ? (unitLabelsPlural[unit] ?? label) : label;
+          };
+          return (
+            <div
+              className={`health-beneficiary-detail ${isMedicationQuestion ? 'health-beneficiary-detail--medication' : ''}`}
+              key={detail.id || `${detail.affiliateCode}-${originalIndex}`}
+            >
+              <span className="health-detail-number">#{localIndex + 1}</span>
+              <div className="previasis-input-group">
+                <label className="previasis-label">{currentQuestion.beneficiaryDetailLabels?.field1} *</label>
+                <input className="previasis-input" placeholder={currentQuestion.beneficiaryDetailPlaceholders?.field1} value={detail.field1} onChange={(event) => updateBeneficiaryDetail(currentQuestion, detail.id, originalIndex, 'field1', event.target.value)} required />
+              </div>
+              {isMedicationQuestion ? (
+                <>
+                  <div className="previasis-input-group">
+                    <label className="previasis-label">Dosis *</label>
+                    <input
+                      className="previasis-input"
+                      placeholder="Ej: 2mg"
+                      value={detail.field2}
+                      onChange={(event) => updateBeneficiaryDetail(currentQuestion, detail.id, originalIndex, 'field2', event.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="previasis-input-group">
+                    <label className="previasis-label">Cada *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="previasis-input"
+                      placeholder="4"
+                      value={detail.field2Number ?? ''}
+                      onChange={(event) => updateBeneficiaryDetail(currentQuestion, detail.id, originalIndex, 'field2Number', event.target.value.replace(/\D/g, ''))}
+                      required
+                    />
+                  </div>
+                  <div className="previasis-input-group">
+                    <label className="previasis-label">Unidad *</label>
+                    <select
+                      className="previasis-input"
+                      value={detail.field2Unit ?? ''}
+                      onChange={(event) => updateBeneficiaryDetail(currentQuestion, detail.id, originalIndex, 'field2Unit', event.target.value)}
+                      required
+                    >
+                      <option value="">Seleccione</option>
+                      <option value="minuto">{getMedicationUnitLabel('minuto')}</option>
+                      <option value="hora">{getMedicationUnitLabel('hora')}</option>
+                      <option value="dia">{getMedicationUnitLabel('dia')}</option>
+                      <option value="semana">{getMedicationUnitLabel('semana')}</option>
+                      <option value="mes">{getMedicationUnitLabel('mes')}</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div className="previasis-input-group">
+                  <label className="previasis-label">{currentQuestion.beneficiaryDetailLabels?.field2} *</label>
+                  {currentQuestion.includeInClinicalSummary ? (
+                    <input
+                      type="month"
+                      className="previasis-input"
+                      value={monthYearToInputValue(detail.field2)}
+                      onChange={(event) => updateBeneficiaryDetail(
+                        currentQuestion,
+                        detail.id,
+                        originalIndex,
+                        'field2',
+                        monthInputValueToMonthYear(event.target.value),
+                      )}
+                      required
+                    />
+                  ) : (
+                    <input className="previasis-input" placeholder={currentQuestion.beneficiaryDetailPlaceholders?.field2} value={detail.field2} onChange={(event) => updateBeneficiaryDetail(currentQuestion, detail.id, originalIndex, 'field2', event.target.value)} required />
+                  )}
+                </div>
+              )}
+              {details.length > 1 && (
+                <button type="button" className="health-delete-icon" title={t('removeDetail')} onClick={() => removeBeneficiaryDetail(currentQuestion, detail.id, originalIndex)}>
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
-            <div className="previasis-input-group">
-              <label className="previasis-label">{currentQuestion.beneficiaryDetailLabels?.field2} *</label>
-              <input className="previasis-input" placeholder={currentQuestion.beneficiaryDetailPlaceholders?.field2} value={detail.field2} onChange={(event) => updateBeneficiaryDetail(currentQuestion, detail.id, originalIndex, 'field2', event.target.value)} required />
-            </div>
-            {details.length > 1 && (
-              <button type="button" className="health-delete-icon" title={t('removeDetail')} onClick={() => removeBeneficiaryDetail(currentQuestion, detail.id, originalIndex)}>
-                <Trash2 size={16} />
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -1205,6 +1324,25 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
       );
     });
 
+  const renderAntecedentFields = () => {
+    if (!question.antecedentFields) return null;
+
+    const field1 = (
+      <div className="previasis-input-group" key="antecedent-field-1">
+        <label className="previasis-label">{question.antecedentFields.field1Label}{question.antecedentFields.field1Required === false ? ` (${t('optional')})` : ' *'}</label>
+        <input className="previasis-input" placeholder={question.antecedentFields.field1Placeholder} value={questionState?.antecedentDetail?.field1 || ''} onChange={(event) => updateAntecedent('field1', event.target.value)} required={question.antecedentFields.field1Required !== false} />
+      </div>
+    );
+    const field2 = (
+      <div className="previasis-input-group" key="antecedent-field-2">
+        <label className="previasis-label">{question.antecedentFields.field2Label} *</label>
+        <input className="previasis-input" placeholder={question.antecedentFields.field2Placeholder} value={questionState?.antecedentDetail?.field2 || ''} onChange={(event) => updateAntecedent('field2', event.target.value)} required />
+      </div>
+    );
+
+    return question.id === 25 ? <>{field2}{field1}</> : <>{field1}{field2}</>;
+  };
+
   return (
     <div className="health-assistant">
       <div className="previasis-card health-assistant-summary">
@@ -1276,7 +1414,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
               const status = getGroupStatus(item.questionIds);
               const meta = statusMeta[status];
               return (
-                <button type="button" key={item.id} className={`health-question-nav-item ${index === currentQuestionIndex ? 'active' : ''}`} onClick={() => goToQuestion(index)}>
+                <button type="button" key={item.id} className={`health-question-nav-item ${index === currentQuestionIndex ? 'active' : ''} ${status !== 'complete' ? 'field-required-invalid' : ''}`} onClick={() => goToQuestion(index)}>
                   <span className="health-question-number">{index + 1}</span>
                   <span className="health-question-nav-copy">
                     <strong>{tHealthGroups(`${item.id}.title`)}</strong>
@@ -1289,7 +1427,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
           </div>
         </aside>
 
-        <section id="health-question-editor" className="previasis-card health-question-editor">
+        <section id="health-question-editor" className={`previasis-card health-question-editor ${getGroupStatus(currentGroup.questionIds) !== 'complete' ? 'field-required-invalid' : ''}`}>
           <div className="health-editor-heading">
             <div className="health-question-badge">{currentQuestionIndex + 1}</div>
             <div className="contextual-tooltip-host">
@@ -1312,7 +1450,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
 
           {groupQuestions.length > 1 ? (
             groupQuestions.every((item) => item.requiresBeneficiarySelection === false) ? (
-              <div className="health-global-answer">
+              <div className={`health-global-answer ${getGroupStatus(currentGroup.questionIds) !== 'complete' ? 'field-required-invalid' : ''}`}>
                 <p className="previasis-label">{t('selectGlobal')}</p>
                 <div className="health-answer-buttons">
                   <button type="button" className={groupQuestions.every((item) => healthDeclaration.questions[item.id]?.answer === 'NO') && !expandedGroupAnswers[currentGroup.id] ? 'selected no' : ''} onClick={answerNoForCurrentGroup}>{t('no')}</button>
@@ -1337,14 +1475,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
                     </div>
                     {questionState?.answer === 'SÍ' && question.antecedentFields && (
                       <div className="health-special-detail-grid">
-                        <div className="previasis-input-group">
-                          <label className="previasis-label">{question.antecedentFields.field1Label}{question.antecedentFields.field1Required === false ? ` (${t('optional')})` : ' *'}</label>
-                          <input className="previasis-input" placeholder={question.antecedentFields.field1Placeholder} value={questionState.antecedentDetail?.field1 || ''} onChange={(event) => updateAntecedent('field1', event.target.value)} required={question.antecedentFields.field1Required !== false} />
-                        </div>
-                        <div className="previasis-input-group">
-                          <label className="previasis-label">{question.antecedentFields.field2Label} *</label>
-                          <input className="previasis-input" placeholder={question.antecedentFields.field2Placeholder} value={questionState.antecedentDetail?.field2 || ''} onChange={(event) => updateAntecedent('field2', event.target.value)} required />
-                        </div>
+                        {renderAntecedentFields()}
                       </div>
                     )}
                   </div>
@@ -1416,14 +1547,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
               </div>
               {questionState?.answer === 'SÍ' && question.antecedentFields && (
                 <div className="health-special-detail-grid">
-                  <div className="previasis-input-group">
-                    <label className="previasis-label">{question.antecedentFields.field1Label}{question.antecedentFields.field1Required === false ? ` (${t('optional')})` : ' *'}</label>
-                    <input className="previasis-input" placeholder={question.antecedentFields.field1Placeholder} value={questionState.antecedentDetail?.field1 || ''} onChange={(event) => updateAntecedent('field1', event.target.value)} required={question.antecedentFields.field1Required !== false} />
-                  </div>
-                  <div className="previasis-input-group">
-                    <label className="previasis-label">{question.antecedentFields.field2Label} *</label>
-                    <input className="previasis-input" placeholder={question.antecedentFields.field2Placeholder} value={questionState.antecedentDetail?.field2 || ''} onChange={(event) => updateAntecedent('field2', event.target.value)} required />
-                  </div>
+                  {renderAntecedentFields()}
                 </div>
               )}
             </div>

@@ -31,6 +31,7 @@ import {
   deserializeAffiliationDraft,
   serializeAffiliationDraft,
 } from '@/core/utils/affiliation-draft.mapper';
+import { getReferralProfile } from '@/core/services/signing-request.service';
 import {
   ArrowLeft,
   ArrowRight,
@@ -196,6 +197,8 @@ const INITIAL_STATE: AffiliationFormState = {
     {
       id: 'policyholder_row',
       affiliateCode: 1,
+      firstNames: '',
+      lastNames: '',
       fullName: '',
       documentType: 'V',
       documentNumber: '',
@@ -216,7 +219,7 @@ const INITIAL_STATE: AffiliationFormState = {
     medicalConditionDetails: [],
   },
   payment: {
-    paymentFrequency: 'Mensual',
+    paymentFrequency: 'Trimestral',
     currency: 'Dólares',
     method: 'Pago en Oficina',
   },
@@ -327,7 +330,9 @@ const normalizeFormNames = (
     },
     affiliates: data.affiliates.map((affiliate) => ({
       ...affiliate,
-      fullName: uppercaseName(affiliate.fullName),
+      firstNames: uppercaseName(affiliate.firstNames),
+      lastNames: uppercaseName(affiliate.lastNames),
+      fullName: uppercaseName(`${affiliate.firstNames} ${affiliate.lastNames}`.trim()),
     })),
     broker: {
       ...data.broker,
@@ -458,6 +463,8 @@ export default function AffiliationPage() {
   const [touchDiagnostic, setTouchDiagnostic] = useState<string | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState<boolean>(false);
   const [celebrationStep, setCelebrationStep] = useState<number | null>(null);
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
   const [renderedStepValidity, setRenderedStepValidity] = useState({
     step: 0,
     isValid: false,
@@ -554,6 +561,39 @@ export default function AffiliationPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const referralCode = new URLSearchParams(window.location.search).get('ref')?.trim();
+    if (!referralCode) return;
+
+    let active = true;
+    setReferralLoading(true);
+    setReferralError(null);
+    void getReferralProfile(referralCode)
+      .then(({ broker }) => {
+        if (!active) return;
+        setFormData((previous) => ({
+          ...previous,
+          broker: {
+            ...broker,
+            fullName: uppercaseName(broker.fullName),
+            lockedByReferral: true,
+          },
+        }));
+      })
+      .catch((error) => {
+        if (!active) return;
+        console.error('Error cargando el vendedor referido:', error);
+        setReferralError(error instanceof Error ? error.message : tValidation('invalidReferral'));
+      })
+      .finally(() => {
+        if (active) setReferralLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [tValidation]);
+
   const saveDraft = useCallback(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeAffiliationDraft(formData)));
@@ -573,6 +613,8 @@ export default function AffiliationPage() {
         if (updatedAffiliates.length > 0) {
           updatedAffiliates[0] = {
             ...updatedAffiliates[0],
+            firstNames: prev.policyholder.firstNames || updatedAffiliates[0].firstNames,
+            lastNames: prev.policyholder.lastNames || updatedAffiliates[0].lastNames,
             fullName: full || updatedAffiliates[0].fullName,
             documentNumber: prev.policyholder.documentNumber || updatedAffiliates[0].documentNumber,
             documentType: prev.policyholder.documentType,
@@ -595,7 +637,9 @@ export default function AffiliationPage() {
   const handleAffiliatesChange = (nextAffiliates: AffiliateRow[]) => {
     const normalizedAffiliates = nextAffiliates.map((affiliate) => ({
       ...affiliate,
-      fullName: uppercaseName(affiliate.fullName),
+      firstNames: uppercaseName(affiliate.firstNames),
+      lastNames: uppercaseName(affiliate.lastNames),
+      fullName: uppercaseName(`${affiliate.firstNames} ${affiliate.lastNames}`.trim()),
     }));
     const compositionChanged =
       formData.affiliates.length !== normalizedAffiliates.length ||
@@ -657,7 +701,8 @@ export default function AffiliationPage() {
       return formData.affiliates.length > 0 && formData.affiliates.every((affiliate) => {
         const age = calculateActuarialAge(affiliate.birthDate);
         return Boolean(
-          affiliate.fullName.trim() &&
+          affiliate.firstNames.trim() &&
+          affiliate.lastNames.trim() &&
           affiliate.documentNumber.trim() &&
           affiliate.birthDate &&
           affiliate.relationship &&
@@ -747,7 +792,16 @@ export default function AffiliationPage() {
     );
     if (firstInvalidField) {
       firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      window.setTimeout(() => firstInvalidField.focus({ preventScroll: true }), 350);
+      window.setTimeout(() => {
+        firstInvalidField.focus({ preventScroll: true });
+        if (
+          firstInvalidField instanceof HTMLInputElement ||
+          firstInvalidField instanceof HTMLSelectElement ||
+          firstInvalidField instanceof HTMLTextAreaElement
+        ) {
+          firstInvalidField.reportValidity();
+        }
+      }, 350);
       return false;
     }
 
@@ -786,7 +840,12 @@ export default function AffiliationPage() {
       }
     }
     if (step === 3) {
-      if (formData.affiliates.length === 0 || !formData.affiliates[0].fullName || !formData.affiliates[0].documentNumber) {
+      if (
+        formData.affiliates.length === 0 ||
+        !formData.affiliates[0].firstNames ||
+        !formData.affiliates[0].lastNames ||
+        !formData.affiliates[0].documentNumber
+      ) {
          alert(tValidation('familyGroupRequired'));
         return false;
       }
@@ -996,7 +1055,7 @@ export default function AffiliationPage() {
       affiliateAnswers: { 1: 'SÍ', 2: 'NO', 3: 'NO' },
     };
 
-    setFormData(normalizeFormNames({
+    setFormData((previous) => normalizeFormNames({
       header: {
         operationType: 'Emisión',
         contractType: 'Individual',
@@ -1017,7 +1076,7 @@ export default function AffiliationPage() {
         birthDate: '1988-04-12',
         profession: 'Ingeniero Civil',
         occupation: 'Consultor de Obras',
-        annualIncomeBs: '$ 4.200,00',
+        annualIncomeBs: '15.000.000,00',
         politicallyExposed: 'NO',
         politicallyExposedDescription: '',
         activityClassification: 'Independiente',
@@ -1040,6 +1099,8 @@ export default function AffiliationPage() {
         {
           id: '1',
           affiliateCode: 1,
+          firstNames: 'Carlos Andrés',
+          lastNames: 'Mendoza Ruiz',
           fullName: 'Carlos Andrés Mendoza Ruiz',
           documentType: 'V',
           documentNumber: '18456789',
@@ -1055,6 +1116,8 @@ export default function AffiliationPage() {
         {
           id: '2',
           affiliateCode: 2,
+          firstNames: 'María Elena',
+          lastNames: 'Mendoza',
           fullName: 'María Elena Mendoza',
           documentType: 'V',
           documentNumber: '19334455',
@@ -1070,6 +1133,8 @@ export default function AffiliationPage() {
         {
           id: '3',
           affiliateCode: 3,
+          firstNames: 'Lucas Daniel',
+          lastNames: 'Mendoza',
           fullName: 'Lucas Daniel Mendoza',
           documentType: 'V',
           documentNumber: '34112233',
@@ -1086,7 +1151,7 @@ export default function AffiliationPage() {
       healthDeclaration: {
         questions: sampleQuestions,
         sportDetails: [
-          { affiliateCode: 1, sport: 'Ciclismo de ruta', frequency: '2 veces por semana', level: 'Amateur' },
+          { affiliateCode: 1, sport: 'Ciclismo de ruta', frequency: '2', level: 'Amateur' },
         ],
         clarificationDetails: {},
         medicalConditionDetails: [
@@ -1115,12 +1180,14 @@ export default function AffiliationPage() {
         acceptsPolicyholderDeclaration: true,
         acceptsContractorSourceOfFunds: true,
       },
-      broker: {
-        fullName: 'Mariángel Colmenárez',
-        credentialNumber: 'CR-007744',
-        documentType: 'V',
-        identityOrTaxNumber: '15889922',
-      },
+      broker: previous.broker.lockedByReferral
+        ? previous.broker
+        : {
+            fullName: 'Mariángel Colmenárez',
+            credentialNumber: 'CR-007744',
+            documentType: 'V',
+            identityOrTaxNumber: '15889922',
+          },
       attachedDocuments: [],
     }));
     setCompletedSteps([1, 2, 3, 4, 5]);
@@ -1133,7 +1200,12 @@ export default function AffiliationPage() {
   const handleReset = () => {
     if (confirm(tAffiliation('resetConfirmation'))) {
       localStorage.removeItem(STORAGE_KEY);
-      setFormData(INITIAL_STATE);
+      setFormData((previous) => ({
+        ...INITIAL_STATE,
+        broker: previous.broker.lockedByReferral
+          ? previous.broker
+          : INITIAL_STATE.broker,
+      }));
       setCompletedSteps([]);
       setStepDirection('backward');
       setValidationAttemptedSteps([]);
@@ -1408,6 +1480,21 @@ export default function AffiliationPage() {
                     {tAffiliation('savedBadge')}
                   </span>
                 )}
+                {referralLoading && (
+                  <span className="pill-badge" style={{ backgroundColor: 'rgba(255, 255, 255, 0.14)', color: '#ffffff' }}>
+                    {tAffiliation('loadingAdvisor')}
+                  </span>
+                )}
+                {formData.broker.lockedByReferral && (
+                  <span className="pill-badge" style={{ backgroundColor: 'rgba(132, 204, 22, 0.2)', color: '#bef264' }}>
+                    {tAffiliation('referredBy', { name: formData.broker.fullName })}
+                  </span>
+                )}
+                {referralError && (
+                  <span className="pill-badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#fecaca' }} title={referralError}>
+                    {tAffiliation('invalidReferral')}
+                  </span>
+                )}
               </div>
                <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.2rem)', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>
                  {tAffiliation('heroTitle')}
@@ -1602,6 +1689,7 @@ export default function AffiliationPage() {
             <Step6SignaturesAndDeclarations
               signatures={formData.signatures}
               broker={formData.broker}
+              brokerReadOnly={Boolean(formData.broker.lockedByReferral)}
               policyholder={formData.policyholder}
               contractor={formData.contractor}
               suggestedPlace={getSubscriptionPlace(formData.policyholder)}
@@ -1610,6 +1698,7 @@ export default function AffiliationPage() {
                 signatures: mergeChangedValues(previous.signatures, formData.signatures, signatures),
               }))}
               onBrokerChange={(broker) => {
+                if (formData.broker.lockedByReferral) return;
                 const normalizedBroker = {
                   ...broker,
                   fullName: uppercaseName(broker.fullName),
@@ -1670,7 +1759,7 @@ export default function AffiliationPage() {
             </div>
 
             <div className="affiliation-bottom-action">
-              {isCurrentStepReady && (currentStep < STEPS.length ? (
+              {currentStep < STEPS.length ? (
                 <button
                   type="button"
                   onClick={handleNext}
@@ -1695,7 +1784,7 @@ export default function AffiliationPage() {
                <span className="affiliation-bottom-label-desktop">{tAffiliation('submitDesktop')}</span>
                 <span className="affiliation-bottom-label-mobile">{tAffiliation('submitMobile')}</span>
                 </button>
-              ))}
+              )}
             </div>
           </div>
         </div>

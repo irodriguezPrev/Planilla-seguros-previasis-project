@@ -46,7 +46,17 @@
     "roleLabel": "USER ROLE",
     "defaultRole": "Commercial Advisor",
     "serviceCheck": "Services and Endpoints Verification",
-    "serviceCheckDesc": "Run real calls to server endpoints to verify responses"
+    "serviceCheckDesc": "Run real calls to server endpoints to verify responses",
+    "referralTitle": "My referral link",
+    "referralSubtitle": "Share it so the client can complete the request with your protected advisor details.",
+    "referralLoading": "Loading personal link...",
+    "copyReferral": "Copy",
+    "shareReferral": "Share",
+    "referralCopied": "Referral link copied.",
+    "referralCopyPrompt": "Copy this referral link:",
+    "referralError": "The referral link could not be loaded or shared.",
+    "referralShareText": "Complete your PREVIASIS affiliation request with guidance from {name}.",
+    "referralAdvisor": "Advisor: {name} · Sudeaseg credential: {credential}"
   },
   "status": {
     "apiOnline": "Online",
@@ -191,6 +201,8 @@
     "contractorDesc": "Natural person responsible for contract hiring and payment",
     "section3": "Section 3",
     "differentContractor": "Is the contractor different from the Proposed Affiliate Holder?",
+    "yes": "Yes",
+    "no": "No",
     "sameAsHolder": "The contractor is the same Affiliate Holder.",
     "sameAsHolderDesc": "Personal, tax, and contact data captured in Step 1 will be automatically used in the official document.",
     "idCard": "ID Card / Passport",
@@ -311,25 +323,31 @@
     "equivalentTo": "equivalent to",
     "monthlyAbbrev": "mo",
     "monthCount": "{count, plural, one {# month} other {# months}}",
-    "fullName": "Full Name",
-    "fullNamePlaceholder": "First and Last Name",
+    "firstNames": "First Names",
+    "firstNamesPlaceholder": "Ex: Carlos Andres",
+    "lastNames": "Last Names",
+    "lastNamesPlaceholder": "Ex: Mendoza Ruiz",
     "idCard": "ID Card / Passport",
     "idPrefix": "V-",
     "idPrefixE": "E-",
     "idPrefixP": "P-",
     "idPlaceholder": "12345678",
+    "hasIdentityCard": "Has an ID card?",
+    "yes": "Yes",
+    "no": "No",
+    "documentPrefix": "Document prefix",
     "birthDate": "Date of Birth",
-    "relationship": "Relationship to the holder",
+    "relationship": "Relationship",
     "gender": "Sex",
     "male": "Male",
     "female": "Female",
     "coverageLimit": "Coverage Limit",
-    "weight": "Weight KG",
-    "weightPlaceholder": "Weight KG",
-    "height": "Height",
-    "heightPlaceholder": "Height",
+    "weight": "Weight (kg)",
+    "weightPlaceholder": "Ex: 65",
+    "height": "Height (cm)",
+    "heightPlaceholder": "Ex: 175",
     "showFieldHelp": "Show field help",
-    "minorDocumentHint": "For children age 10 or younger without their own ID, an M- identification is generated using the policyholder ID, the last two digits of the birth year, and a sequence number when applicable.",
+    "minorDocumentHint": "For children age 13 or younger without their own ID, an M- identification is generated using the policyholder ID, the last two digits of the birth year, and a sequence number when applicable.",
     "actuarialAgeHint": "Age is calculated actuarially: when the next birthday is six months or less away, the following age is used. This age determines the plan and rate."
   },
   "affiliation": {
@@ -361,11 +379,16 @@
     "stepCelebrationTitle4": "Excellent progress!",
     "stepCelebrationMessage4": "The health declaration has been completed.",
     "finalCelebrationEyebrow": "Application completed",
-    "finalCelebrationTitle": "You did it!"
+    "finalCelebrationTitle": "You did it!",
+    "loadingAdvisor": "Loading advisor...",
+    "referredBy": "Advisor: {name}",
+    "invalidReferral": "Invalid referral"
   },
   "validation": {
     "policyholderRequired": "Please complete the required fields of the Holder.",
     "contractorRequired": "Please complete the required data of the Contractor.",
+    "contractorMinor": "The contractor cannot be a minor (must be at least 18 years old).",
+    "contractorCannotBeAffiliate": "The contractor cannot be added as a beneficiary: the document matches a person in the family group.",
     "familyGroupRequired": "You must complete at least the Holder's data in the family group.",
     "ageLimit80": "Cannot proceed: no beneficiary can be over 80 years old.",
     "policyholderDeclarationRequired": "You must check the Holder Declaration acceptance box.",
@@ -384,7 +407,8 @@
     "ageLimit80Beneficiary": "Cannot register a person over 80 years old as a beneficiary.",
     "atLeastOnePerson": "There must be at least one person in the group to affiliate (the Holder).",
     "invalidEmail": "Invalid email address.",
-    "invalidVenezuelanMobile": "Invalid Venezuelan mobile phone (example: 04121234567)."
+    "invalidVenezuelanMobile": "Invalid Venezuelan mobile phone (example: 04121234567).",
+    "invalidReferral": "The referral link does not exist or is inactive."
   },
   "step5": {
     "frequencyHeading": "Payment Frequency",
@@ -451,8 +475,8 @@
     "addAtLeastOneSport": "Add at least one sport to complete this answer.",
     "sport": "Sport *",
     "sportPlaceholder": "Swimming",
-    "frequency": "Frequency *",
-    "frequencyPlaceholder": "3 times a week",
+    "frequency": "Frequency per month *",
+    "frequencyPlaceholder": "10",
     "level": "Level *",
     "select": "Select",
     "amateur": "Amateur",
@@ -500,7 +524,7 @@
     "20": { "title": "Psychobiological habits", "prompt": "Do you or any member use or have used nicotine, alcoholic beverages or addictive drugs?" },
     "21": { "title": "Current medical treatment", "prompt": "Are you or any member currently undergoing treatment with medication?" },
     "24": { "title": "Family history", "prompt": "Do you or any member have a family history of relevant diseases?" },
-    "25-26": { "title": "Health contract history", "prompt": "Do you hold a health contract with another company, or has one ever been denied or cancelled?" }
+    "": { "title": "Health contract history", "prompt": "Do you hold a health contract with another company, or has one ever been denied or cancelled?" }
   },
   "healthQuestions": {
     "1": { "title": "Respiratory tract diseases", "description": "Allergies, asthma, bronchitis, pneumonia, frequent cough, snoring, tuberculosis, covid-19, pulmonary fibrosis, etc." },
@@ -510,7 +534,7 @@
     "5": {
       "title": "Vascular diseases",
       "description": "Cerebrovascular accidents, brain hemorrhages.",
-      "beneficiaryLabels": { "field1": "Event type", "field2": "Diagnosis date" },
+      "beneficiaryLabels": { "field1": "Event type", "field2": "Diagnosis date (MM/YYYY)" },
       "beneficiaryPlaceholders": { "field1": "Ex: Cerebrovascular accident", "field2": "Ex: 03/2021" },
       "strokeOption": "Cerebrovascular accident",
       "hemorrhageOption": "Brain hemorrhage"
@@ -535,6 +559,14 @@
     "18": {
       "title": "Congenital or Hereditary Diseases",
       "description": "Do you or any of the applicants suffer from any congenital or hereditary disease, physical defect, anomaly, developmental disorder, mental disorders, down syndrome?",
+      "clinicalOptions": {
+        "congenitalOrHereditary": "Congenital or hereditary disease",
+        "physicalDefect": "Physical defect",
+        "anomaly": "Anomaly",
+        "developmentalDisorder": "Developmental disorder",
+        "mentalDisorder": "Mental disorder",
+        "downSyndrome": "Down syndrome"
+      },
       "extraInputLabel": "Indicate name, last name of the affected person and condition",
       "extraInputPlaceholder": "Ex: Name and last name of the affected person and description"
     },
@@ -627,7 +659,8 @@
     "brokerNamePlaceholder": "Sales Advisor",
     "credentialNumber": "Sudeaseg Credential No.",
     "credentialPlaceholder": "Ex: CR-008899",
-    "brokerDocument": "Advisor ID / RIF"
+    "brokerDocument": "Advisor ID / RIF",
+    "brokerReferralLocked": "Details protected by the advisor link"
   },
   "signaturePad": {
     "registered": "Signature registered",
@@ -653,6 +686,44 @@
     "pdfTitle": "Affiliation request preview",
     "shareText": "Signed PREVIASIS Affiliation Request",
     "whatsappText": "{shareText}. The PDF was downloaded; attach it to this conversation.",
-    "pdfLoading": "Loading PDF document..."
+    "pdfLoading": "Loading PDF document...",
+    "sendForSignature": "Send to client",
+    "signerHolder": "Primary member",
+    "signerContractor": "Contracting party",
+    "signingShareTitle": "PREVIASIS request awaiting signature",
+    "signingShareInstructions": "Open your link and enter the last 4 characters of your document. Do not forward this link.",
+    "signingExpires": "Expires: {date}",
+    "signingLinkCopied": "The signing links were copied.",
+    "signingCopyPrompt": "Copy and send these signing links:",
+    "signingRequestError": "The signing links could not be created."
+  },
+  "clientSigning": {
+    "accessTitle": "Secure document access",
+    "accessSubtitle": "Confirm your identity to review the request that was sent to you.",
+    "lastFourLabel": "Last 4 characters of your document",
+    "securityHint": "This verification protects your personal and health data.",
+    "openDocument": "Open document",
+    "genericError": "The operation could not be completed.",
+    "pdfError": "The document preview could not be generated.",
+    "signedTitle": "Document signed",
+    "signedSubtitle": "Your signature was recorded successfully. You may download your copy.",
+    "reviewTitle": "Review and sign your request",
+    "signerSummary": "Signer: {name} · Document: {document}",
+    "documentTitle": "Affiliation request",
+    "pdfLoading": "Preparing document...",
+    "confirmTitle": "Confirmation and signature",
+    "confirmSubtitle": "Read the entire document before accepting and signing.",
+    "acceptHolder": "I declare that the information provided is truthful and accept the primary member terms and conditions.",
+    "acceptFunds": "I declare that the funds used come from a lawful source.",
+    "place": "Place of signature",
+    "signatureLabel": "Electronic signature",
+    "signatureHint": "Draw your signature using your finger or mouse.",
+    "legalNotice": "Upon confirmation, the date, time, IP address, and exact document version will be recorded as evidence of the transaction.",
+    "signDocument": "Accept and sign",
+    "downloadSigned": "Download signed document",
+    "roles": {
+      "TITULAR": "Primary member",
+      "CONTRATANTE": "Contracting party"
+    }
   }
 }

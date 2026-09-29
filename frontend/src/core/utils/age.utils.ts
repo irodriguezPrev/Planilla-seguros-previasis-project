@@ -90,3 +90,15 @@ export function calculateActuarialAge(
 
   return chronologicalAge;
 }
+
+/** Returns true when a person born on `dateOfBirth` has not yet reached `ageThreshold` years of age. */
+export function isMinor(dateOfBirth: string, ageThreshold = 18): boolean {
+  const dob = parseDateString(dateOfBirth);
+  if (!dob) return false;
+
+  const ref = new Date();
+  const cutoff = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+  cutoff.setFullYear(cutoff.getFullYear() - ageThreshold);
+
+  return dob > cutoff;
+}

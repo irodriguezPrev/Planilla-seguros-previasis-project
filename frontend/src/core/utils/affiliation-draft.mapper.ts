@@ -94,7 +94,7 @@ const deserializeContractor = (value: unknown): ContractorSection => {
 const deserializePayment = (value: unknown): PaymentSection => {
   const source = asRecord(value);
   return {
-    paymentFrequency: (source.paymentFrequency ?? 'Mensual') as PaymentSection['paymentFrequency'],
+    paymentFrequency: (source.paymentFrequency ?? 'Trimestral') as PaymentSection['paymentFrequency'],
     currency: (source.currency ?? 'Dólares') as PaymentSection['currency'],
     method: (source.method ?? 'Pago en Oficina') as PaymentSection['method'],
     otherPaymentDetails: source.otherPaymentDetails as string | undefined,
@@ -120,15 +120,34 @@ const deserializeBroker = (value: unknown): BrokerSection => {
     credentialNumber: String(source.credentialNumber ?? ''),
     documentType: (source.documentType ?? 'V') as BrokerSection['documentType'],
     identityOrTaxNumber: String(source.identityOrTaxNumber ?? ''),
+    referralCode: source.referralCode ? String(source.referralCode) : undefined,
+    sellerId: source.sellerId ? String(source.sellerId) : undefined,
+    lockedByReferral: Boolean(source.lockedByReferral),
+  };
+};
+
+const splitLegacyAffiliateName = (value: string) => {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return { firstNames: parts[0] ?? '', lastNames: '' };
+  const splitIndex = Math.ceil(parts.length / 2);
+  return {
+    firstNames: parts.slice(0, splitIndex).join(' '),
+    lastNames: parts.slice(splitIndex).join(' '),
   };
 };
 
 const deserializeAffiliate = (value: unknown): AffiliateRow => {
   const source = asRecord(value);
+  const legacyFullName = String(source.fullName ?? '');
+  const legacyNameParts = splitLegacyAffiliateName(legacyFullName);
+  const firstNames = String(source.firstNames ?? legacyNameParts.firstNames);
+  const lastNames = String(source.lastNames ?? legacyNameParts.lastNames);
   return {
     id: String(source.id ?? ''),
     affiliateCode: Number(source.affiliateCode ?? 0),
-    fullName: String(source.fullName ?? ''),
+    firstNames,
+    lastNames,
+    fullName: [firstNames, lastNames].filter(Boolean).join(' ') || legacyFullName,
     documentType: (source.documentType ?? 'V') as AffiliateRow['documentType'],
     documentNumber: String(source.documentNumber ?? ''),
     usesOwnDocument: Boolean(source.usesOwnDocument),
@@ -174,7 +193,7 @@ const deserializeHealthDeclaration = (value: unknown): HealthDeclarationSection 
         id: detail.id as string | undefined,
         affiliateCode: Number(detail.affiliateCode ?? 0),
         sport: String(detail.sport ?? ''),
-        frequency: String(detail.frequency ?? ''),
+        frequency: String(detail.frequency ?? '').replace(/\D/g, ''),
         level: (detail.level ?? '') as 'Amateur' | 'Profesional' | '',
       };
     });
@@ -190,6 +209,8 @@ const deserializeHealthDeclaration = (value: unknown): HealthDeclarationSection 
           affiliateCode: Number(detail.affiliateCode ?? 0),
           field1: String(detail.field1 ?? ''),
           field2: String(detail.field2 ?? ''),
+          field2Number: String(detail.field2Number ?? ''),
+          field2Unit: String(detail.field2Unit ?? ''),
         };
       }),
     ]),

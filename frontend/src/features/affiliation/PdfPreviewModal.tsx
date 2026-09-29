@@ -6,7 +6,8 @@ import { Button } from '@/core/components/ui/Button';
 import { Card } from '@/core/components/ui/Card';
 import { AffiliationFormState } from '@/core/interfaces/affiliation.interfaces';
 import { PdfGeneratorService } from '@/core/services/pdf-generator.service';
-import { Download, Printer, Share2, X, FileText } from 'lucide-react';
+import { createRemoteSigningRequest } from '@/core/services/signing-request.service';
+import { Download, Share2, X, FileText, Link2 } from 'lucide-react';
 
 type PdfPreviewMode = 'draft' | 'final';
 
@@ -30,6 +31,7 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
    const isDraft = mode === 'draft';
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [isCreatingSigningLink, setIsCreatingSigningLink] = useState(false);
   const isGenerating = !pdfUrl;
 const t = useTranslations('pdfPreview');
   const tValidation = useTranslations('validation');
@@ -78,15 +80,6 @@ const t = useTranslations('pdfPreview');
     void PdfGeneratorService.downloadPdf(formData, getFileName(), { mode });
   };
 
-  const handlePrint = () => {
-    if (pdfUrl) {
-      const printWindow = window.open(pdfUrl, '_blank');
-      if (printWindow) {
-        printWindow.focus();
-      }
-    }
-  };
-
   const handleShare = async () => {
     if (isDraft) return;
 
@@ -124,6 +117,51 @@ const t = useTranslations('pdfPreview');
       alert(tValidation('pdfShareError'));
     } finally {
       setIsSharing(false);
+    }
+  };
+
+  const handleSendForSignature = async () => {
+    setIsCreatingSigningLink(true);
+    try {
+      const response = await createRemoteSigningRequest(formData);
+      const links = response.requests.map((item) => {
+        const roleLabel = item.role === 'TITULAR'
+          ? t('signerHolder')
+          : t('signerContractor');
+        return `${roleLabel} — ${item.signerName}: ${item.url}`;
+      });
+      const shareText = [
+        t('signingShareTitle'),
+        '',
+        ...links,
+        '',
+        t('signingShareInstructions'),
+        t('signingExpires', {
+          date: new Intl.DateTimeFormat(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }).format(new Date(response.expiresAt)),
+        }),
+      ].join('\n');
+
+      if (typeof navigator.share === 'function') {
+        try {
+          await navigator.share({ title: t('signingShareTitle'), text: shareText });
+        } catch {
+          window.prompt(t('signingCopyPrompt'), shareText);
+        }
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        alert(t('signingLinkCopied'));
+      } else {
+        window.prompt(t('signingCopyPrompt'), shareText);
+      }
+    } catch (error) {
+      console.error('Error creando la solicitud de firma:', error);
+      const message = error instanceof Error ? error.message : t('signingRequestError');
+      alert(message);
+    } finally {
+      setIsCreatingSigningLink(false);
     }
   };
 
@@ -227,6 +265,18 @@ const t = useTranslations('pdfPreview');
 
             {isDraft ? (
               <>
+
+                <Button
+                  className="pdf-preview-action"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSendForSignature}
+                  isLoading={isCreatingSigningLink}
+                  disabled={isGenerating}
+                  leftIcon={<Link2 size={16} />}
+                >
+                  {t('sendForSignature')}
+                </Button>
 
                 {onBack && (
                   <Button

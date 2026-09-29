@@ -11,7 +11,7 @@ import {
   NaturalPersonData,
   ContractorSection,
 } from '@/core/interfaces/affiliation.interfaces';
-import { ShieldCheck, FileCheck, Award } from 'lucide-react';
+import { ShieldCheck, FileCheck, Award, LockKeyhole } from 'lucide-react';
 
 function getCurrentLocalDate(): string {
   const currentDate = new Date();
@@ -29,6 +29,7 @@ interface Step6Props {
   suggestedPlace: string;
   onSignaturesChange: (signatures: DeclarationsSignaturesSection) => void;
   onBrokerChange: (broker: BrokerSection) => void;
+  brokerReadOnly?: boolean;
 }
 
 export const Step6SignaturesAndDeclarations: React.FC<Step6Props> = ({
@@ -39,6 +40,7 @@ export const Step6SignaturesAndDeclarations: React.FC<Step6Props> = ({
   suggestedPlace,
   onSignaturesChange,
   onBrokerChange,
+  brokerReadOnly = false,
 }) => {
   const t = useTranslations('step6');
   const today = getCurrentLocalDate();
@@ -269,6 +271,11 @@ export const Step6SignaturesAndDeclarations: React.FC<Step6Props> = ({
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {t('brokerSubtitle')}
             </p>
+            {brokerReadOnly && (
+              <span className="broker-referral-lock">
+                <LockKeyhole size={12} /> {t('brokerReferralLocked')}
+              </span>
+            )}
           </div>
         </div>
 
@@ -283,6 +290,8 @@ export const Step6SignaturesAndDeclarations: React.FC<Step6Props> = ({
               placeholder={t('brokerNamePlaceholder')}
               value={broker.fullName}
               onChange={(e) => updateBroker({ fullName: e.target.value })}
+              readOnly={brokerReadOnly}
+              aria-readonly={brokerReadOnly}
               required
             />
           </div>
@@ -297,6 +306,8 @@ export const Step6SignaturesAndDeclarations: React.FC<Step6Props> = ({
               placeholder={t('credentialPlaceholder')}
               value={broker.credentialNumber}
               onChange={(e) => updateBroker({ credentialNumber: e.target.value })}
+              readOnly={brokerReadOnly}
+              aria-readonly={brokerReadOnly}
               required
             />
           </div>
@@ -313,6 +324,7 @@ export const Step6SignaturesAndDeclarations: React.FC<Step6Props> = ({
                 onChange={(e) => updateBroker({
                   documentType: e.target.value as DocumentType | TaxIdType,
                 })}
+                disabled={brokerReadOnly}
               >
                 <option value="V">V-</option>
                 <option value="E">E-</option>
@@ -325,6 +337,8 @@ export const Step6SignaturesAndDeclarations: React.FC<Step6Props> = ({
                 placeholder="12345678"
                 value={broker.identityOrTaxNumber}
                 onChange={(e) => updateBroker({ identityOrTaxNumber: e.target.value })}
+                readOnly={brokerReadOnly}
+                aria-readonly={brokerReadOnly}
                 required
               />
             </div>

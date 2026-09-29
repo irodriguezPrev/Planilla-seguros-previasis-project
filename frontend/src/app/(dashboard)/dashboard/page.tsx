@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/core/hooks/useAuth';
 import { useSocket } from '@/core/hooks/useSocket';
@@ -18,8 +18,12 @@ import {
   ShieldCheck,
   Award,
   ArrowRight,
+  Copy,
+  Link2,
+  Share2,
 } from 'lucide-react';
 import { envConfig } from '@/core/config/env.config';
+import { getMyReferral, MyReferralResponse } from '@/core/services/signing-request.service';
 
 export default function DashboardOverviewPage() {
   const { user, isAuthenticated } = useAuth();
@@ -27,6 +31,47 @@ export default function DashboardOverviewPage() {
   const t = useTranslations('dashboard');
   const [testResult, setTestResult] = useState<any>(null);
   const [testing, setTesting] = useState(false);
+  const [referral, setReferral] = useState<MyReferralResponse | null>(null);
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    setReferralLoading(true);
+    setReferralError(null);
+    void getMyReferral()
+      .then(setReferral)
+      .catch((error) => setReferralError(error instanceof Error ? error.message : t('referralError')))
+      .finally(() => setReferralLoading(false));
+  }, [isAuthenticated, t]);
+
+  const handleShareReferral = async () => {
+    if (!referral) return;
+    const text = t('referralShareText', { name: referral.sellerName });
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ title: t('referralTitle'), text, url: referral.referralUrl });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(referral.referralUrl);
+        alert(t('referralCopied'));
+      } else {
+        window.prompt(t('referralCopyPrompt'), referral.referralUrl);
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      window.prompt(t('referralCopyPrompt'), referral.referralUrl);
+    }
+  };
+
+  const handleCopyReferral = async () => {
+    if (!referral) return;
+    try {
+      await navigator.clipboard.writeText(referral.referralUrl);
+      alert(t('referralCopied'));
+    } catch {
+      window.prompt(t('referralCopyPrompt'), referral.referralUrl);
+    }
+  };
 
   const handleTestEndpoint = async (endpoint: string) => {
     setTesting(true);
@@ -126,6 +171,55 @@ export default function DashboardOverviewPage() {
             {t('startRequest')} <ArrowRight size={16} />
           </button>
         </Link>
+      </div>
+
+      <div className="previasis-card seller-referral-card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ padding: '0.6rem', borderRadius: '50%', backgroundColor: 'var(--previasis-green-light)', color: 'var(--previasis-green)' }}>
+            <Link2 size={20} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--previasis-dark-green)' }}>
+              {t('referralTitle')}
+            </h3>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              {t('referralSubtitle')}
+            </p>
+          </div>
+        </div>
+
+        {referralLoading && <p style={{ color: 'var(--text-muted)' }}>{t('referralLoading')}</p>}
+
+        {!referralLoading && referral && (
+          <>
+            <div className="seller-referral-url">
+              <input
+                className="previasis-input"
+                value={referral.referralUrl}
+                readOnly
+                aria-label={t('referralTitle')}
+              />
+              <button type="button" className="btn-pill btn-pill-secondary" onClick={handleCopyReferral}>
+                <Copy size={15} /> {t('copyReferral')}
+              </button>
+              <button type="button" className="btn-pill btn-pill-primary" onClick={handleShareReferral}>
+                <Share2 size={15} /> {t('shareReferral')}
+              </button>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              {t('referralAdvisor', {
+                name: referral.sellerName,
+                credential: referral.credentialNumber,
+              })}
+            </p>
+          </>
+        )}
+
+        {!referralLoading && referralError && (
+          <div className="client-signing-error" role="status">
+            {referralError}
+          </div>
+        )}
       </div>
 
       {/* Metrics & Status Cards */}

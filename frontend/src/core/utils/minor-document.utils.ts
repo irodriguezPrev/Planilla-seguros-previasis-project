@@ -16,16 +16,19 @@ const getChronologicalAge = (birthDate: string): number | null => {
   return age >= 0 ? age : null;
 };
 
-export const isMinorWithoutIdentityCard = (affiliate: AffiliateRow): boolean => {
+export const requiresMinorDocumentChoice = (affiliate: AffiliateRow): boolean => {
   const age = getChronologicalAge(affiliate.birthDate);
-  return affiliate.relationship !== 'Titular' && age !== null && age <= 10;
+  return age !== null && age <= 13;
 };
+
+export const isMinorWithoutIdentityCard = (affiliate: AffiliateRow): boolean =>
+  requiresMinorDocumentChoice(affiliate) && !affiliate.usesOwnDocument;
 
 export const applyMinorDocument = (
   affiliate: AffiliateRow,
   policyholderDocument: string,
 ): AffiliateRow => {
-  if (isMinorWithoutIdentityCard(affiliate)) {
+  if (requiresMinorDocumentChoice(affiliate)) {
     const hasExistingOwnDocument = (
       affiliate.documentType !== 'M' && affiliate.documentNumber.trim() !== ''
     );

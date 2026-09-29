@@ -18,6 +18,7 @@ import {
   isValidVenezuelanMobilePhone,
   normalizePhoneNumber,
 } from '@/core/utils/contact-validation.utils';
+import { completeCurrencyInput, formatCurrencyInput } from '@/core/utils/format.utils';
 import { User, Shield, MapPin, Phone, Mail } from 'lucide-react';
 
 interface Step1Props {
@@ -113,53 +114,54 @@ export const Step1HeaderAndPolicyholder: React.FC<Step1Props> = ({
               {t('operationType')} <span className="previasis-label-required">*</span>
             </label>
             <div className="pill-switch">
-              {(['Emisión', 'Inclusión'] as OperationType[]).map((op) => (
-                <button
-                  key={op}
-                  type="button"
-                  onClick={() => updateHeader({ operationType: op })}
-                  className={`pill-switch-btn ${header.operationType === op ? 'active' : ''}`}
-                >
-                  {t(op === 'Emisión' ? 'emission' : 'inclusion')}
-                </button>
-              ))}
+              <button
+                type="button"
+                className="pill-switch-btn active"
+                disabled
+                aria-disabled="true"
+              >
+                {t('emission')}
+              </button>
+              <button
+                type="button"
+                className="pill-switch-btn"
+                disabled
+                aria-disabled="true"
+                style={{ opacity: 0.45, cursor: 'not-allowed' }}
+              >
+                {t('inclusion')}
+              </button>
             </div>
           </div>
-
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <label className="previasis-label">
               {t('contractType')} <span className="previasis-label-required">*</span>
             </label>
             <div className="pill-switch">
-              {(['Individual', 'Colectivo'] as ContractType[]).map((co) => (
-                <button
-                  key={co}
-                  type="button"
-                  onClick={() => updateHeader({ contractType: co })}
-                  className={`pill-switch-btn ${header.contractType === co ? 'active' : ''}`}
-                >
-                  {t(co === 'Individual' ? 'individual' : 'collective')}
-                </button>
-              ))}
+              <button
+                type="button"
+                className="pill-switch-btn active"
+                disabled
+                aria-disabled="true"
+              >
+                {t('individual')}
+              </button>
+              <button
+                type="button"
+                className="pill-switch-btn"
+                disabled
+                aria-disabled="true"
+                style={{ opacity: 0.45, cursor: 'not-allowed' }}
+              >
+                {t('collective')}
+              </button>
             </div>
           </div>
 
         </div>
 
         <div className="step1-form-grid step1-identity-grid">
-
-          <div className="previasis-input-group">
-            <label className="previasis-label">{t('requestNumber')}</label>
-            <input
-              type="text"
-              className="previasis-input"
-              placeholder={t('requestNumberPlaceholder')}
-              value={header.applicationNumber || ''}
-              onChange={(e) => updateHeader({ applicationNumber: e.target.value })}
-            />
-          </div>
-
           <div className="previasis-input-group">
             <label className="previasis-label">
               {t('requestDate')} <span className="previasis-label-required">*</span>
@@ -456,10 +458,12 @@ export const Step1HeaderAndPolicyholder: React.FC<Step1Props> = ({
             </label>
             <input
               type="text"
+              inputMode="decimal"
               className="previasis-input"
               placeholder={t('annualIncomePlaceholder')}
               value={policyholder.annualIncomeBs}
-              onChange={(e) => updatePolicyholder({ annualIncomeBs: e.target.value })}
+              onChange={(e) => updatePolicyholder({ annualIncomeBs: formatCurrencyInput(e.target.value) })}
+              onBlur={(e) => updatePolicyholder({ annualIncomeBs: completeCurrencyInput(e.target.value) })}
               required
             />
           </div>
@@ -593,7 +597,7 @@ export const Step1HeaderAndPolicyholder: React.FC<Step1Props> = ({
 
             <div className="previasis-input-group">
               <label className="previasis-label">
-                {t('paymentAddress')} <span className="previasis-label-required">*</span>
+                {t('paymentAddress')}
               </label>
               <input
                 type="text"
@@ -601,7 +605,6 @@ export const Step1HeaderAndPolicyholder: React.FC<Step1Props> = ({
                 placeholder={t('paymentAddressPlaceholder')}
                 value={policyholder.billingAddress}
                 onChange={(e) => updatePolicyholder({ billingAddress: e.target.value })}
-                required
               />
             </div>
           </div>

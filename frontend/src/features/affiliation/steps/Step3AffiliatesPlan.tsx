@@ -9,7 +9,10 @@ import {
   Relationship,
 } from '@/core/interfaces/affiliation.interfaces';
 import { calculateActuarialAge as calculateAge } from '@/core/utils/age.utils';
-import { applyMinorDocument } from '@/core/utils/minor-document.utils';
+import {
+  applyMinorDocument,
+  requiresMinorDocumentChoice,
+} from '@/core/utils/minor-document.utils';
 import { PAYMENT_FREQUENCY_TRANSLATION_KEYS } from '@/core/config/payment-options.config';
 import { ContextualTooltip } from '@/components/common/ContextualTooltip';
 import { UserPlus, Trash2, Users, Award, Check, Flame, Pencil } from 'lucide-react';
@@ -192,7 +195,8 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
     const updated = affiliates.map((affiliate) => applyMinorDocument(affiliate, policyholderDocument));
     const documentsChanged = updated.some((affiliate, index) => (
       affiliate.documentType !== affiliates[index].documentType ||
-      affiliate.documentNumber !== affiliates[index].documentNumber
+      affiliate.documentNumber !== affiliates[index].documentNumber ||
+      affiliate.usesOwnDocument !== affiliates[index].usesOwnDocument
     ));
 
     if (documentsChanged) {
@@ -206,6 +210,8 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
     const newAffiliate: AffiliateRow = {
       id: Math.random().toString(36).substring(2, 9),
       affiliateCode: 0,
+      firstNames: '',
+      lastNames: '',
       fullName: '',
       documentType: 'V',
       documentNumber: '',
@@ -253,6 +259,9 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
   };
 
   const currentMember = affiliates[selectedMemberIndex] || affiliates[0];
+  const showMinorDocumentChoice = currentMember
+    ? requiresMinorDocumentChoice(currentMember)
+    : false;
   const currentAge = calculateAge(currentMember?.birthDate || '');
   const currentRange = getAgeRange(currentAge);
   const availablePlans = currentRange === '61-80'
@@ -316,9 +325,9 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 step3-overview-grid">
 
-        <div className="previasis-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div className="previasis-card step3-family-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="family-group-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
               <div
@@ -512,7 +521,7 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
         </div>
 
 
-        <div className="previasis-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div className="previasis-card step3-plan-selection-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <div
               style={{
@@ -548,7 +557,7 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
                   : t('ageRangeF', { range: currentRange })}
           </p>
 
-          <div className={`grid ${availablePlans.length > 4 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
+          <div className={`grid plan-options-grid ${availablePlans.length > 4 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
             {availablePlans.map((plan) => {
               const isPlanSelected = currentMember?.requestedPlan === plan.id
                 && currentMember?.coverageLimit === plan.defaultCoverage;
@@ -600,59 +609,48 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
           {t('memberData')} {currentMember?.fullName || t('personPlaceholder', { number: currentMember?.affiliateCode || 1 })}
         </h4>
 
-        <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '1rem' }}>
+        <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '1rem' }}>
           <div className="previasis-input-group">
             <label className="previasis-label">
-              {t('fullName')} <span className="previasis-label-required">*</span>
+              {t('firstNames')} <span className="previasis-label-required">*</span>
             </label>
             <input
               ref={memberNameInputRef}
               type="text"
               className="previasis-input"
-               placeholder={t('fullNamePlaceholder')}
-              value={currentMember?.fullName}
-              onChange={(e) => updateAffiliate(selectedMemberIndex, { fullName: e.target.value })}
+              placeholder={t('firstNamesPlaceholder')}
+              value={currentMember?.firstNames}
+              onChange={(e) => {
+                const firstNames = e.target.value;
+                updateAffiliate(selectedMemberIndex, {
+                  firstNames,
+                  fullName: `${firstNames} ${currentMember?.lastNames || ''}`.trim(),
+                });
+              }}
               required
             />
           </div>
 
-          <div className="previasis-input-group contextual-tooltip-host">
-            <div className="previasis-label">
-              <label htmlFor="affiliate-document-number">
-                {t('idCard')} <span className="previasis-label-required">*</span>
-              </label>
-              <ContextualTooltip text={t('minorDocumentHint')} label={t('showFieldHelp')} />
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <select
-                className="previasis-input"
-                style={{ width: '85px', flex: '0 0 auto', fontWeight: 700 }}
-                value={currentMember?.documentType}
-                onChange={(e) => updateAffiliate(selectedMemberIndex, {
-                  documentType: e.target.value as AffiliateRow['documentType'],
-                })}
-              >
-                <option value="M">M-</option>
-                <option value="V">{t('idPrefix')}</option>
-                <option value="E">{t('idPrefixE')}</option>
-                <option value="P">{t('idPrefixP')}</option>
-              </select>
-              <input
-                id="affiliate-document-number"
-                type="text"
-                className="previasis-input"
-                placeholder={t('idPlaceholder')}
-                value={currentMember?.documentNumber}
-                onChange={(e) => updateAffiliate(selectedMemberIndex, {
-                  documentNumber: e.target.value.replace(/\D/g, ''),
-                })}
-                required
-              />
-            </div>
+          <div className="previasis-input-group">
+            <label className="previasis-label">
+              {t('lastNames')} <span className="previasis-label-required">*</span>
+            </label>
+            <input
+              type="text"
+              className="previasis-input"
+              placeholder={t('lastNamesPlaceholder')}
+              value={currentMember?.lastNames}
+              onChange={(e) => {
+                const lastNames = e.target.value;
+                updateAffiliate(selectedMemberIndex, {
+                  lastNames,
+                  fullName: `${currentMember?.firstNames || ''} ${lastNames}`.trim(),
+                });
+              }}
+              required
+            />
           </div>
-        </div>
 
-        <div className="grid grid-cols-4 gap-4" style={{ marginBottom: '1rem' }}>
           <div className="previasis-input-group contextual-tooltip-host">
             <div className="previasis-label">
               <label htmlFor="affiliate-birth-date">
@@ -671,6 +669,84 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
               onBlur={() => validateBirthDate(currentMember?.birthDate)}
               required
             />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4" style={{ marginBottom: '1rem' }}>
+          <div className="previasis-input-group contextual-tooltip-host">
+            {showMinorDocumentChoice && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <span className="previasis-label">{t('hasIdentityCard')}</span>
+                <div className="pill-switch">
+                  <button
+                    type="button"
+                    className={`pill-switch-btn ${currentMember?.usesOwnDocument ? 'active' : ''}`}
+                    onClick={() => updateAffiliate(selectedMemberIndex, {
+                      usesOwnDocument: true,
+                      documentType: 'V',
+                      documentNumber: currentMember?.documentType === 'M'
+                        ? ''
+                        : currentMember?.documentNumber || '',
+                    })}
+                  >
+                    {t('yes')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`pill-switch-btn ${!currentMember?.usesOwnDocument ? 'active' : ''}`}
+                    onClick={() => updateAffiliate(selectedMemberIndex, {
+                      usesOwnDocument: false,
+                      documentType: 'M',
+                      documentNumber: '',
+                    })}
+                  >
+                    {t('no')}
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="previasis-label">
+              <label htmlFor="affiliate-document-number">
+                {t('idCard')} <span className="previasis-label-required">*</span>
+              </label>
+              <ContextualTooltip text={t('minorDocumentHint')} label={t('showFieldHelp')} />
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {showMinorDocumentChoice ? (
+                <input
+                  className="previasis-input"
+                  style={{ width: '85px', flex: '0 0 auto', fontWeight: 700 }}
+                  value={currentMember?.usesOwnDocument ? 'V-' : 'M-'}
+                  readOnly
+                  aria-label={t('documentPrefix')}
+                />
+              ) : (
+                <select
+                  className="previasis-input"
+                  style={{ width: '85px', flex: '0 0 auto', fontWeight: 700 }}
+                  value={currentMember?.documentType}
+                  onChange={(e) => updateAffiliate(selectedMemberIndex, {
+                    documentType: e.target.value as AffiliateRow['documentType'],
+                  })}
+                >
+                  <option value="V">{t('idPrefix')}</option>
+                  <option value="E">{t('idPrefixE')}</option>
+                  <option value="P">{t('idPrefixP')}</option>
+                </select>
+              )}
+              <input
+                id="affiliate-document-number"
+                type="text"
+                className="previasis-input"
+                placeholder={t('idPlaceholder')}
+                value={currentMember?.documentNumber}
+                onChange={(e) => updateAffiliate(selectedMemberIndex, {
+                  documentNumber: e.target.value.replace(/\D/g, ''),
+                })}
+                readOnly={showMinorDocumentChoice && !currentMember?.usesOwnDocument}
+                required
+              />
+            </div>
           </div>
 
           <div className="previasis-input-group">

@@ -7,6 +7,7 @@ export interface HealthQuestionItem {
   extraInputLabel?: string;
   extraInputPlaceholder?: string;
   beneficiaryDetail?: boolean;
+  includeInClinicalSummary?: boolean;
   beneficiaryDetailLabels?: {
     field1: string;
     field2: string;
@@ -21,6 +22,8 @@ export interface HealthQuestionItem {
   };
   requiresBeneficiarySelection?: boolean;
   requiresClinicalDetail?: boolean;
+  clinicalDetailLevel?: 'simple' | 'detailed';
+  clinicalDetailOptions?: string[];
   detailMode?: 'clinical' | 'sport' | 'beneficiary' | 'extra' | 'antecedent';
   antecedentFields?: {
     field1Label: string;
@@ -64,11 +67,12 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     title: 'Enfermedades Vasculares',
     description: 'Accidentes cerebrovasculares, hemorragias cerebrales.',
     beneficiaryDetail: true,
+    includeInClinicalSummary: true,
     detailMode: 'beneficiary',
     requiresClinicalDetail: false,
     beneficiaryDetailLabels: {
-      field1: 'Tipo de evento',
-      field2: 'Fecha diagnóstico',
+      field1: 'Tipo de padecimiento',
+      field2: 'Fecha diagnóstico (MM/AAAA)',
     },
     beneficiaryDetailPlaceholders: {
       field1: 'Ej: Accidente cerebrovascular',
@@ -87,6 +91,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     id: 7,
     title: 'Enfermedades digestivas',
     description: 'Enfermedades del estómago, esófago, gastritis, úlcera péptica, hemorragias digestivas, colon irritable, pancreatitis, colecistitis, hemorroides, litiasis vesicular, hernias umbilicales, inguinales o epigástricas.',
+    clinicalDetailLevel: 'detailed',
   },
   {
     id: 8,
@@ -102,6 +107,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     id: 10,
     title: 'Cáncer o tumores',
     description: 'Cerebrales, tiroides, pulmón, mamas, hepático, páncreas, gástricos, ovarios, útero, cuello uterino, próstata, leucemia, linfoma.',
+    clinicalDetailLevel: 'detailed',
   },
   {
     id: 11,
@@ -131,7 +137,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     hasExtraInput: true,
     detailMode: 'extra',
     extraInputLabel: 'Indicar número de embarazos / Semanas / Abortos',
-    extraInputPlaceholder: 'Ej: 2 embarazos a término, 0 abortos, actualmente no embarazada',
+    extraInputPlaceholder: 'Ej: 2 embarazos a término, 0 abortos, actualmente embarazada',
     applicableSex: 'F',
   },
   {
@@ -152,10 +158,15 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
     id: 18,
     title: 'Enfermedades Congénitas o Hereditarias',
     description: '¿Usted o alguno de los solicitantes padece alguna enfermedad congénita o hereditaria, defecto físico, anomalía, trastorno de desarrollo, desórdenes mentales, síndrome de down?',
-    hasExtraInput: true,
-    detailMode: 'extra',
-    extraInputLabel: 'Indique nombre, apellido del afectado y condición',
-    extraInputPlaceholder: 'Ej: Nombre y apellido del afectado y descripción',
+    detailMode: 'clinical',
+    clinicalDetailOptions: [
+      'congenitalOrHereditary',
+      'physicalDefect',
+      'anomaly',
+      'developmentalDisorder',
+      'mentalDisorder',
+      'downSyndrome',
+    ],
   },
   {
     id: 19,
@@ -256,6 +267,15 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
   },
 ];
 
+/**
+ * Preguntas que no se imprimen en la tabla de "Declaración de Salud" del PDF,
+ * sino dentro de la sección "Declaraciones y Autorizaciones Oficiales".
+ * Los IDs se conservan para que las respuestas sigan llegando a
+ * `healthDeclaration.questions[25 | 26]` y para que el asistente de llenado
+ * del paso de salud continúe funcionando igual.
+ */
+export const OFFICIAL_DECLARATION_QUESTION_IDS = [25, 26];
+
 
 export interface ResolvedHealthQuestionItem extends Omit<HealthQuestionItem, 'title' | 'description' | 'extraInputLabel' | 'extraInputPlaceholder' | 'beneficiaryDetailLabels' | 'beneficiaryDetailPlaceholders' | 'antecedentFields'> {
   id: number;
@@ -319,6 +339,9 @@ export const getHealthQuestions = (t: TFunction): ResolvedHealthQuestionItem[] =
           field2: item.beneficiaryDetailOptions.field2,
         }
       : undefined,
+    clinicalDetailOptions: item.clinicalDetailOptions?.map((option) =>
+      t(`${item.id}.clinicalOptions.${option}`),
+    ),
     antecedentFields: item.antecedentFields
       ? {
           field1Label: t(`${item.id}.antecedent.field1Label`),
@@ -339,7 +362,7 @@ export const getHealthQuestions = (t: TFunction): ResolvedHealthQuestionItem[] =
  */
 export const HEALTH_QUESTION_FILLING_GROUPS: HealthQuestionFillingGroup[] = [
   { id: '1-3', questionIds: [1, 2, 3], title: 'Vías respiratorias, piel y visión', prompt: '¿Usted o algún integrante ha padecido enfermedades de las vías respiratorias, la piel, los ojos, la nariz o la garganta, o defectos de refracción visual?' },
-  { id: '4-5', questionIds: [4, 5], title: 'Enfermedades cardiovasculares y vasculares', prompt: '¿Usted o algún integrante ha padecido enfermedades cardiovasculares o vasculares, incluyendo accidentes cerebrovasculares o hemorragias cerebrales?' },
+  { id: '4-5', questionIds: [4, 5], title: 'Enfermedades cardiovasculares y vasculares', prompt: '¿Usted o algún integrante ha padecido enfermedades vasculares o cardiovasculares, incluyendo accidentes cerebrovasculares o hemorragias cerebrales?' },
   { id: '6-11-12-13-22', questionIds: [6, 11, 12, 13, 22], title: 'Sistema nervioso, endocrino, inmunológico y antecedentes relacionados', prompt: '¿Usted o algún integrante ha presentado enfermedades del sistema nervioso, endocrinas, inmunológicas o de transmisión sexual, o ha donado o recibido transfusiones de sangre?' },
   { id: '7-8', questionIds: [7, 8], title: 'Sistema digestivo, riñones y vías urinarias', prompt: '¿Usted o algún integrante ha padecido enfermedades digestivas, de los riñones o de las vías urinarias?' },
   { id: '9', questionIds: [9], title: 'Enfermedades osteomusculares', prompt: '¿Usted o algún integrante ha padecido alguna enfermedad osteomuscular?' },

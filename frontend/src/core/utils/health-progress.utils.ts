@@ -4,6 +4,7 @@ import {
   MedicalConditionDetail,
   HealthDeclarationSection,
 } from '@/core/interfaces/affiliation.interfaces';
+import { isValidMonthYear } from '@/core/utils/format.utils';
 
 export type HealthAnswer = 'SÍ' | 'NO';
 export type HealthCompletionStatus = 'pending' | 'incomplete' | 'complete';
@@ -46,11 +47,16 @@ export const getAffiliateAnswers = (
   );
 };
 
-export const isClinicalDetailComplete = (detail: MedicalConditionDetail): boolean =>
+export const isClinicalDetailComplete = (
+  detail: MedicalConditionDetail,
+  question: HealthQuestionItem,
+): boolean =>
   Boolean(
     detail.condition.trim() &&
-    detail.diagnosisDate.trim() &&
-    detail.treatment.trim(),
+    (question.clinicalDetailLevel === 'detailed'
+      ? detail.diagnosisDate.trim()
+      : isValidMonthYear(detail.diagnosisDate)) &&
+    (question.clinicalDetailLevel !== 'detailed' || detail.treatment.trim()),
   );
 
 export const getAffiliateQuestionStatus = (
@@ -81,7 +87,15 @@ export const getAffiliateQuestionStatus = (
     const details = healthDeclaration.clarificationDetails?.[question.id]?.filter(
       (item) => item.affiliateCode === affiliate.affiliateCode,
     ) || [];
-    return details.length > 0 && details.every((detail) => detail.field1.trim() && detail.field2.trim())
+    const isMedicationQuestion = question.id === 21;
+    return details.length > 0 && details.every((detail) => {
+      if (question.includeInClinicalSummary) {
+        return detail.field1.trim() && isValidMonthYear(detail.field2);
+      }
+      const doseOk = detail.field1.trim() && detail.field2.trim();
+      if (!isMedicationQuestion) return doseOk;
+      return detail.field1.trim() && detail.field2.trim() && detail.field2Number?.trim() && detail.field2Unit?.trim();
+    })
       ? 'complete'
       : 'incomplete';
   }
@@ -97,7 +111,9 @@ export const getAffiliateQuestionStatus = (
       item.questionId === question.id &&
       Number(item.affiliateCode) === affiliate.affiliateCode,
   );
-  return clinicalDetails.length > 0 && clinicalDetails.every(isClinicalDetailComplete)
+  return clinicalDetails.length > 0 && clinicalDetails.every((detail) =>
+    isClinicalDetailComplete(detail, question),
+  )
     ? 'complete'
     : 'incomplete';
 };

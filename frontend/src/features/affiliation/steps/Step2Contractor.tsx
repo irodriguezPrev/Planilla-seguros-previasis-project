@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/core/components/ui/Card';
 import { Input } from '@/core/components/ui/Input';
 import { Badge } from '@/core/components/ui/Badge';
+import { completeCurrencyInput, formatCurrencyInput } from '@/core/utils/format.utils';
+import { isMinor } from '@/core/utils/age.utils';
 import {
   ContractorSection,
   NaturalPersonData,
@@ -25,7 +27,19 @@ export const Step2Contractor: React.FC<Step2Props> = ({
   contractor,
   onContractorChange,
 }) => {
-  const t = useTranslations('step2');
+   const t = useTranslations('step2');
+   const tValidation = useTranslations('validation');
+   const [birthDateError, setBirthDateError] = useState('');
+
+   const handleBirthDateBlur = (birthDate: string) => {
+     if (birthDate && isMinor(birthDate)) {
+       setBirthDateError(tValidation('contractorMinor'));
+     }
+   };
+
+   const handleBirthDateChange = (birthDate: string) => {
+     if (!birthDate || !isMinor(birthDate)) setBirthDateError('');
+   };
   const updateContractor = (fields: Partial<ContractorSection>) => {
     onContractorChange({ ...contractor, ...fields, personType: 'Natural' });
   };
@@ -79,7 +93,7 @@ export const Step2Contractor: React.FC<Step2Props> = ({
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: 'column',
             gap: '0.75rem',
             padding: '1rem',
             backgroundColor: 'var(--bg-secondary)',
@@ -87,16 +101,29 @@ export const Step2Contractor: React.FC<Step2Props> = ({
             border: '1px solid var(--border-subtle)',
           }}
         >
-          <input
-            type="checkbox"
-            id="differentContractor"
-            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-            checked={contractor.isDifferent}
-            onChange={(e) => updateContractor({ isDifferent: e.target.checked })}
-          />
-          <label htmlFor="differentContractor" style={{ fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}>
+          <label style={{ fontWeight: 600, fontSize: '0.9375rem' }}>
             {t('differentContractor')}
           </label>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.9375rem' }}>
+              <input
+                type="checkbox"
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                checked={contractor.isDifferent === true}
+                onChange={() => updateContractor({ isDifferent: true })}
+              />
+              {t('yes')}
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.9375rem' }}>
+              <input
+                type="checkbox"
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                checked={contractor.isDifferent === false}
+                onChange={() => updateContractor({ isDifferent: false })}
+              />
+              {t('no')}
+            </label>
+          </div>
         </div>
 
         {!contractor.isDifferent ? (
@@ -227,7 +254,12 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                     label={t('birthDate')}
                     type="date"
                     value={naturalPerson.birthDate}
-                    onChange={(e) => updateNaturalPerson({ birthDate: e.target.value })}
+                    onChange={(e) => {
+                      updateNaturalPerson({ birthDate: e.target.value });
+                      handleBirthDateChange(e.target.value);
+                    }}
+                    onBlur={(e) => handleBirthDateBlur(e.target.value)}
+                    error={birthDateError}
                     required
                   />
                   <Input
@@ -244,8 +276,10 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                   />
                   <Input
                     label={t('annualIncome')}
+                    inputMode="decimal"
                     value={naturalPerson.annualIncomeBs}
-                    onChange={(e) => updateNaturalPerson({ annualIncomeBs: e.target.value })}
+                    onChange={(e) => updateNaturalPerson({ annualIncomeBs: formatCurrencyInput(e.target.value) })}
+                    onBlur={(e) => updateNaturalPerson({ annualIncomeBs: completeCurrencyInput(e.target.value) })}
                     required
                   />
                 </div>
@@ -289,23 +323,21 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                     />
                   </div>
                   <div className="input-group">
-                    <label className="input-label">{t('officeAddress')} *</label>
+                    <label className="input-label">{t('officeAddress')}</label>
                     <textarea
                       className="input-field"
                       rows={2}
                       value={naturalPerson.officeAddress}
                       onChange={(e) => updateNaturalPerson({ officeAddress: e.target.value })}
-                      required
                     />
                   </div>
                   <div className="input-group">
-                    <label className="input-label">{t('paymentAddress')} *</label>
+                    <label className="input-label">{t('paymentAddress')}</label>
                     <textarea
                       className="input-field"
                       rows={2}
                       value={naturalPerson.billingAddress}
                       onChange={(e) => updateNaturalPerson({ billingAddress: e.target.value })}
-                      required
                     />
                   </div>
                 </div>
@@ -568,7 +600,12 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                       label={t('birthDate')}
                       type="date"
                       value={legalRepresentative.birthDate}
-                      onChange={(e) => updateLegalRepresentative({ birthDate: e.target.value })}
+                      onChange={(e) => {
+                        updateLegalRepresentative({ birthDate: e.target.value });
+                        handleBirthDateChange(e.target.value);
+                      }}
+                      onBlur={(e) => handleBirthDateBlur(e.target.value)}
+                      error={birthDateError}
                       required
                     />
                     <Input
@@ -585,8 +622,10 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                     />
                     <Input
                       label={t('annualIncome')}
+                      inputMode="decimal"
                       value={legalRepresentative.annualIncomeBs}
-                      onChange={(e) => updateLegalRepresentative({ annualIncomeBs: e.target.value })}
+                      onChange={(e) => updateLegalRepresentative({ annualIncomeBs: formatCurrencyInput(e.target.value) })}
+                      onBlur={(e) => updateLegalRepresentative({ annualIncomeBs: completeCurrencyInput(e.target.value) })}
                       required
                     />
                   </div>
