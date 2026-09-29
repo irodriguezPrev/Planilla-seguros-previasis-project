@@ -24,6 +24,7 @@
   --grad-oro: linear-gradient(135deg, #B8860B 0%, #D4AF37 50%, #F3E5AB 100%);
   --grad-previasis: linear-gradient(135deg, #00733a 0%, #008B47 50%, #10b981 100%);
   --grad-abuelos: linear-gradient(135deg, #0B2B40 0%, #1D4B5C 100%);
+  --grad-247: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #2dd4bf 100%);
 
   /* Superficies y Fondos */
   --bg-app: #f4f6f9;
@@ -948,6 +949,48 @@ button {
 
 .health-special-detail-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
+.health-antecedent-details {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(0, 139, 71, 0.25);
+}
+
+.health-antecedent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.health-antecedent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.health-antecedent-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.health-antecedent-card-header strong {
+  color: var(--previasis-dark-green);
+  font-size: 0.85rem;
+}
+
+.health-add-antecedent {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+}
+
 .health-sport-entry {
   display: flex;
   flex-direction: column;
@@ -1280,6 +1323,7 @@ button {
 .plan-diamante { background: linear-gradient(135deg, #c5efd2 0%, #e9fff0 50%, #abd9ba 100%); color: #073E23; }
 .plan-previasis { background: var(--grad-previasis); }
 .plan-abuelos { background: var(--grad-abuelos); }
+.plan-247 { background: var(--grad-247); }
 
 .family-member-card,
 .family-member-main {

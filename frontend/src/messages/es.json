@@ -300,8 +300,10 @@
     "annualCoverage": "cobertura anual",
     "monthlyFee": "Cuota mensual",
     "consult": "Consultar",
+    "annualOnly": "Solo anual",
     "planSelection": "Selección de Plan",
     "for": "Para:",
+    "stateLabel": "Estado",
     "enterBirthDate": "Ingresa una fecha de nacimiento para calcular la tarifa.",
     "abuelosPlan": "Plan Abuelos · válido para personas de 61 a 80 años.",
     "ageOutOfRange": "Edad fuera de los rangos tarifarios publicados.",
@@ -492,6 +494,9 @@
     "addAnotherDetail": "Agregar otro detalle",
     "selectEventType": "Seleccione un tipo de evento frecuente",
     "removeDetail": "Eliminar detalle",
+    "antecedentNumber": "Registro #{number}",
+    "addAntecedent": "Agregar contrato / empresa",
+    "removeAntecedent": "Quitar registro",
     "clinicalDetailsOf": "Detalles clínicos de",
     "codeHash": "Código #{code}",
     "affiliateNumber": "Afiliado #{code}",
@@ -620,24 +625,32 @@
     },
     "25": {
       "title": "Contratos de salud vigentes con otra compañía",
-      "description": "¿Mantiene usted o algún familiar contrato de salud vigente con otra compañía?",
+      "description": "¿Mantiene usted o alguno del Grupo familiar, con esta COMPAÑÍA o con otra, un contrato de medicina prepagada o un seguro de Salud? En caso afirmativo, especifique:",
       "detailMode": "antecedent",
       "antecedent": {
         "field1Label": "Nº de Contrato",
         "field2Label": "Nombre de la Compañía",
+        "field3Label": "Límite de Cobertura",
+        "field4Label": "Fecha Vigencia",
         "field1Placeholder": "Ej: 000123",
-        "field2Placeholder": "Ej: Compañía de salud"
+        "field2Placeholder": "Ej: Compañía de salud",
+        "field3Placeholder": "Ej: $10.000",
+        "field4Placeholder": "Ej: DD/MM/AAAA"
       }
     },
     "26": {
       "title": "Negativa o anulación de contrato de salud",
-      "description": "¿En alguna oportunidad le ha sido negado o anulado un contrato de salud?",
+      "description": "¿En alguna oportunidad le ha sido negado o anulado un Seguro de Vida; Salud o Accidentes Personales? En caso afirmativo indique",
       "detailMode": "antecedent",
       "antecedent": {
         "field1Label": "Tipo de Seguro",
-        "field2Label": "Compañía que Rechazó",
+        "field2Label": "Nombre de la Compañía",
+        "field3Label": "Límite de Cobertura",
+        "field4Label": "Fecha Rechazo/Anulación",
         "field1Placeholder": "Ej: Colectivo",
-        "field2Placeholder": "Ej: Compañía que rechazó"
+        "field2Placeholder": "Ej: Compañía que rechazó",
+        "field3Placeholder": "Ej: $10.000",
+        "field4Placeholder": "Ej: DD/MM/AAAA"
       }
     }
   },

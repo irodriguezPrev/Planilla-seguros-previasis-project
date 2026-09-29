@@ -300,8 +300,10 @@
     "annualCoverage": "annual coverage",
     "monthlyFee": "Monthly fee",
     "consult": "Consult",
+    "annualOnly": "Annual only",
     "planSelection": "Plan Selection",
     "for": "For:",
+    "stateLabel": "State",
     "enterBirthDate": "Enter a birth date to calculate the rate.",
     "abuelosPlan": "Abuelos Plan · valid for people aged 61 to 80.",
     "ageOutOfRange": "Age outside published rate ranges.",
@@ -492,6 +494,9 @@
     "addAnotherDetail": "Add another detail",
     "selectEventType": "Select a frequent event type",
     "removeDetail": "Remove detail",
+    "antecedentNumber": "Record #{number}",
+    "addAntecedent": "Add contract / company",
+    "removeAntecedent": "Remove record",
     "clinicalDetailsOf": "Clinical details of",
     "codeHash": "Code #{code}",
     "affiliateNumber": "Member #{code}",
@@ -620,24 +625,32 @@
     },
     "25": {
       "title": "Active health contracts with another company",
-      "description": "Do you or any family member maintain an active health contract with another company?",
+      "description": "Do you or any member of the family group maintain, with this COMPANY or another, a prepaid medicine contract or a Health insurance? If affirmative, please specify:",
       "detailMode": "antecedent",
       "antecedent": {
         "field1Label": "Contract No.",
         "field2Label": "Company Name",
+        "field3Label": "Coverage Limit",
+        "field4Label": "Effective Date",
         "field1Placeholder": "Ex: 000123",
-        "field2Placeholder": "Ex: Health company"
+        "field2Placeholder": "Ex: Health company",
+        "field3Placeholder": "Ex: $10,000",
+        "field4Placeholder": "Ex: DD/MM/YYYY"
       }
     },
     "26": {
       "title": "Denial or annulment of health contract",
-      "description": "Have you ever been denied or had a health contract annulled?",
+      "description": "Have you ever been denied or had a Life; Health or Accidents insurance annulled? If affirmative, please indicate",
       "detailMode": "antecedent",
       "antecedent": {
         "field1Label": "Insurance Type",
-        "field2Label": "Company that Rejected",
+        "field2Label": "Company Name",
+        "field3Label": "Coverage Limit",
+        "field4Label": "Denial/Annulment Date",
         "field1Placeholder": "Ex: Collective",
-        "field2Placeholder": "Ex: Company that rejected"
+        "field2Placeholder": "Ex: Company that rejected",
+        "field3Placeholder": "Ex: $10,000",
+        "field4Placeholder": "Ex: DD/MM/YYYY"
       }
     }
   },

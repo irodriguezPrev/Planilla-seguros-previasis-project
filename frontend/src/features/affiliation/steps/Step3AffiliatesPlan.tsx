@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import {
   AffiliateRow,
   PaymentFrequency,
-  RequestedPlan,
   Relationship,
 } from '@/core/interfaces/affiliation.interfaces';
 import { calculateActuarialAge as calculateAge } from '@/core/utils/age.utils';
@@ -14,6 +13,17 @@ import {
   requiresMinorDocumentChoice,
 } from '@/core/utils/minor-document.utils';
 import { PAYMENT_FREQUENCY_TRANSLATION_KEYS } from '@/core/config/payment-options.config';
+import {
+  formatCoverage,
+  getAgeRange,
+  getMonthlyPriceFromTariff,
+  getPlanTiers,
+  getPriceForFrequency,
+  type PlanName,
+  type PlanTier,
+  type TierName,
+} from '@/core/config/tariff-data';
+import type { Zone } from '@/core/config/zone-config';
 import { ContextualTooltip } from '@/components/common/ContextualTooltip';
 import { DateSelect } from '@/core/components/ui';
 import { UserPlus, Trash2, Users, Award, Check, Flame, Pencil } from 'lucide-react';
@@ -28,73 +38,17 @@ const billingPeriods: Array<{
   { id: 'Anual', months: 12 },
 ];
 
-type PlanOption = {
-  id: RequestedPlan;
-  name: string;
-  classStyle: string;
-  features: string[];
-  defaultCoverage: string;
-  monthlyPrices: Partial<Record<'0-20' | '21-40' | '41-60' | '61-80', number>>;
+const TIER_STYLE: Record<TierName, string> = {
+  Oro: 'plan-oro',
+  Plata: 'plan-plata',
+  Bronce: 'plan-bronce',
 };
 
-const planOptions: PlanOption[] = [
-  {
-    id: 'Plan Bronce',
-    name: 'Plan Bronce',
-    classStyle: 'plan-bronce',
-    features: ['Consulta general', 'Farmacia básica', 'Emergencias 24/7'],
-    defaultCoverage: '$10.000',
-    monthlyPrices: { '0-20': 15, '21-40': 18, '41-60': 21 },
-  },
-  {
-    id: 'Plan Plata',
-    name: 'Plan Plata',
-    classStyle: 'plan-plata',
-    features: ['Especialistas', 'Hospitalización', 'Cirugías electivas'],
-    defaultCoverage: '$15.000',
-    monthlyPrices: { '0-20': 18, '21-40': 21, '41-60': 25 },
-  },
-  {
-    id: 'Plan Oro',
-    name: 'Plan Oro',
-    classStyle: 'plan-oro',
-    features: ['Cobertura total', 'Atención VIP', 'Red de clínicas premium'],
-    defaultCoverage: '$25.000',
-    monthlyPrices: { '0-20': 27, '21-40': 32, '41-60': 37 },
-  },
-  {
-    id: 'Plan Diamante',
-    name: 'Plan Diamante',
-    classStyle: 'plan-diamante',
-    features: ['Cobertura superior', 'Atención preferencial', 'Red de clínicas premium'],
-    defaultCoverage: '$40.000',
-    monthlyPrices: { '0-20': 36, '21-40': 42, '41-60': 50 },
-  },
-  {
-    id: 'Abuelos',
-    name: 'Plan Abuelos - Bronce',
-    classStyle: 'plan-bronce',
-    features: ['Personas de 61 a 80 años', 'Telemedicina 24 horas', 'Atención domiciliaria'],
-    defaultCoverage: '$3.000',
-    monthlyPrices: { '61-80': 35 },
-  },
-  {
-    id: 'Abuelos',
-    name: 'Plan Abuelos - Plata',
-    classStyle: 'plan-plata',
-    features: ['Personas de 61 a 80 años', 'Cobertura ampliada', 'Atención domiciliaria'],
-    defaultCoverage: '$5.000',
-    monthlyPrices: { '61-80': 50 },
-  },
-  {
-    id: 'Abuelos',
-    name: 'Plan Abuelos - Oro',
-    classStyle: 'plan-oro',
-    features: ['Personas de 61 a 80 años', 'Cobertura máxima', 'Atención domiciliaria'],
-    defaultCoverage: '$10.000',
-    monthlyPrices: { '61-80': 70 },
-  },
-];
+const PLAN_NAME: Record<PlanName, string> = {
+  'Previasís': 'Previasís',
+  'Abuelos': 'Abuelos',
+  '24/7': '24/7',
+};
 
 function getMinimumBirthDate(): string {
   const maximumDate = new Date();
@@ -104,28 +58,14 @@ function getMinimumBirthDate(): string {
   return `${maximumDate.getFullYear()}-${month}-${day}`;
 }
 
-function getAgeRange(age: number | null): '0-20' | '21-40' | '41-60' | '61-80' | null {
-  if (age === null || age < 0) return null;
-  if (age <= 20) return '0-20';
-  if (age <= 40) return '21-40';
-  if (age <= 60) return '41-60';
-  if (age <= 80) return '61-80';
-  return null;
-}
-
-function getMonthlyPrice(plan: PlanOption | undefined, age: number | null): number | null {
-  const range = getAgeRange(age);
-  return range && plan?.monthlyPrices[range] !== undefined
-    ? plan.monthlyPrices[range] ?? null
-    : null;
-}
-
-function getAffiliateFee(affiliate: AffiliateRow): number {
+function getAffiliatePriceForFrequency(
+  affiliate: AffiliateRow,
+  zone: Zone,
+  frequency: PaymentFrequency,
+): number {
   const age = calculateAge(affiliate.birthDate);
-  const plan = planOptions.find(
-    (p) => p.id === affiliate.requestedPlan && p.defaultCoverage === affiliate.coverageLimit
-  );
-  return getMonthlyPrice(plan, age) || 0;
+  if (age === null) return 0;
+  return getPriceForFrequency(affiliate.requestedPlan, affiliate.coverageLimit, age, zone, frequency) ?? 0;
 }
 
 interface Step3Props {
@@ -135,6 +75,8 @@ interface Step3Props {
   onPaymentFrequencyChange: (frequency: PaymentFrequency) => void;
   policyholderFullName?: string;
   policyholderDocument?: string;
+  zone: Zone;
+  residenceState?: string;
 }
 
 export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
@@ -143,6 +85,8 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
   paymentFrequency,
   onPaymentFrequencyChange,
   policyholderDocument = '',
+  zone,
+  residenceState = '',
 }) => {
   const [selectedMemberIndex, setSelectedMemberIndex] = useState<number>(0);
   const memberNameInputRef = useRef<HTMLInputElement | null>(null);
@@ -184,7 +128,7 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
 
   const normalizeAffiliates = (items: AffiliateRow[]) =>
     items.map((item, index) => {
-      const calculatedFee = getAffiliateFee(item);
+      const calculatedFee = getAffiliatePriceForFrequency(item, zone, paymentFrequency);
       return {
         ...item,
         affiliateCode: index + 1,
@@ -207,6 +151,32 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [policyholderDocument]);
 
+  const has247 = affiliates.some((affiliate) => affiliate.requestedPlan === '24/7');
+
+  // Recalcular cuotas cuando cambia la zona o la frecuencia de pago.
+  useEffect(() => {
+    const recomputed = affiliates.map((affiliate, index) => ({
+      affiliate: { ...affiliate, affiliateCode: index + 1 },
+      fee: getAffiliatePriceForFrequency(affiliate, zone, paymentFrequency),
+    }));
+    const feesChanged = recomputed.some(
+      ({ affiliate, fee }) => affiliate.fee !== fee,
+    );
+
+    if (feesChanged) {
+      onAffiliatesChange(recomputed.map(({ affiliate, fee }) => ({ ...affiliate, fee })));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zone, paymentFrequency]);
+
+  // El plan 24/7 solo cotiza de forma anual: el grupo completo cambia a Anual.
+  useEffect(() => {
+    if (has247 && paymentFrequency !== 'Anual') {
+      onPaymentFrequencyChange('Anual');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [has247, paymentFrequency]);
+
   const addAffiliate = () => {
     const newAffiliate: AffiliateRow = {
       id: Math.random().toString(36).substring(2, 9),
@@ -221,8 +191,8 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
       sex: 'M',
       weightKg: '',
       heightCm: '',
-      requestedPlan: 'Plan Oro',
-      coverageLimit: '$25.000',
+      requestedPlan: 'Previasís',
+      coverageLimit: 25000,
       fee: 0,
     };
     const updated = normalizeAffiliates([...affiliates, newAffiliate]);
@@ -264,45 +234,49 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
     ? requiresMinorDocumentChoice(currentMember)
     : false;
   const currentAge = calculateAge(currentMember?.birthDate || '');
-  const currentRange = getAgeRange(currentAge);
-  const availablePlans = currentRange === '61-80'
-    ? planOptions.filter((plan) => plan.id === 'Abuelos')
-    : planOptions.filter((plan) => plan.id !== 'Abuelos');
+  const currentRange = currentAge === null ? null : getAgeRange(currentAge);
 
-  const selectPlan = (plan: PlanOption) => {
-    const monthlyPrice = getMonthlyPrice(plan, currentAge) || 0;
+  const planTiers =
+    currentAge === null || currentAge > 80 ? [] as PlanTier[] : getPlanTiers(currentAge);
+  const formatPrice = (value: number) => `$${value.toFixed(2)}`;
+
+  const selectPlan = (plan: PlanName, coverage: number) => {
+    const fee = getPriceForFrequency(plan, coverage, currentAge ?? -1, zone, paymentFrequency) ?? 0;
     updateAffiliate(selectedMemberIndex, {
-      requestedPlan: plan.id,
-      coverageLimit: plan.defaultCoverage,
-      fee: monthlyPrice,
+      requestedPlan: plan,
+      coverageLimit: coverage,
+      fee,
     });
+    if (plan === '24/7' && paymentFrequency !== 'Anual') {
+      onPaymentFrequencyChange('Anual');
+    }
   };
 
   const validateBirthDate = (birthDate: string) => {
     const age = calculateAge(birthDate);
+    const currentPlan = currentMember?.requestedPlan;
 
     if (age === null || age > 80) {
       alert(tValidation('ageLimit80Beneficiary'));
       return;
     }
 
-    const range = getAgeRange(age);
-    const currentPlan = planOptions.find(
-      (plan) => plan.id === currentMember?.requestedPlan && plan.defaultCoverage === currentMember?.coverageLimit,
-    );
-
-    if (range === '61-80') {
-      updateAffiliate(selectedMemberIndex, {
-        requestedPlan: 'Abuelos',
-        coverageLimit: '$3.000',
-      });
+    if (age >= 61) {
+      if (currentPlan === 'Abuelos') {
+        updateAffiliate(selectedMemberIndex, { birthDate });
+      } else {
+        updateAffiliate(selectedMemberIndex, {
+          requestedPlan: 'Abuelos',
+          coverageLimit: 3000,
+        });
+      }
       return;
     }
 
-    if (currentPlan?.id === 'Abuelos') {
+    if (currentPlan === 'Abuelos') {
       updateAffiliate(selectedMemberIndex, {
-        requestedPlan: 'Plan Bronce',
-        coverageLimit: '$10.000',
+        requestedPlan: 'Previasís',
+        coverageLimit: 10000,
       });
     } else {
       updateAffiliate(selectedMemberIndex, { birthDate });
@@ -321,7 +295,16 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
     }
   };
 
-  const groupSubtotal = affiliates.reduce((sum, item) => sum + getAffiliateFee(item), 0);
+  const groupSubtotal = affiliates.reduce(
+    (sum, item) => sum + getAffiliatePriceForFrequency(item, zone, paymentFrequency),
+    0,
+  );
+  const periodTotal = (period: PaymentFrequency) =>
+    affiliates.reduce(
+      (sum, item) => sum + getAffiliatePriceForFrequency(item, zone, period),
+      0,
+    );
+  const selectedMonths = billingPeriods.find((period) => period.id === paymentFrequency)?.months || 1;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -364,7 +347,7 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {affiliates.map((af, idx) => {
               const isSelected = idx === selectedMemberIndex;
-              const affiliateFee = getAffiliateFee(af);
+              const affiliateFee = getAffiliatePriceForFrequency(af, zone, paymentFrequency);
 
               return (
                 <div
@@ -429,14 +412,14 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
                         </button>
                       </div>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {getRelationshipLabel(af.relationship)} • {af.requestedPlan} ({af.coverageLimit})
+                        {getRelationshipLabel(af.relationship)} • {PLAN_NAME[af.requestedPlan]} ({formatCoverage(af.coverageLimit)})
                         {' · '}
                         {calculateAge(af.birthDate) === null
                           ? t('agePending')
                           : t('yearsOld', { age: calculateAge(af.birthDate) ?? 0 })}
                       </p>
                       <p style={{ fontWeight: 800, fontSize: '0.8125rem', color: 'var(--previasis-green)', marginTop: '2px' }}>
-                        {t('monthlyRate')}: ${affiliateFee} {t('perMonth')}
+                        {t('monthlyRate')} ({tPayment(PAYMENT_FREQUENCY_TRANSLATION_KEYS[paymentFrequency])}): {formatPrice(affiliateFee)}
                       </p>
                     </div>
                   </div>
@@ -485,11 +468,11 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
             <div className="billing-preview-heading">
               <span className="billing-preview-eyebrow">{t('subtotal')}</span>
               <h4 id="billing-preview-title">
-                ${groupSubtotal * (billingPeriods.find((period) => period.id === paymentFrequency)?.months || 1)}
+                {formatPrice(groupSubtotal)}
               </h4>
               {paymentFrequency !== 'Mensual' && (
                 <p>
-                  {t('payment')} {tPayment(PAYMENT_FREQUENCY_TRANSLATION_KEYS[paymentFrequency])} · {t('equivalentTo')} ${groupSubtotal} {t('perMonth')}
+                  {t('payment')} {tPayment(PAYMENT_FREQUENCY_TRANSLATION_KEYS[paymentFrequency])} · {t('equivalentTo')} ${Math.round(groupSubtotal / selectedMonths)} {t('perMonth')}
                 </p>
               )}
             </div>
@@ -497,6 +480,7 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
             <div className="billing-periods">
               {billingPeriods.map((period) => {
                 const isSelected = paymentFrequency === period.id;
+                const disabled = has247 && period.id !== 'Anual';
                 return (
                   <button
                     key={period.id}
@@ -504,6 +488,8 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
                     className={`billing-period ${isSelected ? 'selected' : ''}`}
                     onClick={() => onPaymentFrequencyChange(period.id)}
                     aria-pressed={isSelected}
+                    disabled={disabled}
+                    style={disabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
                   >
                     {period.id === 'Trimestral' && (
                       <span className="billing-popular-badge">
@@ -511,7 +497,7 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
                       </span>
                     )}
                     <span className="billing-period-name">{tPayment(PAYMENT_FREQUENCY_TRANSLATION_KEYS[period.id])}</span>
-                    <strong>${groupSubtotal * period.months}</strong>
+                    <strong>{formatPrice(periodTotal(period.id))}</strong>
                     <small>{t('monthCount', { count: period.months })}</small>
                     {isSelected && <Check className="billing-period-check" size={16} strokeWidth={3} />}
                   </button>
@@ -547,30 +533,38 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
             </p>
             </div>
           </div>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+            {t('stateLabel')}: <strong>{residenceState || '—'}</strong>
+          </p>
 
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             {currentAge === null
               ? t('enterBirthDate')
-              : currentRange === '61-80'
-                ? t('abuelosPlan')
-                : currentRange === null
-                  ? t('ageOutOfRange')
-                  : t('ageRangeF', { range: currentRange })}
+              : currentRange === null
+                ? t('ageOutOfRange')
+                : t('ageRangeF', { range: currentRange })}
           </p>
 
-          <div className={`grid plan-options-grid ${availablePlans.length > 4 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
-            {availablePlans.map((plan) => {
-              const isPlanSelected = currentMember?.requestedPlan === plan.id
-                && currentMember?.coverageLimit === plan.defaultCoverage;
-              const monthlyPrice = getMonthlyPrice(plan, currentAge);
+          <div className={`grid plan-options-grid ${planTiers.length > 4 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
+            {planTiers.map(({ tier, plan, coverage }) => {
+              const isPlanSelected = currentMember?.requestedPlan === plan
+                && currentMember?.coverageLimit === coverage;
+              const monthlyPrice = getMonthlyPriceFromTariff(plan, coverage, currentAge ?? -1, zone);
 
               return (
                 <button
                   type="button"
-                  key={`${plan.id}-${plan.defaultCoverage}`}
-                  onClick={() => selectPlan(plan)}
-                  className={`plan-gradient-card ${plan.classStyle} ${isPlanSelected ? 'selected' : ''}`}
-                  style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '150px', textAlign: 'left' }}
+                  key={`${plan}-${coverage}`}
+                  onClick={() => selectPlan(plan, coverage)}
+                  className={`plan-gradient-card ${TIER_STYLE[tier]} ${isPlanSelected ? 'selected' : ''}`}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    minHeight: '150px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
                   aria-pressed={isPlanSelected}
                 >
                   <div style={{ width: '100%' }}>
@@ -583,19 +577,17 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
                       )}
                     </div>
                     <h4 style={{ fontWeight: 800, fontSize: '0.9375rem', textTransform: 'uppercase', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                      {plan.name}
+                      {tier}
                     </h4>
-                      <p style={{ fontSize: '0.75rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                        {plan.defaultCoverage} {t('annualCoverage')}
-                      </p>
-                  </div>
-
-                  <div style={{ marginTop: '0.75rem' }}>
-                    <p style={{ fontSize: '0.6875rem', opacity: 0.9 }}>{t('monthlyFee')}</p>
-                    <strong style={{ fontSize: '1.25rem' }}>
-                      {monthlyPrice === null ? t('consult') : `$${monthlyPrice}`}
-                    </strong>
-
+                    <p style={{ fontSize: '0.75rem', fontWeight: 700, marginTop: '0.2rem' }}>
+                      {t('coverageOf')} {formatCoverage(coverage)}
+                    </p>
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <p style={{ fontSize: '0.6875rem', opacity: 0.9 }}>{t('monthlyFee')}</p>
+                      <strong style={{ fontSize: '1.25rem' }}>
+                        {monthlyPrice === null ? t('consult') : formatPrice(monthlyPrice)}
+                      </strong>
+                    </div>
                   </div>
                 </button>
               );
@@ -796,7 +788,7 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
               type="text"
               className="previasis-input"
               readOnly
-              value={currentMember?.coverageLimit}
+              value={currentMember ? formatCoverage(currentMember.coverageLimit) : ''}
             />
           </div>
         </div>

@@ -21,6 +21,7 @@ import {
   HEALTH_QUESTIONS,
 } from '@/core/config/health-questions.config';
 import { getCitiesByState } from '@/core/config/venezuela-locations.config';
+import { getZoneFromState } from '@/core/config/zone-config';
 import { calculateActuarialAge } from '@/core/utils/age.utils';
 import {
   isValidEmail,
@@ -207,8 +208,8 @@ const INITIAL_STATE: AffiliationFormState = {
       sex: 'M',
       weightKg: '',
       heightCm: '',
-      requestedPlan: 'Plan Oro',
-      coverageLimit: '$25.000',
+      requestedPlan: 'Previasís',
+      coverageLimit: 25000,
       fee: 0,
     },
   ],
@@ -1109,8 +1110,8 @@ export default function AffiliationPage() {
           sex: 'M',
           weightKg: '78',
           heightCm: '178',
-          requestedPlan: 'Plan Oro',
-          coverageLimit: '$25.000',
+          requestedPlan: 'Previasís',
+          coverageLimit: 25000,
           fee: 0,
         },
         {
@@ -1126,8 +1127,8 @@ export default function AffiliationPage() {
           sex: 'F',
           weightKg: '60',
           heightCm: '165',
-          requestedPlan: 'Plan Oro',
-          coverageLimit: '$25.000',
+          requestedPlan: 'Previasís',
+          coverageLimit: 25000,
           fee: 0,
         },
         {
@@ -1143,8 +1144,8 @@ export default function AffiliationPage() {
           sex: 'M',
           weightKg: '28',
           heightCm: '128',
-          requestedPlan: 'Plan Plata',
-          coverageLimit: '$15.000',
+          requestedPlan: 'Previasís',
+          coverageLimit: 15000,
           fee: 0,
         },
       ],
@@ -1652,6 +1653,8 @@ export default function AffiliationPage() {
               }))}
               policyholderFullName={`${formData.policyholder.firstNames} ${formData.policyholder.lastNames}`}
               policyholderDocument={formData.policyholder.documentNumber}
+              zone={getZoneFromState(formData.policyholder.residenceState)}
+              residenceState={formData.policyholder.residenceState}
             />
           )}
 
@@ -1675,6 +1678,7 @@ export default function AffiliationPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <Step5PaymentAndOthers
                 payment={formData.payment}
+                has247Plan={formData.affiliates.some((affiliate) => affiliate.requestedPlan === '24/7')}
                 onPaymentChange={(payment) => setFormData((previous) => ({
                   ...previous,
                   payment: mergeChangedValues(previous.payment, formData.payment, payment),

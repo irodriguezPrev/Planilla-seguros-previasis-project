@@ -9,7 +9,9 @@ import {
   LegalEntityData,
   NaturalPersonData,
   PaymentSection,
+  RequestedPlan,
 } from '@/core/interfaces/affiliation.interfaces';
+import { parseCoverageLimit } from '@/core/config/tariff-data';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -142,6 +144,18 @@ const deserializeAffiliate = (value: unknown): AffiliateRow => {
   const legacyNameParts = splitLegacyAffiliateName(legacyFullName);
   const firstNames = String(source.firstNames ?? legacyNameParts.firstNames);
   const lastNames = String(source.lastNames ?? legacyNameParts.lastNames);
+  const legacyPlan = String(source.requestedPlan ?? '');
+  const requestedPlan: RequestedPlan = legacyPlan === 'Abuelos' ||
+    legacyPlan.startsWith('Plan Abuelos')
+    ? 'Abuelos'
+    : legacyPlan === '24/7' || legacyPlan.includes('24/7')
+      ? '24/7'
+      : 'Previasís';
+  const rawCoverage = source.coverageLimit;
+  const coverageLimit =
+    typeof rawCoverage === 'number' && rawCoverage > 0
+      ? rawCoverage
+      : parseCoverageLimit(String(rawCoverage ?? '') || '0');
   return {
     id: String(source.id ?? ''),
     affiliateCode: Number(source.affiliateCode ?? 0),
@@ -156,8 +170,8 @@ const deserializeAffiliate = (value: unknown): AffiliateRow => {
     sex: (source.sex ?? 'M') as AffiliateRow['sex'],
     weightKg: String(source.weightKg ?? ''),
     heightCm: String(source.heightCm ?? ''),
-    requestedPlan: String(source.requestedPlan ?? ''),
-    coverageLimit: String(source.coverageLimit ?? ''),
+    requestedPlan,
+    coverageLimit,
     fee: Number(source.fee ?? 0),
   };
 };
@@ -169,19 +183,39 @@ const deserializeHealthDeclaration = (value: unknown): HealthDeclarationSection 
     Object.entries(rawQuestions).map(([questionId, rawQuestion]) => {
       const question = asRecord(rawQuestion);
       const rawAntecedent = asRecord(question.antecedentDetail);
-      const hasAntecedent = Object.keys(rawAntecedent).length > 0;
+      const legacyAntecedent = Object.keys(rawAntecedent).length > 0
+        ? [{
+            field1: String(rawAntecedent.field1 ?? ''),
+            field2: String(rawAntecedent.field2 ?? ''),
+            field3: String(rawAntecedent.field3 ?? ''),
+            field4: String(rawAntecedent.field4 ?? ''),
+          }]
+        : [];
+      const rawAntecedentList = Array.isArray(question.antecedentDetails)
+        ? question.antecedentDetails
+        : [];
+      const antecedentList = [
+        ...rawAntecedentList.map((value) => {
+          const detail = asRecord(value);
+          return {
+            field1: String(detail.field1 ?? ''),
+            field2: String(detail.field2 ?? ''),
+            field3: String(detail.field3 ?? ''),
+            field4: String(detail.field4 ?? ''),
+          };
+        }),
+        ...legacyAntecedent,
+      ];
+      const hasAntecedents = antecedentList.length > 0;
+      const firstAntecedent = antecedentList[0];
       return [questionId, {
         answer: (question.answer ?? 'NO') as 'SÍ' | 'NO',
         extraDetails: question.extraDetails as string | undefined,
         affiliateAnswers: question.affiliateAnswers as HealthDeclarationSection['questions'][number]['affiliateAnswers'],
         extraDetailsByAffiliate: question.extraDetailsByAffiliate as HealthDeclarationSection['questions'][number]['extraDetailsByAffiliate'],
         affiliateCodes: question.affiliateCodes as number[] | undefined,
-        antecedentDetail: hasAntecedent
-          ? {
-              field1: String(rawAntecedent.field1 ?? ''),
-              field2: String(rawAntecedent.field2 ?? ''),
-            }
-          : undefined,
+        antecedentDetail: hasAntecedents ? firstAntecedent : undefined,
+        antecedentDetails: hasAntecedents ? antecedentList : undefined,
       }];
     }),
   ) as HealthDeclarationSection['questions'];

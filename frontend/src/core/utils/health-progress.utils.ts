@@ -128,11 +128,16 @@ export const getQuestionStatus = (
     if (!savedQuestion) return 'pending';
     if (savedQuestion.answer === 'NO') return 'complete';
 
-    const antecedent = savedQuestion.antecedentDetail;
-    const field1Complete = question.antecedentFields?.field1Required === false || antecedent?.field1.trim();
-    return field1Complete && antecedent?.field2.trim()
-      ? 'complete'
-      : 'incomplete';
+    const antecedentList = savedQuestion.antecedentDetails ||
+      (savedQuestion.antecedentDetail ? [savedQuestion.antecedentDetail] : []);
+    if (antecedentList.length === 0) return 'incomplete';
+
+    const everyComplete = antecedentList.every((antecedent) => {
+      const field1Complete =
+        question.antecedentFields?.field1Required === false || Boolean(antecedent.field1.trim());
+      return field1Complete && Boolean(antecedent.field2.trim());
+    });
+    return everyComplete ? 'complete' : 'incomplete';
   }
 
   const applicableAffiliates = affiliates.filter((affiliate) =>

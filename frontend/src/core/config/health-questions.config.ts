@@ -28,8 +28,12 @@ export interface HealthQuestionItem {
   antecedentFields?: {
     field1Label: string;
     field2Label: string;
+    field3Label: string;
+    field4Label: string;
     field1Placeholder?: string;
     field2Placeholder?: string;
+    field3Placeholder?: string;
+    field4Placeholder?: string;
     field1Required?: boolean;
   };
 }
@@ -239,30 +243,38 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
   {
     id: 25,
     title: 'Contratos de salud vigentes con otra compañía',
-    description: '¿Mantiene usted o algún familiar contrato de salud vigente con otra compañía?',
+    description: '¿Mantiene usted o alguno del Grupo familiar, con esta COMPAÑÍA o con otra, un contrato de medicina prepagada o un seguro de Salud? En caso afirmativo, especifique:',
     requiresBeneficiarySelection: false,
     requiresClinicalDetail: false,
     detailMode: 'antecedent',
     antecedentFields: {
       field1Label: 'Nº de Contrato',
       field2Label: 'Nombre de la Compañía',
+      field3Label: 'Límite de Cobertura',
+      field4Label: 'Fecha Vigencia',
       field1Placeholder: 'Ej: 000123',
       field2Placeholder: 'Ej: Compañía de salud',
+      field3Placeholder: 'Ej: $10.000',
+      field4Placeholder: 'Ej: DD/MM/AAAA',
       field1Required: false,
     },
   },
   {
     id: 26,
     title: 'Negativa o anulación de contrato de salud',
-    description: '¿En alguna oportunidad le ha sido negado o anulado un contrato de salud?',
+    description: '¿En alguna oportunidad le ha sido negado o anulado un Seguro de Vida; Salud o Accidentes Personales? En caso afirmativo indique',
     requiresBeneficiarySelection: false,
     requiresClinicalDetail: false,
     detailMode: 'antecedent',
     antecedentFields: {
       field1Label: 'Tipo de Seguro',
-      field2Label: 'Compañía que Rechazó',
+      field2Label: 'Nombre de la Compañía',
+      field3Label: 'Límite de Cobertura',
+      field4Label: 'Fecha Rechazo/Anulación',
       field1Placeholder: 'Ej: Colectivo',
       field2Placeholder: 'Ej: Compañía que rechazó',
+      field3Placeholder: 'Ej: $10.000',
+      field4Placeholder: 'Ej: DD/MM/AAAA',
     },
   },
 ];
@@ -304,8 +316,12 @@ export interface ResolvedHealthQuestionItem extends Omit<HealthQuestionItem, 'ti
   antecedentFields?: {
     field1Label: string;
     field2Label: string;
+    field3Label: string;
+    field4Label: string;
     field1Placeholder?: string;
     field2Placeholder?: string;
+    field3Placeholder?: string;
+    field4Placeholder?: string;
     field1Required?: boolean;
   };
 }
@@ -346,11 +362,19 @@ export const getHealthQuestions = (t: TFunction): ResolvedHealthQuestionItem[] =
       ? {
           field1Label: t(`${item.id}.antecedent.field1Label`),
           field2Label: t(`${item.id}.antecedent.field2Label`),
+          field3Label: t(`${item.id}.antecedent.field3Label`),
+          field4Label: t(`${item.id}.antecedent.field4Label`),
           field1Placeholder: item.antecedentFields.field1Placeholder
             ? t(`${item.id}.antecedent.field1Placeholder`)
             : undefined,
           field2Placeholder: item.antecedentFields.field2Placeholder
             ? t(`${item.id}.antecedent.field2Placeholder`)
+            : undefined,
+          field3Placeholder: item.antecedentFields.field3Placeholder
+            ? t(`${item.id}.antecedent.field3Placeholder`)
+            : undefined,
+          field4Placeholder: item.antecedentFields.field4Placeholder
+            ? t(`${item.id}.antecedent.field4Placeholder`)
             : undefined,
           field1Required: item.antecedentFields.field1Required,
         }

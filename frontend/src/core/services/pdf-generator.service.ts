@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import {
   AffiliationFormState,
+  AntecedentDetail,
   LegalEntityData,
   NaturalPersonData,
 } from '@/core/interfaces/affiliation.interfaces';
@@ -13,6 +14,40 @@ import { formatAffiliateDocumentForPdf } from '@/core/utils/minor-document.utils
 
 
 const NOT_APPLICABLE = 'N/A';
+
+type PdfTableCell = { label: string; value: string; x: number; w: number };
+
+type LegalEntityRowValues = {
+  razonSocial: string;
+  rif: string;
+  registroMercantil: string;
+  volumenTomo: string;
+  fechaRegistro: string;
+  actividadEconomica: string;
+  sector: string;
+  telefono: string;
+  utilidadEjercicioAnterior: string;
+  patrimonioNeto: string;
+  productosServicios: string;
+  direccionFiscal: string;
+};
+
+// Valores para imprimir el bloque jurídico en N/A cuando el contratante es
+// persona natural: el grid conserva las mismas columnas que el caso jurídico.
+const LEGAL_ENTITY_NA_VALUES: LegalEntityRowValues = {
+  razonSocial: NOT_APPLICABLE,
+  rif: NOT_APPLICABLE,
+  registroMercantil: NOT_APPLICABLE,
+  volumenTomo: NOT_APPLICABLE,
+  fechaRegistro: NOT_APPLICABLE,
+  actividadEconomica: NOT_APPLICABLE,
+  sector: NOT_APPLICABLE,
+  telefono: NOT_APPLICABLE,
+  utilidadEjercicioAnterior: NOT_APPLICABLE,
+  patrimonioNeto: NOT_APPLICABLE,
+  productosServicios: NOT_APPLICABLE,
+  direccionFiscal: NOT_APPLICABLE,
+};
 
 export type PdfGenerationMode = 'draft' | 'final';
 
@@ -57,6 +92,9 @@ export class PdfGeneratorService {
     const pageHeight = 279.4;
     const margin = 10;
     const contentWidth = pageWidth - margin * 2;
+    // Límite inferior común para todo el contenido: deja margen libre sobre la
+    // línea y los textos del pie de página (evita que los cuadros lo pisen).
+    const contentBottomLimit = pageHeight - margin - 18;
     const formatPdfDate = (value?: string | null): string => {
       if (!value) return '-';
       const normalized = String(value).trim();
@@ -94,7 +132,7 @@ export class PdfGeneratorService {
     };
     const logo = await this.loadImage('/images/logo-previasis-horizontal.png').catch(() => null);
 
-    const drawHeaderAndFooter = (pageNum: number, totalPages: number) => {
+    const drawPageHeader = () => {
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(0, 139, 71);
       doc.setLineWidth(0.4);
@@ -139,6 +177,14 @@ export class PdfGeneratorService {
       doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
       doc.text(`Nº Solicitud: ${data.header.applicationNumber || 'EMISIÓN DIRECTA'}`, pageWidth - margin - 4, margin + 12, { align: 'right' });
+    };
+
+    const drawPageFooter = (pageNum: number, totalPages: number) => {
+      // El número de página se dibuja en la zona superior derecha de la cabecera,
+      // pero su total solo se conoce al final: se imprime en una pasada final.
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(15, 23, 42);
       doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth - margin - 4, margin + 16.5, { align: 'right' });
 
       const footerY = pageHeight - margin - 3;
@@ -199,10 +245,15 @@ export class PdfGeneratorService {
       return x + boxSize + 2.2 + doc.getTextWidth(label) + 4;
     };
 
-    const drawCell = (label: string, value: string, x: number, y: number, w: number, h: number = 8.5) => {
+    const drawCell = (label: string, value: string, x: number, y: number, w: number, h?: number) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.8);
+      const lines = doc.splitTextToSize(value || '-', w - 3);
+
+      const cellHeight = h ?? Math.max(8.5, 8.5 + (lines.length - 1) * 3.4);
       doc.setDrawColor(203, 213, 225);
       doc.setLineWidth(0.18);
-      doc.rect(x, y, w, h);
+      doc.rect(x, y, w, cellHeight);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6);
@@ -212,8 +263,42 @@ export class PdfGeneratorService {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.8);
       doc.setTextColor(15, 23, 42);
-      const truncated = doc.splitTextToSize(value || '-', w - 3);
-      doc.text(truncated[0] || '-', x + 1.5, y + 6.5);
+      lines.forEach((line: string, index: number) => {
+        doc.text(line || '-', x + 1.5, y + 6.5 + index * 3.4);
+      });
+    };
+
+    const startNewPage = () => {
+      doc.addPage();
+      currentY = margin + 22;
+      drawPageHeader();
+    };
+
+    const ensureSpace = (requiredHeight: number) => {
+      if (currentY + requiredHeight > contentBottomLimit) {
+        startNewPage();
+      }
+    };
+
+    const computeCellHeight = (value: string, w: number): number => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.8);
+      const lines = doc.splitTextToSize(value || '-', w - 3);
+      return Math.max(8.5, 8.5 + (lines.length - 1) * 3.4);
+    };
+
+    const drawRow = (
+      cells: PdfTableCell[],
+      sexCell?: { value: string; x: number; w: number },
+    ) => {
+      const heights = cells.map((cell) => computeCellHeight(cell.value, cell.w));
+      const rowHeight = Math.max(8.5, ...heights);
+      ensureSpace(rowHeight);
+      cells.forEach((cell) => drawCell(cell.label, cell.value, cell.x, currentY, cell.w, rowHeight));
+      if (sexCell) {
+        drawSexCell(sexCell.value, sexCell.x, currentY, sexCell.w, rowHeight);
+      }
+      currentY += rowHeight;
     };
 
     const drawSexCell = (sex: string, x: number, y: number, w: number, h: number) => {
@@ -246,7 +331,7 @@ export class PdfGeneratorService {
       }
     };
 
-    drawHeaderAndFooter(1, 3);
+    drawPageHeader();
     let currentY = margin + 22;
 
     doc.setFillColor(241, 245, 249);
@@ -279,8 +364,6 @@ export class PdfGeneratorService {
     const thirdW = contentWidth / 3;
     const fourthW = contentWidth / 4;
 
-    const rowHeight = 8.5;
-
     const w1 = contentWidth * 0.18;
     const w2 = contentWidth * 0.18;
     const w3 = contentWidth * 0.13;
@@ -289,58 +372,71 @@ export class PdfGeneratorService {
     const w6 = contentWidth * 0.13;
     const w7 = contentWidth * 0.12;
 
-    drawCell('Nombres', policyholderData.firstNames, margin, currentY, w1);
-    drawCell('Apellidos', policyholderData.lastNames, margin + w1, currentY, w2);
-    drawCell('C.I. / Pasaporte', `${policyholderData.documentType}-${policyholderData.documentNumber}`, margin + w1 + w2, currentY, w3);
-    drawCell('R.I.F.', `${policyholderData.taxIdType}-${policyholderData.taxId}`, margin + w1 + w2 + w3, currentY, w4);
-    drawCell('Nacionalidad', policyholderData.nationality, margin + w1 + w2 + w3 + w4, currentY, w5);
-    drawCell('Edo. Civil', policyholderData.maritalStatus, margin + w1 + w2 + w3 + w4 + w5, currentY, w6);
-    drawSexCell(policyholderData.sex, margin + w1 + w2 + w3 + w4 + w5 + w6, currentY, w7, rowHeight);
-    currentY += rowHeight;
+    drawRow([
+      { label: 'Nombres', value: policyholderData.firstNames, x: margin, w: w1 },
+      { label: 'Apellidos', value: policyholderData.lastNames, x: margin + w1, w: w2 },
+      { label: 'C.I. / Pasaporte', value: `${policyholderData.documentType}-${policyholderData.documentNumber}`, x: margin + w1 + w2, w: w3 },
+      { label: 'R.I.F.', value: `${policyholderData.taxIdType}-${policyholderData.taxId}`, x: margin + w1 + w2 + w3, w: w4 },
+      { label: 'Nacionalidad', value: policyholderData.nationality, x: margin + w1 + w2 + w3 + w4, w: w5 },
+      { label: 'Edo. Civil', value: policyholderData.maritalStatus, x: margin + w1 + w2 + w3 + w4 + w5, w: w6 },
+    ], {
+      value: policyholderData.sex,
+      x: margin + w1 + w2 + w3 + w4 + w5 + w6,
+      w: w7,
+    });
 
     const secondRowWidth = contentWidth / 4;
-    drawCell('Lugar de Nacimiento', policyholderData.birthPlace, margin, currentY, secondRowWidth);
-    drawCell('Fecha Nacimiento', formatPdfDate(policyholderData.birthDate), margin + secondRowWidth, currentY, secondRowWidth);
-    drawCell('Profesión', policyholderData.profession, margin + secondRowWidth * 2, currentY, secondRowWidth);
-    drawCell('Ocupación', policyholderData.occupation, margin + secondRowWidth * 3, currentY, secondRowWidth);
-    currentY += rowHeight;
+    drawRow([
+      { label: 'Lugar de Nacimiento', value: policyholderData.birthPlace, x: margin, w: secondRowWidth },
+      { label: 'Fecha Nacimiento', value: formatPdfDate(policyholderData.birthDate), x: margin + secondRowWidth, w: secondRowWidth },
+      { label: 'Profesión', value: policyholderData.profession, x: margin + secondRowWidth * 2, w: secondRowWidth },
+      { label: 'Ocupación', value: policyholderData.occupation, x: margin + secondRowWidth * 3, w: secondRowWidth },
+    ]);
 
     const incomeWidth = contentWidth * 0.25;
     const politicallyExposedWidth = contentWidth * 0.40;
     const classificationWidth = contentWidth - incomeWidth - politicallyExposedWidth;
-    drawCell('Ingreso Anual (Bs.)', policyholderData.annualIncomeBs, margin, currentY, incomeWidth);
-    drawCell(
-      'Persona Expuesta Políticamente (PEP)',
-      `${policyholderData.politicallyExposed}${policyholderData.politicallyExposed === 'SÍ' && policyholderData.politicallyExposedDescription ? ` (${policyholderData.politicallyExposedDescription})` : ''}`,
-      margin + incomeWidth,
-      currentY,
-      politicallyExposedWidth
-    );
-    drawCell('Clasificación Actividad', policyholderData.activityClassification, margin + incomeWidth + politicallyExposedWidth, currentY, classificationWidth);
-    currentY += rowHeight;
+    drawRow([
+      { label: 'Ingreso Anual / Mensual', value: policyholderData.annualIncomeBs, x: margin, w: incomeWidth },
+      {
+        label: 'Persona Expuesta Políticamente (PEP)',
+        value: `${policyholderData.politicallyExposed}${policyholderData.politicallyExposed === 'SÍ' && policyholderData.politicallyExposedDescription ? ` (${policyholderData.politicallyExposedDescription})` : ''}`,
+        x: margin + incomeWidth,
+        w: politicallyExposedWidth,
+      },
+      { label: 'Clasificación Actividad', value: policyholderData.activityClassification, x: margin + incomeWidth + politicallyExposedWidth, w: classificationWidth },
+    ]);
 
     if (policyholderData.activityClassification === 'Dependiente' && policyholderData.company) {
-      drawCell('Empresa donde labora', policyholderData.company, margin, currentY, contentWidth);
-      currentY += rowHeight;
+      drawRow([
+        { label: 'Empresa donde labora', value: policyholderData.company, x: margin, w: contentWidth },
+      ]);
     }
 
-    drawCell('Estado', policyholderData.residenceState || '-', margin, currentY, halfW);
-    drawCell('Ciudad', policyholderData.residenceCity || '-', margin + halfW, currentY, halfW);
-    currentY += rowHeight;
+    const residenceRow = [
+      { label: 'Estado', value: policyholderData.residenceState || '-', x: margin, w: halfW },
+      { label: 'Ciudad', value: policyholderData.residenceCity || '-', x: margin + halfW, w: halfW },
+    ];
+    drawRow(residenceRow);
 
-    drawCell('Dirección de Residencia / Habitación', policyholderData.homeAddress, margin, currentY, contentWidth * 0.5);
-    drawCell('Dirección de Oficina / Trabajo', policyholderData.officeAddress, margin + contentWidth * 0.5, currentY, contentWidth * 0.5);
-    currentY += rowHeight;
+    const addressRow = [
+      { label: 'Dirección de Residencia / Habitación', value: policyholderData.homeAddress, x: margin, w: contentWidth * 0.5 },
+      { label: 'Dirección de Oficina / Trabajo', value: policyholderData.officeAddress, x: margin + contentWidth * 0.5, w: contentWidth * 0.5 },
+    ];
+    drawRow(addressRow);
 
     const billingWidth = contentWidth * 0.20;
     const homePhoneWidth = contentWidth * 0.20;
     const mobilePhoneWidth = contentWidth * 0.20;
     const emailWidth = contentWidth - billingWidth - homePhoneWidth - mobilePhoneWidth;
-    drawCell('Dirección de Cobro', policyholderData.billingAddress, margin, currentY, billingWidth);
-    drawCell('Teléfono Habitación', policyholderData.homePhone, margin + billingWidth, currentY, homePhoneWidth);
-    drawCell('Teléfono Móvil', policyholderData.mobilePhone, margin + billingWidth + homePhoneWidth, currentY, mobilePhoneWidth);
-    drawCell('Correo Electrónico', policyholderData.email, margin + billingWidth + homePhoneWidth + mobilePhoneWidth, currentY, emailWidth);
-    currentY += rowHeight + 2;
+    const contactRow = [
+      { label: 'Dirección de Cobro', value: policyholderData.billingAddress, x: margin, w: billingWidth },
+      { label: 'Teléfono Habitación', value: policyholderData.homePhone, x: margin + billingWidth, w: homePhoneWidth },
+      { label: 'Teléfono Móvil', value: policyholderData.mobilePhone, x: margin + billingWidth + homePhoneWidth, w: mobilePhoneWidth },
+      { label: 'Correo Electrónico', value: policyholderData.email, x: margin + billingWidth + homePhoneWidth + mobilePhoneWidth, w: emailWidth },
+    ];
+    drawRow(contactRow);
+    currentY += 2;
 
 
     const contractorData = data.contractor;
@@ -355,120 +451,103 @@ export class PdfGeneratorService {
       ? contractorData.naturalPerson
       : data.policyholder;
 
-    const drawContractorSubTitle = (title: string, y: number): number => {
+    const drawContractorSubTitle = (title: string) => {
+      ensureSpace(5);
       doc.setFillColor(241, 245, 249);
       doc.setDrawColor(203, 213, 225);
       doc.setLineWidth(0.18);
-      doc.rect(margin, y, contentWidth, 5, 'FD');
+      doc.rect(margin, currentY, contentWidth, 5, 'FD');
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.4);
       doc.setTextColor(7, 62, 35);
-      doc.text(title.toUpperCase(), margin + 2.5, y + 3.4);
-      return y + 5.5;
+      doc.text(title.toUpperCase(), margin + 2.5, currentY + 3.4);
+      currentY += 5.5;
     };
 
-    const CONTRACTOR_ROW_HEIGHT = 8.5;
-
-    const drawContractorNaturalPerson = (
-      person: NaturalPersonData,
-      startY: number,
-    ): number => {
-      let y = startY;
-
-      drawCell('Nombres y Apellidos Contratante', `${person.firstNames} ${person.lastNames}`, margin, y, halfW, CONTRACTOR_ROW_HEIGHT);
-      drawCell('C.I. / Pasaporte', `${person.documentType}-${person.documentNumber}`, margin + halfW, y, fourthW, CONTRACTOR_ROW_HEIGHT);
-      drawCell('R.I.F.', `${person.taxIdType}-${person.taxId}`, margin + halfW + fourthW, y, fourthW, CONTRACTOR_ROW_HEIGHT);
-      y += CONTRACTOR_ROW_HEIGHT;
-
+    const buildNaturalPersonRows = (person: NaturalPersonData): PdfTableCell[][] => {
       const contractorNationalityWidth = contentWidth * 0.17;
       const contractorMaritalStatusWidth = contentWidth * 0.17;
       const contractorSexWidth = contentWidth * 0.12;
       const contractorBirthDateWidth = contentWidth * 0.18;
       const contractorBirthPlaceWidth = contentWidth - contractorNationalityWidth - contractorMaritalStatusWidth - contractorSexWidth - contractorBirthDateWidth;
-      drawCell('Nacionalidad', person.nationality, margin, y, contractorNationalityWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Estado Civil', person.maritalStatus, margin + contractorNationalityWidth, y, contractorMaritalStatusWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Sexo', person.sex, margin + contractorNationalityWidth + contractorMaritalStatusWidth, y, contractorSexWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Fecha de Nacimiento', formatPdfDate(person.birthDate), margin + contractorNationalityWidth + contractorMaritalStatusWidth + contractorSexWidth, y, contractorBirthDateWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Lugar de Nacimiento', person.birthPlace, margin + contractorNationalityWidth + contractorMaritalStatusWidth + contractorSexWidth + contractorBirthDateWidth, y, contractorBirthPlaceWidth, CONTRACTOR_ROW_HEIGHT);
-      y += CONTRACTOR_ROW_HEIGHT;
 
       const contractorProfessionWidth = contentWidth * 0.25;
       const contractorOccupationWidth = contentWidth * 0.25;
       const contractorIncomeWidth = contentWidth * 0.20;
       const contractorPoliticallyExposedWidth = contentWidth * 0.15;
       const contractorActivityWidth = contentWidth - contractorProfessionWidth - contractorOccupationWidth - contractorIncomeWidth - contractorPoliticallyExposedWidth;
-      drawCell('Profesión', person.profession, margin, y, contractorProfessionWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Ocupación', person.occupation, margin + contractorProfessionWidth, y, contractorOccupationWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Ingreso Anual (Bs.)', person.annualIncomeBs, margin + contractorProfessionWidth + contractorOccupationWidth, y, contractorIncomeWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('PEP', `${person.politicallyExposed}${person.politicallyExposed === 'SÍ' && person.politicallyExposedDescription ? `: ${person.politicallyExposedDescription}` : ''}`, margin + contractorProfessionWidth + contractorOccupationWidth + contractorIncomeWidth, y, contractorPoliticallyExposedWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Actividad', person.activityClassification, margin + contractorProfessionWidth + contractorOccupationWidth + contractorIncomeWidth + contractorPoliticallyExposedWidth, y, contractorActivityWidth, CONTRACTOR_ROW_HEIGHT);
-      y += CONTRACTOR_ROW_HEIGHT;
+
+      const rows: PdfTableCell[][] = [
+        [
+          { label: 'Nombres y Apellidos Contratante', value: `${person.firstNames} ${person.lastNames}`, x: margin, w: halfW },
+          { label: 'C.I. / Pasaporte', value: `${person.documentType}-${person.documentNumber}`, x: margin + halfW, w: fourthW },
+          { label: 'R.I.F.', value: `${person.taxIdType}-${person.taxId}`, x: margin + halfW + fourthW, w: fourthW },
+        ],
+        [
+          { label: 'Nacionalidad', value: person.nationality, x: margin, w: contractorNationalityWidth },
+          { label: 'Estado Civil', value: person.maritalStatus, x: margin + contractorNationalityWidth, w: contractorMaritalStatusWidth },
+          { label: 'Sexo', value: person.sex, x: margin + contractorNationalityWidth + contractorMaritalStatusWidth, w: contractorSexWidth },
+          { label: 'Fecha de Nacimiento', value: formatPdfDate(person.birthDate), x: margin + contractorNationalityWidth + contractorMaritalStatusWidth + contractorSexWidth, w: contractorBirthDateWidth },
+          { label: 'Lugar de Nacimiento', value: person.birthPlace, x: margin + contractorNationalityWidth + contractorMaritalStatusWidth + contractorSexWidth + contractorBirthDateWidth, w: contractorBirthPlaceWidth },
+        ],
+        [
+          { label: 'Profesión', value: person.profession, x: margin, w: contractorProfessionWidth },
+          { label: 'Ocupación', value: person.occupation, x: margin + contractorProfessionWidth, w: contractorOccupationWidth },
+          { label: 'Ingreso Anual (Bs.)', value: person.annualIncomeBs, x: margin + contractorProfessionWidth + contractorOccupationWidth, w: contractorIncomeWidth },
+          { label: 'PEP', value: `${person.politicallyExposed}${person.politicallyExposed === 'SÍ' && person.politicallyExposedDescription ? `: ${person.politicallyExposedDescription}` : ''}`, x: margin + contractorProfessionWidth + contractorOccupationWidth + contractorIncomeWidth, w: contractorPoliticallyExposedWidth },
+          { label: 'Actividad', value: person.activityClassification, x: margin + contractorProfessionWidth + contractorOccupationWidth + contractorIncomeWidth + contractorPoliticallyExposedWidth, w: contractorActivityWidth },
+        ],
+      ];
 
       if (person.activityClassification === 'Dependiente' && person.company) {
-        drawCell('Empresa donde labora', person.company, margin, y, halfW, CONTRACTOR_ROW_HEIGHT);
-        drawCell('Dirección de Habitación', person.homeAddress, margin + halfW, y, fourthW, CONTRACTOR_ROW_HEIGHT);
-        drawCell('Dirección de Oficina', person.officeAddress, margin + halfW + fourthW, y, fourthW, CONTRACTOR_ROW_HEIGHT);
-        y += CONTRACTOR_ROW_HEIGHT;
-
-        drawCell('Dirección de Cobro', person.billingAddress, margin, y, halfW, CONTRACTOR_ROW_HEIGHT);
-        drawCell('Teléfono Habitación', person.homePhone, margin + halfW, y, fourthW, CONTRACTOR_ROW_HEIGHT);
-        drawCell('Teléfono Móvil', person.mobilePhone, margin + halfW + fourthW, y, fourthW, CONTRACTOR_ROW_HEIGHT);
-        y += CONTRACTOR_ROW_HEIGHT;
-
-        drawCell('Correo Electrónico', person.email, margin, y, contentWidth, CONTRACTOR_ROW_HEIGHT);
-        y += CONTRACTOR_ROW_HEIGHT + 2;
+        rows.push(
+          [
+            { label: 'Empresa donde labora', value: person.company, x: margin, w: halfW },
+            { label: 'Dirección de Habitación', value: person.homeAddress, x: margin + halfW, w: fourthW },
+            { label: 'Dirección de Oficina', value: person.officeAddress, x: margin + halfW + fourthW, w: fourthW },
+          ],
+          [
+            { label: 'Dirección de Cobro', value: person.billingAddress, x: margin, w: halfW },
+            { label: 'Teléfono Habitación', value: person.homePhone, x: margin + halfW, w: fourthW },
+            { label: 'Teléfono Móvil', value: person.mobilePhone, x: margin + halfW + fourthW, w: fourthW },
+          ],
+          [
+            { label: 'Correo Electrónico', value: person.email, x: margin, w: contentWidth },
+          ],
+        );
       } else {
-        drawCell('Dirección de Habitación', person.homeAddress, margin, y, halfW, CONTRACTOR_ROW_HEIGHT);
-        drawCell('Dirección de Oficina', person.officeAddress, margin + halfW, y, fourthW, CONTRACTOR_ROW_HEIGHT);
-        drawCell('Dirección de Cobro', person.billingAddress, margin + halfW + fourthW, y, fourthW, CONTRACTOR_ROW_HEIGHT);
-        y += CONTRACTOR_ROW_HEIGHT;
-
-        drawCell('Teléfono Local', person.homePhone, margin, y, contentWidth * 0.20, CONTRACTOR_ROW_HEIGHT);
-        drawCell('Teléfono Móvil', person.mobilePhone, margin + contentWidth * 0.20, y, contentWidth * 0.20, CONTRACTOR_ROW_HEIGHT);
-        drawCell('Correo Electrónico', person.email, margin + contentWidth * 0.40, y, contentWidth * 0.60, CONTRACTOR_ROW_HEIGHT);
-        y += CONTRACTOR_ROW_HEIGHT + 2;
+        rows.push(
+          [
+            { label: 'Dirección de Habitación', value: person.homeAddress, x: margin, w: halfW },
+            { label: 'Dirección de Oficina', value: person.officeAddress, x: margin + halfW, w: fourthW },
+            { label: 'Dirección de Cobro', value: person.billingAddress, x: margin + halfW + fourthW, w: fourthW },
+          ],
+          [
+            { label: 'Teléfono Local', value: person.homePhone, x: margin, w: contentWidth * 0.20 },
+            { label: 'Teléfono Móvil', value: person.mobilePhone, x: margin + contentWidth * 0.20, w: contentWidth * 0.20 },
+            { label: 'Correo Electrónico', value: person.email, x: margin + contentWidth * 0.40, w: contentWidth * 0.60 },
+          ],
+        );
       }
 
-      return y;
+      return rows;
     };
 
-    const drawContractorLegalEntity = (
-      entity: LegalEntityData,
-      startY: number,
-    ): number => {
-      let y = drawContractorSubTitle('2.1. Datos de la Empresa Contratante', startY);
-
+    const buildLegalEntityRows = (values: LegalEntityRowValues): PdfTableCell[][] => {
       const companyNameWidth = contentWidth * 0.34;
       const companyRifWidth = contentWidth * 0.20;
       const companyRegistryWidth = contentWidth * 0.22;
       const companyVolumeWidth = contentWidth - companyNameWidth - companyRifWidth - companyRegistryWidth;
-      drawCell('Razón Social', entity.legalName, margin, y, companyNameWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('R.I.F.', `${entity.taxIdType}-${entity.taxId}`, margin + companyNameWidth, y, companyRifWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Nº Registro Mercantil', entity.commercialRegistryNumber, margin + companyNameWidth + companyRifWidth, y, companyRegistryWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Volumen / Tomo', entity.volumeNumber, margin + companyNameWidth + companyRifWidth + companyRegistryWidth, y, companyVolumeWidth, CONTRACTOR_ROW_HEIGHT);
-      y += CONTRACTOR_ROW_HEIGHT;
 
       const companyRegistrationDateWidth = contentWidth * 0.20;
       const companyActivityWidth = contentWidth * 0.22;
       const companySectorWidth = contentWidth * 0.20;
       const companyPhoneWidth = contentWidth * 0.18;
       const companyProfitWidth = contentWidth - companyRegistrationDateWidth - companyActivityWidth - companySectorWidth - companyPhoneWidth;
-      drawCell('Fecha de Registro', entity.registrationDate, margin, y, companyRegistrationDateWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Actividad Económica', entity.economicActivity, margin + companyRegistrationDateWidth, y, companyActivityWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Sector', entity.businessSector || NOT_APPLICABLE, margin + companyRegistrationDateWidth + companyActivityWidth, y, companySectorWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Teléfono', entity.phone, margin + companyRegistrationDateWidth + companyActivityWidth + companySectorWidth, y, companyPhoneWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Utilidad Ejercicio Anterior', entity.previousFiscalYearProfit, margin + companyRegistrationDateWidth + companyActivityWidth + companySectorWidth + companyPhoneWidth, y, companyProfitWidth, CONTRACTOR_ROW_HEIGHT);
-      y += CONTRACTOR_ROW_HEIGHT;
 
       const companyNetWorthWidth = contentWidth * 0.25;
       const companyProductsWidth = contentWidth - companyNetWorthWidth;
-      drawCell('Patrimonio Neto', entity.netWorth, margin, y, companyNetWorthWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Productos / Servicios', entity.productsServices, margin + companyNetWorthWidth, y, companyProductsWidth, CONTRACTOR_ROW_HEIGHT);
-      y += CONTRACTOR_ROW_HEIGHT;
-
-      drawCell('Dirección Fiscal', entity.taxAddress, margin, y, contentWidth, CONTRACTOR_ROW_HEIGHT);
-      y += CONTRACTOR_ROW_HEIGHT;
 
       const naNationalityWidth = contentWidth * 0.17;
       const naMaritalStatusWidth = contentWidth * 0.17;
@@ -476,41 +555,95 @@ export class PdfGeneratorService {
       const naBirthDateWidth = contentWidth * 0.18;
       const naBirthPlaceWidth = contentWidth * 0.18;
       const naIncomeWidth = contentWidth - naNationalityWidth - naMaritalStatusWidth - naSexWidth - naBirthDateWidth - naBirthPlaceWidth;
-      drawCell('Nacionalidad', NOT_APPLICABLE, margin, y, naNationalityWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Estado Civil', NOT_APPLICABLE, margin + naNationalityWidth, y, naMaritalStatusWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Sexo', NOT_APPLICABLE, margin + naNationalityWidth + naMaritalStatusWidth, y, naSexWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Fecha de Nacimiento', NOT_APPLICABLE, margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth, y, naBirthDateWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Lugar de Nacimiento', NOT_APPLICABLE, margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth + naBirthDateWidth, y, naBirthPlaceWidth, CONTRACTOR_ROW_HEIGHT);
-      drawCell('Ingreso Anual (Bs.)', NOT_APPLICABLE, margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth + naBirthDateWidth + naBirthPlaceWidth, y, naIncomeWidth, CONTRACTOR_ROW_HEIGHT);
-      y += CONTRACTOR_ROW_HEIGHT + 2;
 
-      y = drawContractorSubTitle('2.2. Datos del Representante Legal', y);
-      return drawContractorNaturalPerson(entity.legalRepresentative, y);
+      return [
+        [
+          { label: 'Razón Social', value: values.razonSocial, x: margin, w: companyNameWidth },
+          { label: 'R.I.F.', value: values.rif, x: margin + companyNameWidth, w: companyRifWidth },
+          { label: 'Nº Registro Mercantil', value: values.registroMercantil, x: margin + companyNameWidth + companyRifWidth, w: companyRegistryWidth },
+          { label: 'Volumen / Tomo', value: values.volumenTomo, x: margin + companyNameWidth + companyRifWidth + companyRegistryWidth, w: companyVolumeWidth },
+        ],
+        [
+          { label: 'Fecha de Registro', value: values.fechaRegistro, x: margin, w: companyRegistrationDateWidth },
+          { label: 'Actividad Económica', value: values.actividadEconomica, x: margin + companyRegistrationDateWidth, w: companyActivityWidth },
+          { label: 'Sector', value: values.sector, x: margin + companyRegistrationDateWidth + companyActivityWidth, w: companySectorWidth },
+          { label: 'Teléfono', value: values.telefono, x: margin + companyRegistrationDateWidth + companyActivityWidth + companySectorWidth, w: companyPhoneWidth },
+          { label: 'Utilidad Ejercicio Anterior', value: values.utilidadEjercicioAnterior, x: margin + companyRegistrationDateWidth + companyActivityWidth + companySectorWidth + companyPhoneWidth, w: companyProfitWidth },
+        ],
+        [
+          { label: 'Patrimonio Neto', value: values.patrimonioNeto, x: margin, w: companyNetWorthWidth },
+          { label: 'Productos / Servicios', value: values.productosServicios, x: margin + companyNetWorthWidth, w: companyProductsWidth },
+        ],
+        [
+          { label: 'Dirección Fiscal', value: values.direccionFiscal, x: margin, w: contentWidth },
+        ],
+        [
+          { label: 'Nacionalidad', value: NOT_APPLICABLE, x: margin, w: naNationalityWidth },
+          { label: 'Estado Civil', value: NOT_APPLICABLE, x: margin + naNationalityWidth, w: naMaritalStatusWidth },
+          { label: 'Sexo', value: NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth, w: naSexWidth },
+          { label: 'Fecha de Nacimiento', value: NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth, w: naBirthDateWidth },
+          { label: 'Lugar de Nacimiento', value: NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth + naBirthDateWidth, w: naBirthPlaceWidth },
+          { label: 'Ingreso Anual (Bs.)', value: NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth + naBirthDateWidth + naBirthPlaceWidth, w: naIncomeWidth },
+        ],
+      ];
     };
 
-    const estimateNaturalPersonHeight = (person: NaturalPersonData): number => {
-      const extraRows =
-        person.activityClassification === 'Dependiente' && person.company ? 3 : 2;
-      return (3 + extraRows) * CONTRACTOR_ROW_HEIGHT + 2;
+    const buildLegalEntityRowsFromEntity = (entity: LegalEntityData): PdfTableCell[][] =>
+      buildLegalEntityRows({
+        razonSocial: entity.legalName,
+        rif: `${entity.taxIdType}-${entity.taxId}`,
+        registroMercantil: entity.commercialRegistryNumber,
+        volumenTomo: entity.volumeNumber,
+        fechaRegistro: entity.registrationDate,
+        actividadEconomica: entity.economicActivity,
+        sector: entity.businessSector || NOT_APPLICABLE,
+        telefono: entity.phone,
+        utilidadEjercicioAnterior: entity.previousFiscalYearProfit,
+        patrimonioNeto: entity.netWorth,
+        productosServicios: entity.productsServices,
+        direccionFiscal: entity.taxAddress,
+      });
+
+    const estimateRowsHeight = (rows: PdfTableCell[][]): number =>
+      rows.reduce(
+        (total, row) => total + Math.max(...row.map((cell) => computeCellHeight(cell.value, cell.w))),
+        0,
+      );
+
+    const drawContractorNaturalPerson = (person: NaturalPersonData) => {
+      buildNaturalPersonRows(person).forEach((row) => drawRow(row));
+      currentY += 2;
+    };
+
+    const drawContractorLegalEntity = (entity: LegalEntityData) => {
+      drawContractorSubTitle('2.1. Datos de la Empresa Contratante');
+      buildLegalEntityRowsFromEntity(entity).forEach((row) => drawRow(row));
+      currentY += 2;
+      drawContractorSubTitle('2.2. Datos del Representante Legal');
+      drawContractorNaturalPerson(entity.legalRepresentative);
     };
 
     const estimatedContractorHeight = isLegalEntityContractor
       ? 5.5
-        + 5 * CONTRACTOR_ROW_HEIGHT
+        + estimateRowsHeight(buildLegalEntityRowsFromEntity(contractorData.legalEntity)) + 2
         + 5.5
-        + estimateNaturalPersonHeight(contractorData.legalEntity.legalRepresentative)
-      : estimateNaturalPersonHeight(contractorPerson);
+        + estimateRowsHeight(buildNaturalPersonRows(contractorData.legalEntity.legalRepresentative)) + 2
+      : estimateRowsHeight(buildNaturalPersonRows(contractorPerson))
+        + 2
+        + estimateRowsHeight(buildLegalEntityRows(LEGAL_ENTITY_NA_VALUES))
+        + 2;
 
-    const contentBottomLimit = pageHeight - margin - 6.5;
-    if (currentY + estimatedContractorHeight > contentBottomLimit) {
-      doc.addPage();
-      currentY = margin + 22;
+    ensureSpace(estimatedContractorHeight);
+
+    if (isLegalEntityContractor) {
+      drawContractorLegalEntity(contractorData.legalEntity);
+    } else {
+      drawContractorNaturalPerson(contractorPerson);
+      buildLegalEntityRows(LEGAL_ENTITY_NA_VALUES).forEach((row) => drawRow(row));
+      currentY += 2;
     }
 
-    currentY = isLegalEntityContractor
-      ? drawContractorLegalEntity(contractorData.legalEntity, currentY)
-      : drawContractorNaturalPerson(contractorPerson, currentY);
-
+    ensureSpace(52);
     currentY = drawSectionTitle('3. Personas a Afiliar y Plan Solicitado', currentY);
 
     const colWidths = [8, 50, 22, 20, 20, 12, 16, 25, 22.9];
@@ -566,9 +699,7 @@ export class PdfGeneratorService {
       currentY += 6.5;
     });
 
-    doc.addPage();
-    const startHealthY = margin + 22;
-    currentY = startHealthY;
+    startNewPage();
 
     const colCodeW = 22;
     const colHealthW = pageWidth - margin * 2;
@@ -632,6 +763,8 @@ export class PdfGeneratorService {
         (lineCount + extraLineCount + antecedentLines.length) * lineHeight + 3,
         codeLines.length * lineHeight + 3,
       );
+
+      ensureSpace(dynamicRowHeight);
 
       doc.setDrawColor(203, 213, 225);
       doc.rect(margin, currentY, colHealthW, dynamicRowHeight);
@@ -737,7 +870,6 @@ export class PdfGeneratorService {
     if (conditions.length > 0) {
       const rowHeight = 6.5;
       const headerHeight = 11;
-      const bottomLimit = pageHeight - margin - 15;
 
       const renderConditionsHeader = () => {
         doc.setFillColor(241, 245, 249);
@@ -773,21 +905,15 @@ export class PdfGeneratorService {
         return conditionColumnWidths;
       };
 
-      if (currentY + headerHeight + rowHeight > bottomLimit) {
-        doc.addPage();
-        currentY = margin + 22;
+      if (currentY + headerHeight + rowHeight > contentBottomLimit) {
+        startNewPage();
       } else {
         currentY += 3;
       }
       let conditionColumnWidths = renderConditionsHeader();
       conditions.forEach((af) => {
 
-        const requiredInitialSpace = headerHeight + (rowHeight * 2);
-
-        if (currentY + requiredInitialSpace > bottomLimit) {
-          doc.addPage();
-          currentY = margin + 22;
-        }
+        ensureSpace(rowHeight);
 
 
         doc.setDrawColor(203, 213, 225);
@@ -841,9 +967,8 @@ export class PdfGeneratorService {
     if (hasSports && sportDetails.length > 0) {
       const estimatedHeight = 15 + sportDetails.length * 6;
 
-      if (currentY + estimatedHeight > pageHeight - margin - 18) {
-        doc.addPage();
-        currentY = margin + 22;
+      if (currentY + estimatedHeight > contentBottomLimit) {
+        startNewPage();
       } else {
         currentY += 3;
       }
@@ -874,6 +999,7 @@ export class PdfGeneratorService {
 
       sportDetails.forEach((dep) => {
         const rowHeight = 6;
+        ensureSpace(rowHeight);
         doc.setDrawColor(203, 213, 225);
         doc.rect(margin, currentY, contentWidth, rowHeight);
 
@@ -912,9 +1038,8 @@ export class PdfGeneratorService {
 
       const rowHeight = 6;
       const estimatedHeight = 12 + details.length * rowHeight;
-      if (currentY + estimatedHeight > pageHeight - margin - 18) {
-        doc.addPage();
-        currentY = margin + 22;
+      if (currentY + estimatedHeight > contentBottomLimit) {
+        startNewPage();
       } else {
         currentY += 3;
       }
@@ -951,6 +1076,7 @@ export class PdfGeneratorService {
       currentY += 5;
 
       details.forEach((detail) => {
+        ensureSpace(rowHeight);
         doc.setDrawColor(203, 213, 225);
         doc.rect(margin, currentY, contentWidth, rowHeight);
         doc.setFont('helvetica', 'normal');
@@ -1001,22 +1127,22 @@ export class PdfGeneratorService {
       )
       .forEach(renderBeneficiaryDetails);
 
-    if (currentY + 26 > pageHeight - margin - 15) {
-      doc.addPage();
-      currentY = margin + 22;
+    if (currentY + 26 > contentBottomLimit) {
+      startNewPage();
     }
 
     currentY = drawSectionTitle('5. Forma de Pago', currentY);
     const payment = data.payment;
 
-    const cellHeight = 8.5;
     const methodText = `${payment.method}${payment.otherPaymentDetails ? ` (${payment.otherPaymentDetails})` : ''}`;
 
-    drawCell('Frecuencia de Pago', payment.paymentFrequency, margin, currentY, thirdW, cellHeight);
-    drawCell('Moneda de Pago', payment.currency, margin + thirdW, currentY, thirdW, cellHeight);
-    drawCell('Modalidad de Pago', methodText, margin + thirdW * 2, currentY, thirdW, cellHeight);
+    drawRow([
+      { label: 'Frecuencia de Pago', value: payment.paymentFrequency, x: margin, w: thirdW },
+      { label: 'Moneda de Pago', value: payment.currency, x: margin + thirdW, w: thirdW },
+      { label: 'Modalidad de Pago', value: methodText, x: margin + thirdW * 2, w: thirdW },
+    ]);
 
-    currentY += cellHeight + 3;
+    currentY += 3;
 
     const officialDeclarationQuestions = OFFICIAL_DECLARATION_QUESTION_IDS.flatMap((questionId) => {
       const question = HEALTH_QUESTIONS.find((candidate) => candidate.id === questionId);
@@ -1033,39 +1159,25 @@ export class PdfGeneratorService {
       doc.setFontSize(6.0);
 
       const answer = data.healthDeclaration.questions[question.id]?.answer || 'NO';
-      const antecedent = data.healthDeclaration.questions[question.id]?.antecedentDetail;
       const isYes = answer === 'SÍ';
 
       const yesCheckboxWidth = doc.getTextWidth('SÍ') + 3.2 + 2.5;
       const noCheckboxWidth = doc.getTextWidth('NO') + 3.2 + 2.5;
       const totalCheckboxWidth = yesCheckboxWidth + 4 + noCheckboxWidth;
       const textWidth = contentWidth - totalCheckboxWidth - 9;
-      const antecedentTextWidth = contentWidth - totalCheckboxWidth - 12;
 
       const fullText = `${question.title}: ${question.description}`;
       const wrappedLines = doc.splitTextToSize(fullText, textWidth);
-      const antecedentLines = isYes && question.antecedentFields
-        ? [
-            `${question.antecedentFields.field1Label}: ${antecedent?.field1 || '-'}`,
-            `${question.antecedentFields.field2Label}: ${antecedent?.field2 || '-'}`,
-          ].flatMap((line) => doc.splitTextToSize(line, antecedentTextWidth))
-        : [];
 
-      const height = Math.max(
-        7,
-        (wrappedLines.length + antecedentLines.length) * lineHeight + 3,
-      );
+      const height = Math.max(7, wrappedLines.length * lineHeight + 3);
 
-      return { isYes, yesCheckboxWidth, totalCheckboxWidth, wrappedLines, antecedentLines, height };
+      return { isYes, yesCheckboxWidth, totalCheckboxWidth, wrappedLines, height };
     };
 
     const renderOfficialDeclarationQuestion = (question: (typeof HEALTH_QUESTIONS)[number]) => {
       const metrics = measureOfficialDeclarationQuestion(question);
 
-      if (currentY + metrics.height > pageHeight - margin - 15) {
-        doc.addPage();
-        currentY = margin + 22;
-      }
+      ensureSpace(metrics.height);
 
       doc.setDrawColor(203, 213, 225);
       doc.setLineWidth(0.2);
@@ -1096,16 +1208,6 @@ export class PdfGeneratorService {
         doc.text(line, margin + 2, textY);
       });
 
-      if (metrics.antecedentLines.length > 0) {
-        const detailY = currentY + 2.5 + metrics.wrappedLines.length * lineHeight;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(5.2);
-        doc.setTextColor(71, 85, 105);
-        metrics.antecedentLines.forEach((line: string, index: number) => {
-          doc.text(line, margin + 2, detailY + index * lineHeight);
-        });
-      }
-
       const finalCheckboxY = currentY + metrics.height / 2;
       const checkStartX = margin + contentWidth - metrics.totalCheckboxWidth - 3;
       drawCheckbox('SÍ', metrics.isYes, checkStartX, finalCheckboxY);
@@ -1119,7 +1221,7 @@ export class PdfGeneratorService {
       0,
     );
 
-    if (currentY + officialDeclarationBlockHeight + 90 > pageHeight - margin - 18) {
+    if (currentY + officialDeclarationBlockHeight + 150 > pageHeight - margin - 18) {
       doc.addPage();
       currentY = margin + 22;
     }
@@ -1130,6 +1232,162 @@ export class PdfGeneratorService {
       renderOfficialDeclarationQuestion(question);
       currentY += 2;
     });
+
+    /** Caja "OTROS CONTRATOS DE SALUD": pregunta oficial + checkboxes SÍ/NO + tabla por contrato. */
+    const getAntecedentEntries = (questionId: number): AntecedentDetail[] => {
+      const questionData = data.healthDeclaration.questions[questionId];
+      return (
+        questionData?.antecedentDetails ||
+        (questionData?.antecedentDetail ? [questionData.antecedentDetail] : [])
+      );
+    };
+
+    const measureAntecedentQuestion = (question: (typeof HEALTH_QUESTIONS)[number]) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.4);
+
+      const yesCheckboxWidth = doc.getTextWidth('SÍ') + 3.2 + 2.5;
+      const noCheckboxWidth = doc.getTextWidth('NO') + 3.2 + 2.5;
+      const totalCheckboxWidth = yesCheckboxWidth + 4 + noCheckboxWidth;
+      const textWidth = contentWidth - totalCheckboxWidth - 8;
+
+      const wrapped = doc.splitTextToSize(question.description, textWidth);
+      return { wrapped, height: wrapped.length * 4.6 + 3.5, yesCheckboxWidth, totalCheckboxWidth };
+    };
+
+    const renderAntecedentQuestionWithTable = (
+      question: (typeof HEALTH_QUESTIONS)[number],
+      entries: AntecedentDetail[],
+      columns: string[],
+      widths: number[],
+      rowHeight: number,
+    ) => {
+      const isYes = data.healthDeclaration.questions[question.id]?.answer === 'SÍ';
+      const metrics = measureAntecedentQuestion(question);
+      const tableHeaderHeight = 5;
+      const tableHeight = isYes && entries.length > 0
+        ? tableHeaderHeight + entries.length * rowHeight
+        : 0;
+      const blockHeight = metrics.height + tableHeight;
+
+      if (currentY + blockHeight + 10 > pageHeight - margin - 15) {
+        doc.addPage();
+        currentY = margin + 22;
+      }
+
+      // Recuadro de la pregunta oficial + checkboxes
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.2);
+      doc.rect(margin, currentY, contentWidth, metrics.height);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.4);
+      doc.setTextColor(51, 65, 85);
+      metrics.wrapped.forEach((line: string, index: number) => {
+        doc.text(line, margin + 2, currentY + 2.5 + index * 4.6);
+      });
+
+      const finalCheckboxY = currentY + metrics.height / 2;
+      const checkStartX = margin + contentWidth - metrics.totalCheckboxWidth - 3;
+      drawCheckbox('SÍ', isYes, checkStartX, finalCheckboxY);
+      drawCheckbox('NO', !isYes, checkStartX + metrics.yesCheckboxWidth + 4, finalCheckboxY);
+
+      if (isYes && entries.length > 0) {
+        const tableTop = currentY + metrics.height;
+        const tableBottom = tableTop + tableHeight;
+
+        // Cabecera de la tabla
+        doc.setFillColor(226, 232, 240);
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(margin, tableTop, contentWidth, tableHeaderHeight, 'FD');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(5.8);
+        doc.setTextColor(7, 62, 35);
+        let headerX = margin;
+        columns.forEach((header, index) => {
+          doc.text(header, headerX + 1.5, tableTop + 3.4);
+          headerX += widths[index];
+        });
+
+        // Filas de datos
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(5.8);
+        doc.setTextColor(15, 23, 42);
+        entries.forEach((entry, rowIndex) => {
+          const rowTop = tableTop + tableHeaderHeight + rowIndex * rowHeight;
+          doc.setDrawColor(203, 213, 225);
+          doc.setLineWidth(0.18);
+          doc.rect(margin, rowTop, contentWidth, rowHeight);
+
+          const cells = [entry.field1, entry.field2, entry.field3, entry.field4];
+          let cellX = margin;
+          cells.forEach((cell, colIndex) => {
+            const truncated = doc.splitTextToSize(cell || '', widths[colIndex] - 3);
+            doc.text(truncated[0] || '', cellX + 1.5, rowTop + 4);
+            cellX += widths[colIndex];
+          });
+        });
+
+        // Separadores verticales entre columnas
+        doc.setDrawColor(203, 213, 225);
+        doc.setLineWidth(0.18);
+        let separatorX = margin;
+        widths.slice(0, -1).forEach((width) => {
+          separatorX += width;
+          doc.line(separatorX, tableTop, separatorX, tableBottom);
+        });
+
+        // Línea de separación cabecera / primera fila
+        doc.line(margin, tableTop + tableHeaderHeight, margin + contentWidth, tableTop + tableHeaderHeight);
+      }
+
+      currentY += blockHeight;
+    };
+
+    const contractColumns = ['Nro. Contrato', 'Nombre de la Compañía', 'Límite de Cobertura', 'Fecha Vigencia'];
+    const refusalColumns = ['Tipo de Seguro', 'Nombre de la Compañía', 'Límite de Cobertura', 'Fecha Rechazo/Anulación'];
+    const contractWidths = [37.9, 62, 48, 48];
+    const refusalWidths = [31.9, 62, 48, 54];
+    const dataRowHeight = 5.6;
+
+    // Encabezado de la caja
+    const boxHeaderHeight = 6.5;
+    if (currentY + boxHeaderHeight + 66 > pageHeight - margin - 15) {
+      doc.addPage();
+      currentY = margin + 22;
+    } else {
+      currentY += 6;
+    }
+    doc.setFillColor(241, 245, 249);
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.4);
+    doc.rect(margin, currentY, contentWidth, boxHeaderHeight, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(7, 62, 35);
+    doc.text('OTROS CONTRATOS DE SALUD', margin + 3, currentY + 4.6);
+    currentY += boxHeaderHeight + 4;
+
+    const q25 = officialDeclarationQuestions.find((item) => item.id === 25);
+    const q26 = officialDeclarationQuestions.find((item) => item.id === 26);
+
+    if (q25) {
+      renderAntecedentQuestionWithTable(q25, getAntecedentEntries(25), contractColumns, contractWidths, dataRowHeight);
+      currentY += 4;
+    }
+
+    if (q26) {
+      renderAntecedentQuestionWithTable(q26, getAntecedentEntries(26), refusalColumns, refusalWidths, dataRowHeight);
+      currentY += 4;
+    }
+
+    if (currentY + 42 > pageHeight - margin - 15) {
+      doc.addPage();
+      currentY = margin + 22;
+    } else {
+      currentY += 6;
+    }
 
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(203, 213, 225);
@@ -1152,6 +1410,7 @@ export class PdfGeneratorService {
     drawCheckbox('Acepto y ratifico la declaración del Afiliado Titular', data.signatures.acceptsPolicyholderDeclaration, margin + 3, currentY + 32);
     currentY += 38;
 
+    ensureSpace(36);
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(203, 213, 225);
     doc.rect(margin, currentY, contentWidth, 32, 'FD');
@@ -1182,10 +1441,13 @@ export class PdfGeneratorService {
     drawCheckbox('Doy fe del origen lícito de los fondos', true, margin + 3, currentY + 28);
     currentY += 34;
 
-    drawCell('Lugar de Suscripción', data.signatures.place || 'Barquisimeto, Venezuela', margin, currentY, halfW);
-    drawCell('Fecha de Suscripción', formatPdfDate(data.signatures.date || data.header.applicationDate), margin + halfW, currentY, halfW);
-    currentY += 11;
+    drawRow([
+      { label: 'Lugar de Suscripción', value: data.signatures.place || 'Barquisimeto, Venezuela', x: margin, w: halfW },
+      { label: 'Fecha de Suscripción', value: formatPdfDate(data.signatures.date || data.header.applicationDate), x: margin + halfW, w: halfW },
+    ]);
+    currentY += 2.5;
 
+    ensureSpace(76);
     currentY = drawSectionTitle('7. Firmas y Huellas Dactilares Oficiales', currentY);
 
     const boxSignW = (contentWidth - 6) / 2;
@@ -1268,14 +1530,17 @@ export class PdfGeneratorService {
 
     currentY = drawSectionTitle('8. Intermediario de la Actividad Aseguradora', currentY);
     const broker = data.broker;
-    drawCell('Nombre y Apellido del Intermediario', broker.fullName, margin, currentY, thirdW * 1.2);
-    drawCell('Nº Credencial Sudeaseg', broker.credentialNumber, margin + thirdW * 1.2, currentY, thirdW * 0.8);
-    drawCell('C.I. / R.I.F. / Pasaporte', `${broker.documentType}-${broker.identityOrTaxNumber}`, margin + thirdW * 2, currentY, thirdW);
+    drawRow([
+      { label: 'Nombre y Apellido del Intermediario', value: broker.fullName, x: margin, w: thirdW * 1.2 },
+      { label: 'Nº Credencial Sudeaseg', value: broker.credentialNumber, x: margin + thirdW * 1.2, w: thirdW * 0.8 },
+      { label: 'C.I. / R.I.F. / Pasaporte', value: `${broker.documentType}-${broker.identityOrTaxNumber}`, x: margin + thirdW * 2, w: thirdW },
+    ]);
 
-    if (isDraft) {
-      const totalPages = doc.getNumberOfPages();
-      for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
-        doc.setPage(pageNumber);
+    const totalPages = doc.getNumberOfPages();
+    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+      doc.setPage(pageNumber);
+      drawPageFooter(pageNumber, totalPages);
+      if (isDraft) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(34);
         originalSetTextColor(220, 220, 220);

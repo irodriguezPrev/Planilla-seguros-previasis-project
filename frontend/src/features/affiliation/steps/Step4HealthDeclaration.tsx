@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ContextualTooltip } from '@/components/common/ContextualTooltip';
 import {
   AffiliateRow,
+  AntecedentDetail,
   MedicalConditionDetail,
   HealthDeclarationSection,
   SportDetail,
@@ -266,7 +267,12 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
 
     groupQuestions.forEach((item) => {
       if (item.requiresBeneficiarySelection === false) {
-        questions[item.id] = { ...questions[item.id], answer: 'NO', antecedentDetail: undefined };
+        questions[item.id] = {
+          ...questions[item.id],
+          answer: 'NO',
+          antecedentDetail: undefined,
+          antecedentDetails: undefined,
+        };
       } else {
         const applicable = affiliates.filter((affiliate) => isQuestionApplicableToAffiliate(item, affiliate));
         questions[item.id] = {
@@ -494,12 +500,18 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
     groupQuestions.forEach((item) => {
       const current = questions[item.id];
       if (item.id === targetQuestion.id) {
+        const existingDetails =
+          current?.antecedentDetails ||
+          (current?.antecedentDetail ? [current.antecedentDetail] : []);
         questions[item.id] = {
           ...current,
           answer: wasSelected ? 'NO' : 'SÍ',
-          antecedentDetail: wasSelected
+          antecedentDetail: undefined,
+          antecedentDetails: wasSelected
             ? undefined
-            : current?.antecedentDetail || { field1: '', field2: '' },
+            : existingDetails.length > 0
+              ? existingDetails
+              : [{ field1: '', field2: '', field3: '', field4: '' }],
         };
       } else if (!current?.answer) {
         questions[item.id] = { answer: 'NO' };
@@ -517,6 +529,9 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
 
   const setGlobalAnswer = (currentQuestion: HealthQuestionItem, answer: HealthAnswer) => {
     const current = healthDeclaration.questions[currentQuestion.id] || { answer: 'NO' as const };
+    const existingDetails =
+      current.antecedentDetails ||
+      (current.antecedentDetail ? [current.antecedentDetail] : []);
     onHealthChange({
       ...healthDeclaration,
       questions: {
@@ -524,8 +539,11 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
         [currentQuestion.id]: {
           ...current,
           answer,
-          antecedentDetail: answer === 'SÍ'
-            ? current.antecedentDetail || { field1: '', field2: '' }
+          antecedentDetail: undefined,
+          antecedentDetails: answer === 'SÍ'
+            ? existingDetails.length > 0
+              ? existingDetails
+              : [{ field1: '', field2: '', field3: '', field4: '' }]
             : undefined,
         },
       },
@@ -582,7 +600,35 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
     });
   };
 
-  const updateAntecedent = (field: 'field1' | 'field2', value: string) => {
+  type AntecedentField = 'field1' | 'field2' | 'field3' | 'field4';
+
+  const getAntecedentDetails = (): AntecedentDetail[] => {
+    const saved = healthDeclaration.questions[question.id];
+    return (
+      saved?.antecedentDetails ||
+      (saved?.antecedentDetail ? [saved.antecedentDetail] : [])
+    );
+  };
+
+  const updateAntecedent = (index: number, field: AntecedentField, value: string) => {
+    const current = healthDeclaration.questions[question.id] || { answer: 'SÍ' as const };
+    const nextDetails = getAntecedentDetails().map((entry, entryIndex) =>
+      entryIndex === index ? { ...entry, [field]: value } : entry,
+    );
+    onHealthChange({
+      ...healthDeclaration,
+      questions: {
+        ...healthDeclaration.questions,
+        [question.id]: {
+          ...current,
+          antecedentDetail: undefined,
+          antecedentDetails: nextDetails.length > 0 ? nextDetails : undefined,
+        },
+      },
+    });
+  };
+
+  const addAntecedentDetail = () => {
     const current = healthDeclaration.questions[question.id] || { answer: 'SÍ' as const };
     onHealthChange({
       ...healthDeclaration,
@@ -590,10 +636,27 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
         ...healthDeclaration.questions,
         [question.id]: {
           ...current,
-          antecedentDetail: {
-            ...(current.antecedentDetail || { field1: '', field2: '' }),
-            [field]: value,
-          },
+          antecedentDetail: undefined,
+          antecedentDetails: [
+            ...getAntecedentDetails(),
+            { field1: '', field2: '', field3: '', field4: '' },
+          ],
+        },
+      },
+    });
+  };
+
+  const removeAntecedentDetail = (index: number) => {
+    const current = healthDeclaration.questions[question.id] || { answer: 'SÍ' as const };
+    const nextDetails = getAntecedentDetails().filter((_, entryIndex) => entryIndex !== index);
+    onHealthChange({
+      ...healthDeclaration,
+      questions: {
+        ...healthDeclaration.questions,
+        [question.id]: {
+          ...current,
+          antecedentDetail: undefined,
+          antecedentDetails: nextDetails.length > 0 ? nextDetails : undefined,
         },
       },
     });
@@ -1327,20 +1390,75 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
   const renderAntecedentFields = () => {
     if (!question.antecedentFields) return null;
 
-    const field1 = (
-      <div className="previasis-input-group" key="antecedent-field-1">
-        <label className="previasis-label">{question.antecedentFields.field1Label}{question.antecedentFields.field1Required === false ? ` (${t('optional')})` : ' *'}</label>
-        <input className="previasis-input" placeholder={question.antecedentFields.field1Placeholder} value={questionState?.antecedentDetail?.field1 || ''} onChange={(event) => updateAntecedent('field1', event.target.value)} required={question.antecedentFields.field1Required !== false} />
-      </div>
-    );
-    const field2 = (
-      <div className="previasis-input-group" key="antecedent-field-2">
-        <label className="previasis-label">{question.antecedentFields.field2Label} *</label>
-        <input className="previasis-input" placeholder={question.antecedentFields.field2Placeholder} value={questionState?.antecedentDetail?.field2 || ''} onChange={(event) => updateAntecedent('field2', event.target.value)} required />
-      </div>
-    );
+    const detailFields: Array<{ key: AntecedentField; label: string; placeholder?: string; required: boolean }> = [
+      {
+        key: 'field1',
+        label: question.antecedentFields.field1Label,
+        placeholder: question.antecedentFields.field1Placeholder,
+        required: question.antecedentFields.field1Required !== false,
+      },
+      {
+        key: 'field2',
+        label: question.antecedentFields.field2Label,
+        placeholder: question.antecedentFields.field2Placeholder,
+        required: true,
+      },
+      {
+        key: 'field3',
+        label: question.antecedentFields.field3Label,
+        placeholder: question.antecedentFields.field3Placeholder,
+        required: false,
+      },
+      {
+        key: 'field4',
+        label: question.antecedentFields.field4Label,
+        placeholder: question.antecedentFields.field4Placeholder,
+        required: false,
+      },
+    ];
 
-    return question.id === 25 ? <>{field2}{field1}</> : <>{field1}{field2}</>;
+    const details = getAntecedentDetails();
+
+    return (
+      <div className="health-antecedent-list">
+        {details.map((entry, index) => (
+          <div className="health-antecedent-card" key={index}>
+            <div className="health-antecedent-card-header">
+              <strong>{t('antecedentNumber', { number: index + 1 })}</strong>
+              {details.length > 1 && (
+                <button
+                  type="button"
+                  className="health-delete-icon"
+                  title={t('removeAntecedent')}
+                  onClick={() => removeAntecedentDetail(index)}
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+            <div className="health-special-detail-grid">
+              {detailFields.map((field) => (
+                <div className="previasis-input-group" key={field.key}>
+                  <label className="previasis-label">
+                    {field.label}{field.required ? ' *' : ` (${t('optional')})`}
+                  </label>
+                  <input
+                    className="previasis-input"
+                    placeholder={field.placeholder}
+                    value={entry[field.key] || ''}
+                    onChange={(event) => updateAntecedent(index, field.key, event.target.value)}
+                    required={field.required}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <button type="button" className="btn-pill btn-pill-outline health-add-antecedent" onClick={addAntecedentDetail}>
+          <PlusCircle size={15} /> {t('addAntecedent')}
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -1474,7 +1592,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
                       ))}
                     </div>
                     {questionState?.answer === 'SÍ' && question.antecedentFields && (
-                      <div className="health-special-detail-grid">
+                      <div className="health-antecedent-details">
                         {renderAntecedentFields()}
                       </div>
                     )}
@@ -1546,7 +1664,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
                 <button type="button" className={questionState?.answer === 'SÍ' ? 'selected yes' : ''} onClick={() => setGlobalAnswer(question, 'SÍ')}>{t('yes')}</button>
               </div>
               {questionState?.answer === 'SÍ' && question.antecedentFields && (
-                <div className="health-special-detail-grid">
+                <div className="health-antecedent-details">
                   {renderAntecedentFields()}
                 </div>
               )}

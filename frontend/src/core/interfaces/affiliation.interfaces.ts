@@ -7,7 +7,7 @@ export type Sex = 'F' | 'M';
 export type ActivityClassification = 'Independiente' | 'Dependiente' | 'Societaria';
 export type ContractorPersonType = 'Natural' | 'Juridica';
 export type LegalEconomicActivity = 'Profesional' | 'Comercial' | 'Industrial';
-export type RequestedPlan = 'Previasis' | 'Abuelos' | 'Previasis 24/7' | 'Plan Bronce' | 'Plan Plata' | 'Plan Oro' | 'Plan Diamante';
+export type RequestedPlan = 'Previasís' | 'Abuelos' | '24/7';
 export type PaymentFrequency = 'Anual' | 'Semestral' | 'Trimestral' | 'Mensual';
 export type PaymentCurrency = 'Bolívares' | 'Dólares';
 export type PaymentMethod = 'Domiciliación de Pago' | 'Pago en Oficina' | 'Pagos en Divisas' | 'Zelle' | 'Otro';
@@ -97,8 +97,8 @@ export interface AffiliateRow {
   sex: Sex;
   weightKg: string;
   heightCm: string;
-  requestedPlan: string;
-  coverageLimit: string;
+  requestedPlan: RequestedPlan;
+  coverageLimit: number;
   fee: number;
 }
 
@@ -120,6 +120,7 @@ export interface HealthQuestion {
   answer: 'SÍ' | 'NO';
   extraDetails?: string;
   antecedentDetail?: AntecedentDetail;
+  antecedentDetails?: AntecedentDetail[];
 }
 
 export interface SportDetail {
@@ -142,6 +143,8 @@ export interface ClarificationDetail {
 export interface AntecedentDetail {
   field1: string;
   field2: string;
+  field3?: string;
+  field4?: string;
 }
 
 export interface HealthDeclarationSection {
@@ -152,6 +155,7 @@ export interface HealthDeclarationSection {
     extraDetailsByAffiliate?: Partial<Record<number, string>>;
     affiliateCodes?: number[];
     antecedentDetail?: AntecedentDetail;
+    antecedentDetails?: AntecedentDetail[];
   }>;
   sportDetails?: SportDetail[];
   clarificationDetails?: Record<number, ClarificationDetail[]>;

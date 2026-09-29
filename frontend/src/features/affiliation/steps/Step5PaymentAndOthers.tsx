@@ -20,9 +20,10 @@ import {
 interface Step5Props {
   payment: PaymentSection;
   onPaymentChange: (payment: PaymentSection) => void;
+  has247Plan?: boolean;
 }
 
-export const Step5PaymentAndOthers: React.FC<Step5Props> = ({ payment, onPaymentChange }) => {
+export const Step5PaymentAndOthers: React.FC<Step5Props> = ({ payment, onPaymentChange, has247Plan = false }) => {
   const t = useTranslations('step5');
   const tPayment = useTranslations('paymentOptions');
   const frequencyIconMap: Record<PaymentFrequency, React.ElementType> = {
@@ -32,10 +33,14 @@ export const Step5PaymentAndOthers: React.FC<Step5Props> = ({ payment, onPayment
     Anual: Gift,
   };
 
-  const availableFrequencies = PAYMENT_FREQUENCIES_BY_CURRENCY[payment.currency];
+  const availableFrequencies = has247Plan
+    ? (['Anual'] as PaymentFrequency[])
+    : PAYMENT_FREQUENCIES_BY_CURRENCY[payment.currency];
 
   useEffect(() => {
-    const validFrequencies = PAYMENT_FREQUENCIES_BY_CURRENCY[payment.currency];
+    const validFrequencies = has247Plan
+      ? (['Anual'] as PaymentFrequency[])
+      : PAYMENT_FREQUENCIES_BY_CURRENCY[payment.currency];
     if (!validFrequencies.includes(payment.paymentFrequency)) {
       onPaymentChange({ ...payment, paymentFrequency: validFrequencies[0] });
     }
@@ -44,7 +49,7 @@ export const Step5PaymentAndOthers: React.FC<Step5Props> = ({ payment, onPayment
       onPaymentChange({ ...payment, method: validMethods[0], otherPaymentDetails: undefined });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payment.currency]);
+  }, [payment.currency, has247Plan]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

@@ -153,7 +153,21 @@ export const TARIFFS: TariffEntry[] = [
   },
 ];
 
-export function getAgeRange(age: number): AgeRange | null {
+const RANGE_BOUNDS: Record<AgeRange, { min: number; max: number }> = {
+  '0-20': { min: 0, max: 20 },
+  '21-40': { min: 21, max: 40 },
+  '41-60': { min: 41, max: 60 },
+  '61-80': { min: 61, max: 80 },
+  '0-60': { min: 0, max: 60 },
+};
+
+export function isAgeInRange(age: number, rango: AgeRange): boolean {
+  const bounds = RANGE_BOUNDS[rango];
+  if (!bounds) return false;
+  return age >= bounds.min && age <= bounds.max;
+}
+
+export function getAgeRange(age: number): Exclude<AgeRange, '0-60'> | null {
   if (age < 0 || age > 80) return null;
   if (age <= 20) return '0-20';
   if (age <= 40) return '21-40';
@@ -164,7 +178,7 @@ export function getAgeRange(age: number): AgeRange | null {
 export function getTariff(
   plan: PlanName,
   cobertura: number,
-  ageRange: AgeRange,
+  age: number,
   zone: Zone,
   frequency: Frequency
 ): number | null {
@@ -172,7 +186,7 @@ export function getTariff(
     (t) =>
       t.plan === plan &&
       t.cobertura === cobertura &&
-      t.rango_edad === ageRange
+      isAgeInRange(age, t.rango_edad)
   );
   if (!entry) return null;
 
@@ -180,24 +194,46 @@ export function getTariff(
   return zonePrice[frequency] ?? null;
 }
 
-export function getAvailableCoverages(plan: PlanName, ageRange: AgeRange): number[] {
+export function getAvailableCoverages(plan: PlanName, age: number): number[] {
   const coverages = TARIFFS.filter(
-    (t) => t.plan === plan && t.rango_edad === ageRange
+    (t) => t.plan === plan && isAgeInRange(age, t.rango_edad)
   ).map((t) => t.cobertura);
   return [...new Set(coverages)].sort((a, b) => a - b);
 }
 
 export function getAvailablePlans(age: number): PlanName[] {
-  const ageRange = getAgeRange(age);
-  if (!ageRange) return [];
-
-  const plans = TARIFFS.filter((t) => t.rango_edad === ageRange).map((t) => t.plan);
+  const plans = TARIFFS.filter((t) => isAgeInRange(age, t.rango_edad)).map((t) => t.plan);
   return [...new Set(plans)];
 }
 
-export function getPlansForAgeRange(ageRange: AgeRange): PlanName[] {
-  const plans = TARIFFS.filter((t) => t.rango_edad === ageRange).map((t) => t.plan);
-  return [...new Set(plans)];
+export type TierName = 'Oro' | 'Plata' | 'Bronce';
+
+export interface PlanTier {
+  tier: TierName;
+  plan: PlanName;
+  coverage: number;
+}
+
+/**
+ * Niveles comerciales fijos (Oro/Plata/Bronce), independientes de las
+ * combinaciones (plan x cobertura) disponibles. Excluye el plan 24/7.
+ */
+export function getPlanTiers(age: number): PlanTier[] {
+  if (age <= 60) {
+    return [
+      { tier: 'Oro', plan: 'Previasís', coverage: 40000 },
+      { tier: 'Plata', plan: 'Previasís', coverage: 25000 },
+      { tier: 'Bronce', plan: 'Previasís', coverage: 10000 },
+    ];
+  }
+  if (age <= 80) {
+    return [
+      { tier: 'Oro', plan: 'Abuelos', coverage: 10000 },
+      { tier: 'Plata', plan: 'Abuelos', coverage: 5000 },
+      { tier: 'Bronce', plan: 'Abuelos', coverage: 3000 },
+    ];
+  }
+  return [];
 }
 
 export function formatCoverage(cobertura: number): string {
@@ -214,9 +250,7 @@ export function getMonthlyPriceFromTariff(
   age: number,
   zone: Zone
 ): number | null {
-  const ageRange = getAgeRange(age);
-  if (!ageRange) return null;
-  return getTariff(plan, cobertura, ageRange, zone, 'mensual');
+  return getTariff(plan, cobertura, age, zone, 'mensual');
 }
 
 export function getAnnualPriceFromTariff(
@@ -225,10 +259,19 @@ export function getAnnualPriceFromTariff(
   age: number,
   zone: Zone
 ): number | null {
-  const ageRange = getAgeRange(age);
-  if (!ageRange) return null;
-  return getTariff(plan, cobertura, ageRange, zone, 'anual');
+  return getTariff(plan, cobertura, age, zone, 'anual');
 }
+
+export function roundMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+const FREQUENCY_MONTHS: Record<'Mensual' | 'Trimestral' | 'Semestral' | 'Anual', number> = {
+  Mensual: 1,
+  Trimestral: 3,
+  Semestral: 6,
+  Anual: 12,
+};
 
 export function getPriceForFrequency(
   plan: PlanName,
@@ -237,26 +280,20 @@ export function getPriceForFrequency(
   zone: Zone,
   frequency: 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual'
 ): number | null {
-  const ageRange = getAgeRange(age);
-  if (!ageRange) return null;
+  if (age < 0 || age > 80) return null;
 
-  const annualPrice = getTariff(plan, cobertura, ageRange, zone, 'anual');
-  const monthlyPrice = getTariff(plan, cobertura, ageRange, zone, 'mensual');
+  const annualPrice = getTariff(plan, cobertura, age, zone, 'anual');
+  const monthlyPrice = getTariff(plan, cobertura, age, zone, 'mensual');
 
-  if (annualPrice === null && monthlyPrice === null) return null;
-
-  switch (frequency) {
-    case 'Anual':
-      return annualPrice;
-    case 'Mensual':
-      return monthlyPrice;
-    case 'Trimestral':
-      return monthlyPrice !== null ? monthlyPrice * 3 : annualPrice !== null ? annualPrice / 4 : null;
-    case 'Semestral':
-      return monthlyPrice !== null ? monthlyPrice * 6 : annualPrice !== null ? annualPrice / 2 : null;
-    default:
-      return null;
+  if (monthlyPrice !== null) {
+    return roundMoney(monthlyPrice * FREQUENCY_MONTHS[frequency]);
   }
+  if (annualPrice !== null) {
+    // Sin tarifa mensual (24/7): se usa el equivalente anual de la tarifa.
+    const monthlyBase = annualPrice / 12;
+    return roundMoney(monthlyBase * FREQUENCY_MONTHS[frequency]);
+  }
+  return null;
 }
 
 export function hasMonthlyPrice(plan: PlanName): boolean {
