@@ -384,6 +384,14 @@
     "referredBy": "Asesor: {name}",
     "invalidReferral": "Referido no válido"
   },
+  "dateSelect": {
+    "year": "Año",
+    "month": "Mes",
+    "day": "Día",
+    "yearPlaceholder": "Año",
+    "monthPlaceholder": "Mes",
+    "dayPlaceholder": "Día"
+  },
   "validation": {
     "policyholderRequired": "Por favor complete los campos obligatorios del Titular.",
     "contractorRequired": "Por favor complete los datos obligatorios del Contratante.",

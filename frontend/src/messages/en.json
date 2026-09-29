@@ -384,6 +384,14 @@
     "referredBy": "Advisor: {name}",
     "invalidReferral": "Invalid referral"
   },
+  "dateSelect": {
+    "year": "Year",
+    "month": "Month",
+    "day": "Day",
+    "yearPlaceholder": "Year",
+    "monthPlaceholder": "Month",
+    "dayPlaceholder": "Day"
+  },
   "validation": {
     "policyholderRequired": "Please complete the required fields of the Holder.",
     "contractorRequired": "Please complete the required data of the Contractor.",

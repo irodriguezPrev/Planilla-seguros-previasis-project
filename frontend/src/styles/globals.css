@@ -1124,6 +1124,38 @@ button {
   font-weight: 400;
 }
 
+/* DateSelect: fixed year -> month -> day order, built from selects instead of the
+   native date input whose segment order depends on the device locale. */
+.date-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.date-select__field {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.date-select__field--year {
+  flex: 1.25 1 0;
+}
+
+.date-select__error {
+  flex: 1 0 100%;
+  font-size: 0.75rem;
+  color: var(--status-error);
+}
+
 /* Consistent visual validation for required fields. */
 .show-validation-errors .previasis-input:required:invalid,
 .show-validation-errors .input-field:required:invalid {
@@ -1997,6 +2029,14 @@ button {
   .affiliation-page *::before,
   .affiliation-page *::after {
     pointer-events: none !important;
+  }
+
+  /* 16px keeps iOS from zooming the viewport when a select receives focus,
+     and the taller box gives a comfortable touch target. */
+  .date-select__field {
+    font-size: 1rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
   }
 }
 

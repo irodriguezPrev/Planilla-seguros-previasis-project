@@ -15,6 +15,7 @@ import {
 } from '@/core/utils/minor-document.utils';
 import { PAYMENT_FREQUENCY_TRANSLATION_KEYS } from '@/core/config/payment-options.config';
 import { ContextualTooltip } from '@/components/common/ContextualTooltip';
+import { DateSelect } from '@/core/components/ui';
 import { UserPlus, Trash2, Users, Award, Check, Flame, Pencil } from 'lucide-react';
 
 const billingPeriods: Array<{
@@ -658,14 +659,12 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
               </label>
               <ContextualTooltip text={t('actuarialAgeHint')} label={t('showFieldHelp')} />
             </div>
-            <input
+            <DateSelect
               id="affiliate-birth-date"
-              type="date"
-              className="previasis-input"
               min={getMinimumBirthDate()}
               max={new Date().toISOString().slice(0, 10)}
-              value={currentMember?.birthDate}
-              onChange={(e) => updateAffiliate(selectedMemberIndex, { birthDate: e.target.value })}
+              value={currentMember?.birthDate || ''}
+              onChange={(birthDate) => updateAffiliate(selectedMemberIndex, { birthDate })}
               onBlur={() => validateBirthDate(currentMember?.birthDate)}
               required
             />
