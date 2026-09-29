@@ -551,8 +551,9 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
                 const isPlanSelected =
                   currentMember?.requestedPlan === plan &&
                   currentMember?.coverageLimit === coverage;
+                const monthlyPrice = getMonthlyPriceFromTariff(plan, coverage, currentAge ?? -1, zone);
 
-              return (
+                return (
                 <button
                   type="button"
                   key={`${plan}-${coverage}`}
@@ -594,6 +595,7 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
               );
             })}
           </div>
+          )}
         </div>
       </div>
 

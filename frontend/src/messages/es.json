@@ -291,6 +291,7 @@
     "parent": "Padre/Madre",
     "sibling": "Hermano/a",
     "other": "Otro",
+    "dateSelect":"Seleccione una fecha",
     "subtotal": "Subtotal del grupo familiar",
     "pricingLabel": "Vista para evaluación:",
     "option1": "Opción 1",
