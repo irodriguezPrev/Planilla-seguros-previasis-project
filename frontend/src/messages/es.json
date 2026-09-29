@@ -520,7 +520,23 @@
     "addCondition": "Agregar {condition}",
     "removeCondition": "Quitar {condition}",
     "showCombinedQuestionHelp": "Mostrar explicación de la pregunta combinada",
-    "combinedQuestionHint": "Esta pregunta agrupa varias preguntas de la planilla para agilizar el llenado. Seleccione todas las condiciones que correspondan; cada respuesta se conservará por separado en su casilla del PDF."
+    "combinedQuestionHint": "Esta pregunta agrupa varias preguntas de la planilla para agilizar el llenado. Seleccione todas las condiciones que correspondan; cada respuesta se conservará por separado en su casilla del PDF.",
+    "tour": {
+      "trigger": "Ver tutorial",
+      "skip": "Omitir tutorial",
+      "previous": "Anterior",
+      "next": "Continuar",
+      "finish": "Comenzar cuestionario",
+      "stepProgress": "Paso {current} de {total}",
+      "progressTitle": "Sigue el progreso del grupo",
+      "progressDescription": "Aquí puedes ver cuántas preguntas están completas y el avance de cada integrante. Una respuesta estará lista cuando muestre el check verde.",
+      "navigatorTitle": "Navega entre las preguntas",
+      "navigatorDescription": "Puedes abrir cualquier categoría desde esta lista. Los estados te indican cuáles están pendientes, incompletas o terminadas.",
+      "answersTitle": "Responde por cada integrante",
+      "answersDescription": "Marca NO o SÍ para cada persona. Si eliges SÍ, aparecerán los detalles obligatorios del padecimiento; complétalos para obtener el check verde.",
+      "navigationTitle": "Continúa con la siguiente pendiente",
+      "navigationDescription": "Usa estos botones para volver o avanzar automáticamente a la próxima pregunta pendiente. Cuando todas estén listas, podrás completar el cuestionario."
+    }
   },
   "healthGroups": {
     "1-3": { "title": "Vías respiratorias, piel y visión", "prompt": "¿Usted o algún integrante ha padecido enfermedades de las vías respiratorias, la piel, los ojos, la nariz o la garganta, o defectos de refracción visual?" },

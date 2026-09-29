@@ -520,7 +520,23 @@
     "addCondition": "Add {condition}",
     "removeCondition": "Remove {condition}",
     "showCombinedQuestionHelp": "Show combined question explanation",
-    "combinedQuestionHint": "This question groups several form questions to speed up completion. Select every applicable condition; each answer remains stored separately in its corresponding PDF field."
+    "combinedQuestionHint": "This question groups several form questions to speed up completion. Select every applicable condition; each answer remains stored separately in its corresponding PDF field.",
+    "tour": {
+      "trigger": "View tutorial",
+      "skip": "Skip tutorial",
+      "previous": "Previous",
+      "next": "Continue",
+      "finish": "Start questionnaire",
+      "stepProgress": "Step {current} of {total}",
+      "progressTitle": "Track the group's progress",
+      "progressDescription": "Here you can see how many questions are complete and each member's progress. An answer is ready when it displays a green check mark.",
+      "navigatorTitle": "Navigate through the questions",
+      "navigatorDescription": "You can open any category from this list. The statuses show which ones are pending, incomplete, or finished.",
+      "answersTitle": "Answer for each member",
+      "answersDescription": "Select NO or YES for each person. If you choose YES, the required condition details will appear; complete them to get the green check mark.",
+      "navigationTitle": "Continue to the next pending question",
+      "navigationDescription": "Use these buttons to go back or automatically move to the next pending question. Once all are ready, you can complete the questionnaire."
+    }
   },
   "healthGroups": {
     "1-3": { "title": "Respiratory tract, skin and vision", "prompt": "Have you or any member had respiratory tract, skin, eye, nose or throat diseases, or refractive vision defects?" },

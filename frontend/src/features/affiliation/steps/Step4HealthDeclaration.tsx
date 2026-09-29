@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ContextualTooltip } from '@/components/common/ContextualTooltip';
+import { GuidedTour, GuidedTourStep } from '@/components/common/GuidedTour';
 import {
   AffiliateRow,
   AntecedentDetail,
@@ -133,6 +134,28 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
     (group) => getGroupStatus(group.questionIds) === 'incomplete',
   ).length;
   const progressPercent = Math.round((completedQuestions / HEALTH_QUESTION_FILLING_GROUPS.length) * 100);
+  const tourSteps: GuidedTourStep[] = [
+    {
+      target: '.health-assistant-summary',
+      title: t('tour.progressTitle'),
+      description: t('tour.progressDescription'),
+    },
+    {
+      target: '.health-question-navigator',
+      title: t('tour.navigatorTitle'),
+      description: t('tour.navigatorDescription'),
+    },
+    {
+      target: '.health-question-editor',
+      title: t('tour.answersTitle'),
+      description: t('tour.answersDescription'),
+    },
+    {
+      target: '.health-editor-navigation',
+      title: t('tour.navigationTitle'),
+      description: t('tour.navigationDescription'),
+    },
+  ];
 
   const syncQuestionSummary = (
     current: HealthDeclarationSection['questions'][number],
@@ -1473,6 +1496,18 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
             </div>
           </div>
           <div className="health-progress-copy">
+            <GuidedTour
+              steps={tourSteps}
+              storageKey="previasis-health-tutorial-seen-v2"
+              labels={{
+                trigger: t('tour.trigger'),
+                skip: t('tour.skip'),
+                previous: t('tour.previous'),
+                next: t('tour.next'),
+                finish: t('tour.finish'),
+                progress: (current, total) => t('tour.stepProgress', { current, total }),
+              }}
+            />
             <span>{t('completedOf', { completed: completedQuestions, total: HEALTH_QUESTION_FILLING_GROUPS.length })}</span>
           </div>
         </div>

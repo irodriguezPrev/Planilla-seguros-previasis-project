@@ -545,11 +545,12 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
                 : t('ageRangeF', { range: currentRange })}
           </p>
 
-          <div className={`grid plan-options-grid ${planTiers.length > 4 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
-            {planTiers.map(({ tier, plan, coverage }) => {
-              const isPlanSelected = currentMember?.requestedPlan === plan
-                && currentMember?.coverageLimit === coverage;
-              const monthlyPrice = getMonthlyPriceFromTariff(plan, coverage, currentAge ?? -1, zone);
+          {planTiers.length > 0 && (
+            <div className="grid plan-options-grid grid-cols-3 gap-3">
+              {planTiers.map(({ tier, plan, coverage }) => {
+                const isPlanSelected =
+                  currentMember?.requestedPlan === plan &&
+                  currentMember?.coverageLimit === coverage;
 
               return (
                 <button
