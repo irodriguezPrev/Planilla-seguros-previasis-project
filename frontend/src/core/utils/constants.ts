@@ -7,6 +7,9 @@ export const USER_ROLES = {
 
 export const DEFAULT_PAGE_SIZE = 10;
 
+// Identifica la fila de afiliados que representa al titular y la vincula con el Step 1.
+export const AFFILIATION_POLICYHOLDER_ROW_ID = 'policyholder_row';
+
 export const MEDICATION_TIME_UNITS = {
   minuto: {
     singular: 'Minuto',

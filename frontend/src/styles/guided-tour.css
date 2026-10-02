@@ -161,23 +161,67 @@
 @media (max-width: 640px) {
   .guided-tour-dialog {
     top: auto;
-    right: 0.75rem;
-    bottom: max(0.75rem, env(safe-area-inset-bottom));
-    left: 0.75rem;
+    right: 0.5rem;
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    left: 0.5rem;
     width: auto;
-    padding: 1rem;
+    padding: 0.55rem 0.65rem;
+    max-height: min(200px, calc(100dvh - 1rem));
+    overflow-y: auto;
+    border-radius: 16px;
+  }
+
+  .guided-tour-dialog-header > span {
+    font-size: 0.58rem;
+  }
+
+  .guided-tour-skip-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .guided-tour-dots {
+    margin: 0.2rem 0 0.35rem;
+  }
+
+  .guided-tour-dots i {
+    width: 14px;
+    height: 3px;
+  }
+
+  .guided-tour-dots i.active {
+    width: 22px;
+  }
+
+  .guided-tour-dialog h3 {
+    margin-bottom: 0.2rem;
+    font-size: 0.82rem;
+  }
+
+  .guided-tour-dialog p {
+    font-size: 0.68rem;
+    line-height: 1.25;
   }
 
   .guided-tour-actions {
-    align-items: flex-end;
+    align-items: center;
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
   }
 
   .guided-tour-actions > div {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
   }
 
   .guided-tour-actions .btn-pill {
-    padding-inline: 0.7rem;
+    padding: 0.32rem 0.45rem;
+    font-size: 0.63rem;
+    white-space: nowrap;
+  }
+
+  .guided-tour-skip {
+    display: none;
   }
 }
 

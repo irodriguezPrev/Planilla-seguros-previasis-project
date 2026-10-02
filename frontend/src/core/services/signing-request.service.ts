@@ -11,7 +11,7 @@ export interface SigningRequestLink {
 }
 
 export interface CreateSigningRequestResponse {
-  expedienteId: string;
+  caseFileId: string;
   expiresAt: string;
   requests: SigningRequestLink[];
 }
@@ -24,7 +24,7 @@ export interface SigningAccessResponse {
   mode: 'SOLO_FIRMA' | 'EDITAR_Y_FIRMAR';
   editableSections: string[];
   status: 'PENDIENTE' | 'FIRMADO';
-  expedienteStatus: string;
+  caseFileStatus: string;
   expiresAt: string;
   formData: AffiliationFormState;
 }
@@ -46,6 +46,49 @@ export interface SignDocumentResponse {
 
 export interface ReferralProfileResponse {
   broker: BrokerSection;
+}
+
+export type SellerSigningRequestStatus =
+  | 'PENDIENTE_FIRMA'
+  | 'PARCIALMENTE_FIRMADO'
+  | 'FIRMADO'
+  | 'EXPIRADO'
+  | 'REVOCADO';
+
+export interface SellerSigningRequestSigner {
+  role: RemoteSignerRole;
+  name: string;
+  status: 'PENDIENTE' | 'FIRMADO' | 'EXPIRADO' | 'REVOCADO';
+  expiresAt: string;
+  signedAt: string | null;
+}
+
+export interface SellerSigningRequestItem {
+  caseFileId: string;
+  caseFileNumber: string;
+  status: SellerSigningRequestStatus;
+  holderName: string;
+  documentType: string;
+  documentNumber: string;
+  email: string | null;
+  createdAt: string;
+  sentAt: string | null;
+  signedAt: string | null;
+  signedCount: number;
+  signerCount: number;
+  signers: SellerSigningRequestSigner[];
+}
+
+export interface SellerSigningRequestsResponse {
+  requests: SellerSigningRequestItem[];
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+export interface SellerSigningRequestDetail {
+  caseFileId: string;
+  formData: AffiliationFormState;
 }
 
 export interface MyReferralResponse {
@@ -111,6 +154,34 @@ export const signRemoteDocument = (
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(payload),
 });
+
+export const getMySigningRequests = (
+  limit = 20,
+  offset = 0,
+): Promise<SellerSigningRequestsResponse> => {
+  const token = storage.getToken();
+  const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return requestJson(`${signingApiBase}/signing-requests/mine?${query}`, {
+    cache: 'no-store',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+};
+
+export const getMySigningRequest = (caseFileId: string): Promise<SellerSigningRequestDetail> => {
+  const token = storage.getToken();
+  return requestJson(`${signingApiBase}/signing-requests/mine/${encodeURIComponent(caseFileId)}`, {
+    cache: 'no-store',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+};
+
+export const deleteMyPendingSigningRequest = (caseFileId: string): Promise<{ ok: true }> => {
+  const token = storage.getToken();
+  return requestJson(`${signingApiBase}/signing-requests/mine/${encodeURIComponent(caseFileId)}`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+};
 
 export const getReferralProfile = (code: string): Promise<ReferralProfileResponse> =>
   requestJson(`${signingApiBase}/referrals/${encodeURIComponent(code)}`, { cache: 'no-store' });

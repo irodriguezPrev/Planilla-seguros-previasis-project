@@ -33,10 +33,21 @@ function parseDateString(dateStr: string): Date | null {
   return date;
 }
 
+/** Adds `months` to a date, clamping the day for shorter target months (e.g. Jan 31 + 1 month -> Feb 28/29). */
+function addMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  const targetMonth = result.getMonth() + months;
+  result.setMonth(targetMonth);
+  if (result.getMonth() !== ((targetMonth % 12) + 12) % 12) {
+    result.setDate(0);
+  }
+  return result;
+}
+
 /** Calculates actuarial age, rounding up when the next birthday is at most six months away. */
 export function calculateActuarialAge(
   dateOfBirthInput: string | Date,
-  referenceDateInput: string | Date = new Date()
+  referenceDateInput: string | Date = new Date(),
 ): number | null {
   const dateOfBirth =
     typeof dateOfBirthInput === 'string'
@@ -53,38 +64,46 @@ export function calculateActuarialAge(
     return null;
   }
 
+  // Compare date-only values to avoid off-by-one errors caused by the
+  // reference time-of-day (new Date()) vs. midnight construction of birthdays.
+  const birth = new Date(
+    dateOfBirth.getFullYear(),
+    dateOfBirth.getMonth(),
+    dateOfBirth.getDate(),
+  );
+  const reference = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate(),
+  );
+
   // Calculate the base chronological age.
-  let chronologicalAge = referenceDate.getFullYear() - dateOfBirth.getFullYear();
+  let chronologicalAge = reference.getFullYear() - birth.getFullYear();
 
   // Adjust when the birthday has not occurred yet in the current year.
-  const birthMonth = dateOfBirth.getMonth();
-  const birthDay = dateOfBirth.getDate();
-  const referenceMonth = referenceDate.getMonth();
-  const referenceDay = referenceDate.getDate();
-
   if (
-    referenceMonth < birthMonth ||
-    (referenceMonth === birthMonth && referenceDay < birthDay)
+    reference.getMonth() < birth.getMonth() ||
+    (reference.getMonth() === birth.getMonth() &&
+      reference.getDate() < birth.getDate())
   ) {
     chronologicalAge--;
   }
 
-  // Determine the next birthday.
+  // Determine the next birthday (strictly after the reference date).
   const nextBirthday = new Date(
-    referenceDate.getFullYear(),
-    birthMonth,
-    birthDay,
+    reference.getFullYear(),
+    birth.getMonth(),
+    birth.getDate(),
   );
-
-  if (nextBirthday < referenceDate) {
+  if (nextBirthday <= reference) {
     nextBirthday.setFullYear(nextBirthday.getFullYear() + 1);
   }
 
-  const millisecondsPerMonth = (1000 * 60 * 60 * 24 * 365.25) / 12;
-  const monthsUntilBirthday =
-    (nextBirthday.getTime() - referenceDate.getTime()) / millisecondsPerMonth;
-
-  if (monthsUntilBirthday <= 6) {
+  // Actuarial rule: if the next birthday is at most six months away, use the
+  // following age. Measured with calendar-month arithmetic (not a 365.25-day
+  // average, which mis-classifies the boundary by ~1.4 days and produced
+  // inconsistent results depending on the time of day).
+  if (nextBirthday <= addMonths(reference, 6)) {
     return chronologicalAge + 1;
   }
 

@@ -15,14 +15,19 @@ import {
   AffiliateRow,
   HealthDeclarationSection,
   AffiliationFormState,
+  PaymentFrequency,
 } from '@/core/interfaces/affiliation.interfaces';
 import {
   HEALTH_QUESTION_FILLING_GROUPS,
   HEALTH_QUESTIONS,
 } from '@/core/config/health-questions.config';
 import { getCitiesByState } from '@/core/config/venezuela-locations.config';
-import { getZoneFromState } from '@/core/config/zone-config';
+import { getZoneFromState, type Zone } from '@/core/config/zone-config';
 import { calculateActuarialAge } from '@/core/utils/age.utils';
+import { getLocalIsoDate } from '@/core/utils/date.utils';
+import { applyAgeBasedPlan } from '@/core/utils/affiliate-plan.utils';
+import { AFFILIATION_POLICYHOLDER_ROW_ID } from '@/core/utils/constants';
+import { getPriceForFrequency } from '@/core/config/tariff-data';
 import {
   isValidEmail,
   isValidVenezuelanMobilePhone,
@@ -95,7 +100,7 @@ const INITIAL_STATE: AffiliationFormState = {
     operationType: 'Emisión',
     contractType: 'Individual',
     applicationNumber: '',
-    applicationDate: new Date().toISOString().slice(0, 10),
+    applicationDate: getLocalIsoDate(),
   },
   policyholder: {
     firstNames: '',
@@ -196,7 +201,7 @@ const INITIAL_STATE: AffiliationFormState = {
   },
   affiliates: [
     {
-      id: 'policyholder_row',
+      id: AFFILIATION_POLICYHOLDER_ROW_ID,
       affiliateCode: 1,
       firstNames: '',
       lastNames: '',
@@ -254,6 +259,22 @@ const getApprovalSnapshot = (data: AffiliationFormState): string => JSON.stringi
 
 const uppercaseName = (value: string | undefined) =>
   (value || '').toLocaleUpperCase('es-VE');
+
+const getAffiliateFeeForRow = (
+  affiliate: Pick<AffiliateRow, 'requestedPlan' | 'coverageLimit' | 'birthDate'>,
+  zone: Zone,
+  paymentFrequency: PaymentFrequency,
+): number => {
+  const age = calculateActuarialAge(affiliate.birthDate);
+  if (age === null) return 0;
+  return getPriceForFrequency(
+    affiliate.requestedPlan,
+    affiliate.coverageLimit,
+    age,
+    zone,
+    paymentFrequency,
+  ) ?? 0;
+};
 
 const getSubscriptionPlace = (
   policyholder: AffiliationFormState['policyholder'],
@@ -583,7 +604,6 @@ export default function AffiliationPage() {
       })
       .catch((error) => {
         if (!active) return;
-        console.error('Error cargando el vendedor referido:', error);
         setReferralError(error instanceof Error ? error.message : tValidation('invalidReferral'));
       })
       .finally(() => {
@@ -606,26 +626,71 @@ export default function AffiliationPage() {
   }, [formData]);
 
 
+  // Step 1 y la fila del titular en Step 3 comparten la fecha de nacimiento.
+  // Si el titular fue borrado del grupo familiar la fila deja de existir y el link queda inactivo.
   useEffect(() => {
-    if (formData.policyholder.firstNames || formData.policyholder.lastNames) {
-      const full = `${formData.policyholder.firstNames} ${formData.policyholder.lastNames}`.trim();
-      setFormData((prev) => {
-        const updatedAffiliates = [...prev.affiliates];
-        if (updatedAffiliates.length > 0) {
-          updatedAffiliates[0] = {
-            ...updatedAffiliates[0],
-            firstNames: prev.policyholder.firstNames || updatedAffiliates[0].firstNames,
-            lastNames: prev.policyholder.lastNames || updatedAffiliates[0].lastNames,
-            fullName: full || updatedAffiliates[0].fullName,
-            documentNumber: prev.policyholder.documentNumber || updatedAffiliates[0].documentNumber,
-            documentType: prev.policyholder.documentType,
-            birthDate: prev.policyholder.birthDate || updatedAffiliates[0].birthDate,
-            sex: prev.policyholder.sex,
-          };
+    setFormData((prev) => {
+      const holderIndex = prev.affiliates.findIndex(
+        (affiliate) => affiliate.id === AFFILIATION_POLICYHOLDER_ROW_ID,
+      );
+      if (holderIndex === -1) return prev;
+
+      const holder = prev.affiliates[holderIndex];
+      const hasPolicyholderIdentity = Boolean(
+        prev.policyholder.firstNames || prev.policyholder.lastNames,
+      );
+      const fullName = `${prev.policyholder.firstNames} ${prev.policyholder.lastNames}`.trim();
+
+      const withLinkedBirthDate: AffiliateRow = {
+        ...holder,
+        firstNames: hasPolicyholderIdentity
+          ? prev.policyholder.firstNames || holder.firstNames
+          : holder.firstNames,
+        lastNames: hasPolicyholderIdentity
+          ? prev.policyholder.lastNames || holder.lastNames
+          : holder.lastNames,
+        fullName: hasPolicyholderIdentity ? fullName || holder.fullName : holder.fullName,
+        documentNumber: hasPolicyholderIdentity
+          ? prev.policyholder.documentNumber || holder.documentNumber
+          : holder.documentNumber,
+        documentType: hasPolicyholderIdentity
+          ? prev.policyholder.documentType
+          : holder.documentType,
+        sex: hasPolicyholderIdentity ? prev.policyholder.sex : holder.sex,
+        birthDate: prev.policyholder.birthDate,
+      };
+
+      const birthDateChanged = prev.policyholder.birthDate !== holder.birthDate;
+      // La regla de plan por edad solo se aplica cuando la fecha cambia, para no
+      // sobrescribir un plan/cobertura que el usuario ajustó en el Step 3.
+      const nextHolder = birthDateChanged
+        ? applyAgeBasedPlan(withLinkedBirthDate, prev.policyholder.birthDate)
+        : withLinkedBirthDate;
+
+      if (!birthDateChanged) {
+        const identityUnchanged =
+          nextHolder.firstNames === holder.firstNames &&
+          nextHolder.lastNames === holder.lastNames &&
+          nextHolder.fullName === holder.fullName &&
+          nextHolder.documentNumber === holder.documentNumber &&
+          nextHolder.documentType === holder.documentType &&
+          nextHolder.sex === holder.sex;
+        if (identityUnchanged) return prev;
+      }
+
+      const updatedAffiliates = [...prev.affiliates];
+      updatedAffiliates[holderIndex] = birthDateChanged
+        ? {
+          ...nextHolder,
+          fee: getAffiliateFeeForRow(
+            nextHolder,
+            getZoneFromState(prev.policyholder.residenceState),
+            prev.payment.paymentFrequency,
+          ),
         }
-        return { ...prev, affiliates: updatedAffiliates };
-      });
-    }
+        : nextHolder;
+      return { ...prev, affiliates: updatedAffiliates };
+    });
   }, [
     formData.policyholder.firstNames,
     formData.policyholder.lastNames,
@@ -656,8 +721,18 @@ export default function AffiliationPage() {
         formData.affiliates,
         normalizedAffiliates,
       );
+      const holder = mergedAffiliates.find(
+        (affiliate) => affiliate.id === AFFILIATION_POLICYHOLDER_ROW_ID,
+      );
+      // Editar la fecha del titular en Step 3 también actualiza el Step 1.
+      // Si el titular fue borrado del grupo, la fila no existe y el link queda inactivo.
+      const policyholder = holder && holder.birthDate !== previous.policyholder.birthDate
+        ? { ...previous.policyholder, birthDate: holder.birthDate }
+        : previous.policyholder;
+
       return {
         ...previous,
+        policyholder,
         affiliates: mergedAffiliates,
         healthDeclaration: reconcileAffiliateHealthData(
           previous.healthDeclaration,
@@ -1061,7 +1136,7 @@ export default function AffiliationPage() {
         operationType: 'Emisión',
         contractType: 'Individual',
         applicationNumber: 'SOL-2026-0089',
-        applicationDate: new Date().toISOString().slice(0, 10),
+        applicationDate: getLocalIsoDate(),
       },
       policyholder: {
         firstNames: 'Carlos Andrés',
@@ -1225,7 +1300,7 @@ export default function AffiliationPage() {
   };
 
   return (
-    <div className="affiliation-page" style={{ backgroundColor: 'var(--bg-app)', minHeight: '100vh', paddingBottom: '6rem' }}>
+    <div className="affiliation-page" style={{ backgroundColor: 'var(--bg-app)', minHeight: '100vh', paddingBottom: '1.5rem' }}>
       {touchDiagnostic && (
         <output
           aria-live="polite"
@@ -1318,11 +1393,10 @@ export default function AffiliationPage() {
           gap: 1.75rem;
         }
         .affiliation-bottom-bar {
-          position: fixed;
+          position: sticky;
           bottom: 1rem;
-          left: 0;
-          right: 0;
           z-index: 40;
+          width: 100%;
           transition: transform 180ms ease, opacity 180ms ease;
         }
         .affiliation-bottom-inner {
@@ -1394,8 +1468,9 @@ export default function AffiliationPage() {
             gap: 1.25rem;
           }
           .affiliation-bottom-bar {
-            position: static;
-            padding: 0 1rem max(0.75rem, env(safe-area-inset-bottom));
+            position: sticky;
+            bottom: max(0.5rem, env(safe-area-inset-bottom));
+            padding: 0;
             transform: none;
             opacity: 1;
             pointer-events: auto;
@@ -1719,11 +1794,9 @@ export default function AffiliationPage() {
             />
           )}
         </div>
-      </div>
 
 
-      <div className="affiliation-bottom-bar">
-        <div className="container" style={{ maxWidth: '1200px' }}>
+        <div className="affiliation-bottom-bar">
           <div className="affiliation-bottom-inner">
             <div className="affiliation-bottom-action">
               {currentStep === 6 && (

@@ -27,6 +27,8 @@ import {
   isQuestionApplicableToAffiliate,
 } from '@/core/utils/health-progress.utils';
 import {
+  isValidMonthYear,
+  isValidPastMonthYear,
   monthInputValueToMonthYear,
   monthYearToInputValue,
 } from '@/core/utils/format.utils';
@@ -46,6 +48,8 @@ import {
   Users,
 } from 'lucide-react';
 import { getMedicationTimeUnitLabel } from '@/core/utils/constants';
+import { getLocalIsoDate, getLocalIsoMonth } from '@/core/utils/date.utils';
+import { DateSelect } from '@/core/components/ui';
 
 interface Step4Props {
   healthDeclaration: HealthDeclarationSection;
@@ -81,6 +85,12 @@ const getSuggestedConditions = (question: ResolvedHealthQuestionItem): string[] 
     .map((condition) => capitalizeCondition(condition.replace(/[.?]+$/, '')))
     .filter((condition) => condition.length > 2 && condition.length < 65);
 
+const selectedFirst = <T,>(items: T[], isSelected: (item: T) => boolean): T[] =>
+  items
+    .map((item, index) => ({ item, index, selected: isSelected(item) }))
+    .sort((left, right) => Number(right.selected) - Number(left.selected) || left.index - right.index)
+    .map(({ item }) => item);
+
 export const Step4HealthDeclaration: React.FC<Step4Props> = ({
   healthDeclaration,
   affiliates,
@@ -95,6 +105,31 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null);
   const [otherConditions, setOtherConditions] = useState<Record<string, string>>({});
   const [expandedGroupAnswers, setExpandedGroupAnswers] = useState<Record<string, boolean>>({});
+  const [touchedDiagnosisDates, setTouchedDiagnosisDates] = useState<Record<string, boolean>>({});
+  const currentIsoMonth = getLocalIsoMonth();
+
+  /**
+   * Marca un campo de fecha como ya editado para no mostrar el error mientras se escribe.
+   * Los `<input type="month">` emiten un valor atómico (`AAAA-MM` o vacío), así que basta con
+   * marcarlos en `onChange`; los de texto libre usan `onBlur`.
+   */
+  const markDiagnosisDateTouched = (key: string) => {
+    setTouchedDiagnosisDates((current) => (current[key] ? current : { ...current, [key]: true }));
+  };
+
+  /** Mensaje de error de una fecha de diagnóstico, o `undefined` si la fecha es válida/vacía. */
+  const getDiagnosisDateError = (value: string): string | undefined => {
+    if (!value.trim()) return undefined;
+    if (isValidPastMonthYear(value)) return undefined;
+    return isValidMonthYear(value) ? t('clinicalDateInFuture') : t('clinicalDateInvalidFormat');
+  };
+
+  const renderDiagnosisDateError = (key: string, value: string) => {
+    if (!touchedDiagnosisDates[key]) return null;
+    const error = getDiagnosisDateError(value);
+    if (!error) return null;
+    return <span className="input-error-message">{error}</span>;
+  };
   const getAffiliateName = (affiliate: AffiliateRow) =>
     affiliate.fullName || t('affiliateNumber', { code: affiliate.affiliateCode });
 
@@ -1024,7 +1059,9 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
           <div>
             <p className="previasis-label" style={{ marginBottom: '0.5rem' }}>{t('selectCondition')}</p>
             <div className="health-condition-chips">
-              {suggestions.map((condition) => {
+              {selectedFirst(suggestions, (condition) => details.some(
+                (detail) => detail.condition.toLocaleLowerCase() === condition.toLocaleLowerCase(),
+              )).map((condition) => {
                 const alreadyAdded = details.some(
                   (detail) => detail.condition.toLocaleLowerCase() === condition.toLocaleLowerCase(),
                 );
@@ -1033,6 +1070,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
                     key={condition}
                     type="button"
                     className={`health-condition-chip ${alreadyAdded ? 'selected' : ''}`}
+                    style={alreadyAdded ? { order: -1 } : undefined}
                     onClick={() => toggleClinicalCondition(currentQuestion, affiliate.affiliateCode, condition)}
                     aria-pressed={alreadyAdded}
                     title={alreadyAdded ? t('removeCondition', { condition }) : t('addCondition', { condition })}
@@ -1069,18 +1107,30 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
               <div className="previasis-input-group">
                 <label className="previasis-label">{t('clinicalDate')}</label>
                 {showsDetailedClinicalFields ? (
-                  <input className="previasis-input" placeholder={t('clinicalDatePlaceholder')} value={detail.diagnosisDate} onChange={(event) => updateClinicalDetail(detail.id, { diagnosisDate: event.target.value })} required />
+                  <input
+                    className={`previasis-input ${getDiagnosisDateError(detail.diagnosisDate) ? 'input-error' : ''}`}
+                    placeholder={t('clinicalDatePlaceholder')}
+                    value={detail.diagnosisDate}
+                    onChange={(event) => updateClinicalDetail(detail.id, { diagnosisDate: event.target.value })}
+                    onBlur={() => markDiagnosisDateTouched(`clinical-${detail.id}`)}
+                    required
+                  />
                 ) : (
                   <input
                     type="month"
-                    className="previasis-input"
+                    className={`previasis-input ${getDiagnosisDateError(detail.diagnosisDate) ? 'input-error' : ''}`}
+                    max={currentIsoMonth}
                     value={monthYearToInputValue(detail.diagnosisDate)}
-                    onChange={(event) => updateClinicalDetail(detail.id, {
-                      diagnosisDate: monthInputValueToMonthYear(event.target.value),
-                    })}
+                    onChange={(event) => {
+                      markDiagnosisDateTouched(`clinical-${detail.id}`);
+                      updateClinicalDetail(detail.id, {
+                        diagnosisDate: monthInputValueToMonthYear(event.target.value),
+                      });
+                    }}
                     required
                   />
                 )}
+                {renderDiagnosisDateError(`clinical-${detail.id}`, detail.diagnosisDate)}
               </div>
               {showsDetailedClinicalFields && (
                 <>
@@ -1089,8 +1139,13 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
                     <input className="previasis-input" placeholder={t('clinicalTreatmentPlaceholder')} value={detail.treatment} onChange={(event) => updateClinicalDetail(detail.id, { treatment: event.target.value })} required />
                   </div>
                   <div className="previasis-input-group">
-                    <label className="previasis-label">{t('clinicalLastCheck')}</label>
-                    <input type="date" className="previasis-input" value={detail.lastCheckupDate} onChange={(event) => updateClinicalDetail(detail.id, { lastCheckupDate: event.target.value })} />
+                    <label className="previasis-label" htmlFor={`clinical-last-check-${detail.id}`}>{t('clinicalLastCheck')}</label>
+                    <DateSelect
+                      id={`clinical-last-check-${detail.id}`}
+                      max={getLocalIsoDate()}
+                      value={detail.lastCheckupDate}
+                      onChange={(lastCheckupDate) => updateClinicalDetail(detail.id, { lastCheckupDate })}
+                    />
                   </div>
                   <div className="previasis-input-group health-clinical-wide">
                     <label className="previasis-label">{t('clinicalInstitution')}</label>
@@ -1185,7 +1240,9 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
           <div>
             <p className="previasis-label" style={{ marginBottom: '0.5rem' }}>{t('selectEventType')}</p>
             <div className="health-condition-chips">
-              {currentQuestion.beneficiaryDetailOptions.field1.map((option) => {
+              {selectedFirst(currentQuestion.beneficiaryDetailOptions.field1, (option) => details.some(
+                ({ detail }) => detail.field1.trim().toLocaleLowerCase('es-VE') === option.toLocaleLowerCase('es-VE'),
+              )).map((option) => {
                 const isSelected = details.some(
                   ({ detail }) => detail.field1.trim().toLocaleLowerCase('es-VE') === option.toLocaleLowerCase('es-VE'),
                 );
@@ -1194,6 +1251,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
                     key={option}
                     type="button"
                     className={`health-condition-chip ${isSelected ? 'selected' : ''}`}
+                    style={isSelected ? { order: -1 } : undefined}
                     onClick={() => toggleBeneficiaryDetailOption(currentQuestion, affiliate.affiliateCode, option)}
                     aria-pressed={isSelected}
                     title={isSelected ? t('removeDetail') : t('addCondition', { condition: option })}
@@ -1283,20 +1341,26 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
                   {currentQuestion.includeInClinicalSummary ? (
                     <input
                       type="month"
-                      className="previasis-input"
+                      className={`previasis-input ${getDiagnosisDateError(detail.field2) ? 'input-error' : ''}`}
+                      max={currentIsoMonth}
                       value={monthYearToInputValue(detail.field2)}
-                      onChange={(event) => updateBeneficiaryDetail(
-                        currentQuestion,
-                        detail.id,
-                        originalIndex,
-                        'field2',
-                        monthInputValueToMonthYear(event.target.value),
-                      )}
+                      onChange={(event) => {
+                        markDiagnosisDateTouched(`beneficiary-${detail.id}`);
+                        updateBeneficiaryDetail(
+                          currentQuestion,
+                          detail.id,
+                          originalIndex,
+                          'field2',
+                          monthInputValueToMonthYear(event.target.value),
+                        );
+                      }}
                       required
                     />
                   ) : (
                     <input className="previasis-input" placeholder={currentQuestion.beneficiaryDetailPlaceholders?.field2} value={detail.field2} onChange={(event) => updateBeneficiaryDetail(currentQuestion, detail.id, originalIndex, 'field2', event.target.value)} required />
                   )}
+                  {currentQuestion.includeInClinicalSummary
+                    && renderDiagnosisDateError(`beneficiary-${detail.id}`, detail.field2)}
                 </div>
               )}
               {details.length > 1 && (
@@ -1373,27 +1437,29 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
       const quickOptions = mode === 'clinical'
         ? getSuggestedConditions(item)
         : item.beneficiaryDetailOptions?.field1 || [item.title];
+      const isOptionSelected = (option: string) => mode === 'clinical'
+        ? healthDeclaration.medicalConditionDetails.some((detail) =>
+            detail.questionId === item.id &&
+            Number(detail.affiliateCode) === affiliate.affiliateCode &&
+            detail.condition.trim().toLocaleLowerCase('es-VE') === option.trim().toLocaleLowerCase('es-VE')
+          )
+        : mode === 'beneficiary'
+          ? (healthDeclaration.clarificationDetails?.[item.id] || []).some((detail) =>
+              detail.affiliateCode === affiliate.affiliateCode &&
+              (!item.beneficiaryDetailOptions?.field1 || detail.field1.trim().toLocaleLowerCase('es-VE') === option.trim().toLocaleLowerCase('es-VE'))
+            )
+          : getAffiliateAnswers(healthDeclaration, item, affiliates)[affiliate.affiliateCode] === 'SÍ';
       return (
         <div className="health-group-option-category" key={item.id}>
           <small>{item.title}</small>
           <div className="health-condition-chips">
-            {quickOptions.map((option) => {
-              const selected = mode === 'clinical'
-                ? healthDeclaration.medicalConditionDetails.some((detail) =>
-                    detail.questionId === item.id &&
-                    Number(detail.affiliateCode) === affiliate.affiliateCode &&
-                    detail.condition.trim().toLocaleLowerCase('es-VE') === option.trim().toLocaleLowerCase('es-VE')
-                  )
-                : mode === 'beneficiary'
-                  ? (healthDeclaration.clarificationDetails?.[item.id] || []).some((detail) =>
-                      detail.affiliateCode === affiliate.affiliateCode &&
-                      (!item.beneficiaryDetailOptions?.field1 || detail.field1.trim().toLocaleLowerCase('es-VE') === option.trim().toLocaleLowerCase('es-VE'))
-                    )
-                  : getAffiliateAnswers(healthDeclaration, item, affiliates)[affiliate.affiliateCode] === 'SÍ';
+            {selectedFirst(quickOptions, isOptionSelected).map((option) => {
+              const selected = isOptionSelected(option);
               return (
                 <button
                   type="button"
                   className={`health-condition-chip ${selected ? 'selected' : ''}`}
+                  style={selected ? { order: -1 } : undefined}
                   key={option}
                   onClick={() => activateQuickOption(
                     item,
@@ -1620,8 +1686,17 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
                       <div><strong>{t('globalPositiveTitle')}</strong><span>{t('globalPositiveSub')}</span></div>
                     </div>
                     <div className="health-group-global-options">
-                      {groupQuestions.map((item) => (
-                        <button type="button" className={`health-condition-chip ${healthDeclaration.questions[item.id]?.answer === 'SÍ' ? 'selected' : ''}`} key={item.id} onClick={() => activateGlobalQuickOption(item)}>
+                      {selectedFirst(
+                        groupQuestions,
+                        (item) => healthDeclaration.questions[item.id]?.answer === 'SÍ',
+                      ).map((item) => (
+                        <button
+                          type="button"
+                          className={`health-condition-chip ${healthDeclaration.questions[item.id]?.answer === 'SÍ' ? 'selected' : ''}`}
+                          style={healthDeclaration.questions[item.id]?.answer === 'SÍ' ? { order: -1 } : undefined}
+                          key={item.id}
+                          onClick={() => activateGlobalQuickOption(item)}
+                        >
                           {healthDeclaration.questions[item.id]?.answer === 'SÍ' && <Check size={13} />} {item.title}
                         </button>
                       ))}

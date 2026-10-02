@@ -358,7 +358,7 @@ export class PdfGeneratorService {
     doc.text(`Fecha: ${formatPdfDate(data.header.applicationDate)}`, pageWidth - margin - 3, currentY + 4.5, { align: 'right' });
     currentY += 8.5;
 
-    currentY = drawSectionTitle('1. Datos del Propuesto Afiliado Titular', currentY);
+    currentY = drawSectionTitle('Datos del Propuesto Afiliado Titular', currentY);
     const policyholderData = data.policyholder;
     const halfW = contentWidth / 2;
     const thirdW = contentWidth / 3;
@@ -440,7 +440,7 @@ export class PdfGeneratorService {
 
 
     const contractorData = data.contractor;
-    currentY = drawSectionTitle('2. Datos del Contratante', currentY);
+    currentY = drawSectionTitle('Datos del Contratante', currentY);
 
     const isLegalEntityContractor =
       contractorData.isDifferent && contractorData.personType === 'Juridica';
@@ -616,10 +616,10 @@ export class PdfGeneratorService {
     };
 
     const drawContractorLegalEntity = (entity: LegalEntityData) => {
-      drawContractorSubTitle('2.1. Datos de la Empresa Contratante');
+      drawContractorSubTitle('Datos de la Empresa Contratante');
       buildLegalEntityRowsFromEntity(entity).forEach((row) => drawRow(row));
       currentY += 2;
-      drawContractorSubTitle('2.2. Datos del Representante Legal');
+      drawContractorSubTitle('Datos del Representante Legal');
       drawContractorNaturalPerson(entity.legalRepresentative);
     };
 
@@ -644,7 +644,7 @@ export class PdfGeneratorService {
     }
 
     ensureSpace(52);
-    currentY = drawSectionTitle('3. Personas a Afiliar y Plan Solicitado', currentY);
+    currentY = drawSectionTitle('Personas a Afiliar y Plan Solicitado', currentY);
 
     const colWidths = [8, 50, 22, 20, 20, 12, 16, 25, 22.9];
     const headers = ['Nº', 'Nombres y Apellidos', 'C.I. / R.I.F.', 'F. Nac.', 'Parentesco', 'Sexo', 'P(kg)/E(cm)', 'Plan Solicitado', 'Límite Cobertura'];
@@ -695,6 +695,15 @@ export class PdfGeneratorService {
           : '-';
       doc.text(legalRequestedPlan, rowX + 1.5, currentY + 4.5);
       rowX += colWidths[7];
+      const coverageLimit = Number(af.coverageLimit);
+      const formattedCoverage = Number.isFinite(coverageLimit) && coverageLimit > 0
+        ? `$${coverageLimit.toLocaleString('es-VE')}`
+        : '-';
+      doc.text(
+        doc.splitTextToSize(formattedCoverage, colWidths[8] - 3)[0] || '-',
+        rowX + 1.5,
+        currentY + 4.5,
+      );
 
       currentY += 6.5;
     });
@@ -721,8 +730,7 @@ export class PdfGeneratorService {
 
     const lineHeight = 4.8;
 
-    // Las preguntas oficiales (25 y 26) no se imprimen aquí: se renderizan en
-    // la sección "6. Declaraciones y Autorizaciones Oficiales".
+    // Las preguntas 25 y 26 se imprimen juntas en "OTROS CONTRATOS DE SALUD".
     HEALTH_QUESTIONS.filter((q) => !OFFICIAL_DECLARATION_QUESTION_IDS.includes(q.id)).forEach((q) => {
       const answer = data.healthDeclaration.questions[q.id]?.answer || 'NO';
       const extra = data.healthDeclaration.questions[q.id]?.extraDetails;
@@ -805,7 +813,7 @@ export class PdfGeneratorService {
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(5.2);
         doc.setTextColor(0, 139, 71);
-        const extraText = `Esp: ${extra.substring(0, 60)}${extra.length > 60 ? '…' : ''}`;
+        const extraText = `${extra.substring(0, 60)}${extra.length > 60 ? '…' : ''}`;
         doc.text(extraText, margin + 2, detailY);
         detailY += lineHeight;
       }
@@ -1127,110 +1135,9 @@ export class PdfGeneratorService {
       )
       .forEach(renderBeneficiaryDetails);
 
-    if (currentY + 26 > contentBottomLimit) {
-      startNewPage();
-    }
-
-    currentY = drawSectionTitle('5. Forma de Pago', currentY);
-    const payment = data.payment;
-
-    const methodText = `${payment.method}${payment.otherPaymentDetails ? ` (${payment.otherPaymentDetails})` : ''}`;
-
-    drawRow([
-      { label: 'Frecuencia de Pago', value: payment.paymentFrequency, x: margin, w: thirdW },
-      { label: 'Moneda de Pago', value: payment.currency, x: margin + thirdW, w: thirdW },
-      { label: 'Modalidad de Pago', value: methodText, x: margin + thirdW * 2, w: thirdW },
-    ]);
-
-    currentY += 3;
-
     const officialDeclarationQuestions = OFFICIAL_DECLARATION_QUESTION_IDS.flatMap((questionId) => {
       const question = HEALTH_QUESTIONS.find((candidate) => candidate.id === questionId);
       return question ? [question] : [];
-    });
-
-    /**
-     * Calcula la altura del recuadro de una pregunta oficial (25 / 26) usando
-     * la misma tipografía de la tabla de "Declaración de Salud", de modo que la
-     * medición previa y el dibujo final coincidan exactamente.
-     */
-    const measureOfficialDeclarationQuestion = (question: (typeof HEALTH_QUESTIONS)[number]) => {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.0);
-
-      const answer = data.healthDeclaration.questions[question.id]?.answer || 'NO';
-      const isYes = answer === 'SÍ';
-
-      const yesCheckboxWidth = doc.getTextWidth('SÍ') + 3.2 + 2.5;
-      const noCheckboxWidth = doc.getTextWidth('NO') + 3.2 + 2.5;
-      const totalCheckboxWidth = yesCheckboxWidth + 4 + noCheckboxWidth;
-      const textWidth = contentWidth - totalCheckboxWidth - 9;
-
-      const fullText = `${question.title}: ${question.description}`;
-      const wrappedLines = doc.splitTextToSize(fullText, textWidth);
-
-      const height = Math.max(7, wrappedLines.length * lineHeight + 3);
-
-      return { isYes, yesCheckboxWidth, totalCheckboxWidth, wrappedLines, height };
-    };
-
-    const renderOfficialDeclarationQuestion = (question: (typeof HEALTH_QUESTIONS)[number]) => {
-      const metrics = measureOfficialDeclarationQuestion(question);
-
-      ensureSpace(metrics.height);
-
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.2);
-      doc.rect(margin, currentY, contentWidth, metrics.height);
-
-      metrics.wrappedLines.forEach((line: string, index: number) => {
-        const textY = currentY + 2.5 + index * lineHeight;
-        const colonIndex = index === 0 ? line.indexOf(':') : -1;
-
-        if (colonIndex !== -1) {
-          const lineTitle = line.substring(0, colonIndex + 1);
-          const lineDescription = line.substring(colonIndex + 1);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(6.0);
-          doc.setTextColor(metrics.isYes ? 0 : 7, metrics.isYes ? 139 : 62, metrics.isYes ? 71 : 35);
-          doc.text(lineTitle, margin + 2, textY);
-          const descriptionX = margin + 2 + doc.getTextWidth(lineTitle);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(6.0);
-          doc.setTextColor(71, 85, 105);
-          doc.text(lineDescription, descriptionX, textY);
-          return;
-        }
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(6.0);
-        doc.setTextColor(71, 85, 105);
-        doc.text(line, margin + 2, textY);
-      });
-
-      const finalCheckboxY = currentY + metrics.height / 2;
-      const checkStartX = margin + contentWidth - metrics.totalCheckboxWidth - 3;
-      drawCheckbox('SÍ', metrics.isYes, checkStartX, finalCheckboxY);
-      drawCheckbox('NO', !metrics.isYes, checkStartX + metrics.yesCheckboxWidth + 4, finalCheckboxY);
-
-      currentY += metrics.height;
-    };
-
-    const officialDeclarationBlockHeight = officialDeclarationQuestions.reduce(
-      (total, question) => total + measureOfficialDeclarationQuestion(question).height + 2,
-      0,
-    );
-
-    if (currentY + officialDeclarationBlockHeight + 150 > pageHeight - margin - 18) {
-      doc.addPage();
-      currentY = margin + 22;
-    }
-
-    currentY = drawSectionTitle('6. Declaraciones y Autorizaciones Oficiales', currentY);
-
-    officialDeclarationQuestions.forEach((question) => {
-      renderOfficialDeclarationQuestion(question);
-      currentY += 2;
     });
 
     /** Caja "OTROS CONTRATOS DE SALUD": pregunta oficial + checkboxes SÍ/NO + tabla por contrato. */
@@ -1265,8 +1172,16 @@ export class PdfGeneratorService {
       const isYes = data.healthDeclaration.questions[question.id]?.answer === 'SÍ';
       const metrics = measureAntecedentQuestion(question);
       const tableHeaderHeight = 5;
-      const tableHeight = isYes && entries.length > 0
-        ? tableHeaderHeight + entries.length * rowHeight
+      const tableEntries: AntecedentDetail[] = isYes
+        ? entries
+        : Array.from({ length: 2 }, () => ({
+            field1: 'N/A',
+            field2: 'N/A',
+            field3: 'N/A',
+            field4: 'N/A',
+          }));
+      const tableHeight = tableEntries.length > 0
+        ? tableHeaderHeight + tableEntries.length * rowHeight
         : 0;
       const blockHeight = metrics.height + tableHeight;
 
@@ -1292,7 +1207,7 @@ export class PdfGeneratorService {
       drawCheckbox('SÍ', isYes, checkStartX, finalCheckboxY);
       drawCheckbox('NO', !isYes, checkStartX + metrics.yesCheckboxWidth + 4, finalCheckboxY);
 
-      if (isYes && entries.length > 0) {
+      if (tableEntries.length > 0) {
         const tableTop = currentY + metrics.height;
         const tableBottom = tableTop + tableHeight;
 
@@ -1314,7 +1229,7 @@ export class PdfGeneratorService {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(5.8);
         doc.setTextColor(15, 23, 42);
-        entries.forEach((entry, rowIndex) => {
+        tableEntries.forEach((entry, rowIndex) => {
           const rowTop = tableTop + tableHeaderHeight + rowIndex * rowHeight;
           doc.setDrawColor(203, 213, 225);
           doc.setLineWidth(0.18);
@@ -1356,8 +1271,6 @@ export class PdfGeneratorService {
     if (currentY + boxHeaderHeight + 66 > pageHeight - margin - 15) {
       doc.addPage();
       currentY = margin + 22;
-    } else {
-      currentY += 6;
     }
     doc.setFillColor(241, 245, 249);
     doc.setDrawColor(203, 213, 225);
@@ -1367,7 +1280,7 @@ export class PdfGeneratorService {
     doc.setFontSize(7.5);
     doc.setTextColor(7, 62, 35);
     doc.text('OTROS CONTRATOS DE SALUD', margin + 3, currentY + 4.6);
-    currentY += boxHeaderHeight + 4;
+    currentY += boxHeaderHeight;
 
     const q25 = officialDeclarationQuestions.find((item) => item.id === 25);
     const q26 = officialDeclarationQuestions.find((item) => item.id === 26);
@@ -1381,6 +1294,22 @@ export class PdfGeneratorService {
       renderAntecedentQuestionWithTable(q26, getAntecedentEntries(26), refusalColumns, refusalWidths, dataRowHeight);
       currentY += 4;
     }
+
+    if (currentY + 26 > contentBottomLimit) {
+      startNewPage();
+    }
+
+    currentY = drawSectionTitle('Forma de Pago', currentY);
+    const payment = data.payment;
+    const methodText = `${payment.method}${payment.otherPaymentDetails ? ` (${payment.otherPaymentDetails})` : ''}`;
+
+    drawRow([
+      { label: 'Frecuencia de Pago', value: payment.paymentFrequency, x: margin, w: thirdW },
+      { label: 'Moneda de Pago', value: payment.currency, x: margin + thirdW, w: thirdW },
+      { label: 'Modalidad de Pago', value: methodText, x: margin + thirdW * 2, w: thirdW },
+    ]);
+
+    currentY += 3;
 
     if (currentY + 42 > pageHeight - margin - 15) {
       doc.addPage();
@@ -1448,7 +1377,7 @@ export class PdfGeneratorService {
     currentY += 2.5;
 
     ensureSpace(76);
-    currentY = drawSectionTitle('7. Firmas y Huellas Dactilares Oficiales', currentY);
+    currentY = drawSectionTitle('Firmas y Huellas Dactilares Oficiales', currentY);
 
     const boxSignW = (contentWidth - 6) / 2;
     const boxSignH = 46;
@@ -1528,7 +1457,7 @@ export class PdfGeneratorService {
 
     currentY += boxSignH + 4;
 
-    currentY = drawSectionTitle('8. Intermediario de la Actividad Aseguradora', currentY);
+    currentY = drawSectionTitle('Intermediario de la Actividad Aseguradora', currentY);
     const broker = data.broker;
     drawRow([
       { label: 'Nombre y Apellido del Intermediario', value: broker.fullName, x: margin, w: thirdW * 1.2 },

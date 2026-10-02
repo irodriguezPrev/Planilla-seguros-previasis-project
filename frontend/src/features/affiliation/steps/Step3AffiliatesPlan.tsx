@@ -8,6 +8,7 @@ import {
   Relationship,
 } from '@/core/interfaces/affiliation.interfaces';
 import { calculateActuarialAge as calculateAge } from '@/core/utils/age.utils';
+import { applyAgeBasedPlan } from '@/core/utils/affiliate-plan.utils';
 import {
   applyMinorDocument,
   requiresMinorDocumentChoice,
@@ -16,7 +17,6 @@ import { PAYMENT_FREQUENCY_TRANSLATION_KEYS } from '@/core/config/payment-option
 import {
   formatCoverage,
   getAgeRange,
-  getMonthlyPriceFromTariff,
   getPlanTiers,
   getPriceForFrequency,
   type PlanName,
@@ -26,6 +26,7 @@ import {
 import type { Zone } from '@/core/config/zone-config';
 import { ContextualTooltip } from '@/components/common/ContextualTooltip';
 import { DateSelect } from '@/core/components/ui';
+import { getLocalIsoDate, getMinimumDateYearsAgo } from '@/core/utils/date.utils';
 import { UserPlus, Trash2, Users, Award, Check, Flame, Pencil } from 'lucide-react';
 
 const billingPeriods: Array<{
@@ -39,9 +40,10 @@ const billingPeriods: Array<{
 ];
 
 const TIER_STYLE: Record<TierName, string> = {
-  Oro: 'plan-oro',
-  Plata: 'plan-plata',
   Bronce: 'plan-bronce',
+  Plata: 'plan-plata',
+  Oro: 'plan-oro',
+  Diamante: 'plan-diamante',
 };
 
 const PLAN_NAME: Record<PlanName, string> = {
@@ -49,14 +51,6 @@ const PLAN_NAME: Record<PlanName, string> = {
   'Abuelos': 'Abuelos',
   '24/7': '24/7',
 };
-
-function getMinimumBirthDate(): string {
-  const maximumDate = new Date();
-  maximumDate.setFullYear(maximumDate.getFullYear() - 80);
-  const month = String(maximumDate.getMonth() + 1).padStart(2, '0');
-  const day = String(maximumDate.getDate()).padStart(2, '0');
-  return `${maximumDate.getFullYear()}-${month}-${day}`;
-}
 
 function getAffiliatePriceForFrequency(
   affiliate: AffiliateRow,
@@ -254,33 +248,15 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
 
   const validateBirthDate = (birthDate: string) => {
     const age = calculateAge(birthDate);
-    const currentPlan = currentMember?.requestedPlan;
 
     if (age === null || age > 80) {
       alert(tValidation('ageLimit80Beneficiary'));
       return;
     }
 
-    if (age >= 61) {
-      if (currentPlan === 'Abuelos') {
-        updateAffiliate(selectedMemberIndex, { birthDate });
-      } else {
-        updateAffiliate(selectedMemberIndex, {
-          requestedPlan: 'Abuelos',
-          coverageLimit: 3000,
-        });
-      }
-      return;
-    }
+    if (!currentMember) return;
 
-    if (currentPlan === 'Abuelos') {
-      updateAffiliate(selectedMemberIndex, {
-        requestedPlan: 'Previasís',
-        coverageLimit: 10000,
-      });
-    } else {
-      updateAffiliate(selectedMemberIndex, { birthDate });
-    }
+    updateAffiliate(selectedMemberIndex, applyAgeBasedPlan(currentMember, birthDate));
   };
 
   const removeAffiliate = (index: number) => {
@@ -546,12 +522,18 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
           </p>
 
           {planTiers.length > 0 && (
-            <div className="grid plan-options-grid grid-cols-3 gap-3">
+            <div className={`grid plan-options-grid ${planTiers.length === 4 ? 'grid-cols-4' : 'grid-cols-3'} gap-3`}>
               {planTiers.map(({ tier, plan, coverage }) => {
                 const isPlanSelected =
                   currentMember?.requestedPlan === plan &&
                   currentMember?.coverageLimit === coverage;
-                const monthlyPrice = getMonthlyPriceFromTariff(plan, coverage, currentAge ?? -1, zone);
+                const monthlyPrice = getPriceForFrequency(
+                  plan,
+                  coverage,
+                  currentAge ?? -1,
+                  zone,
+                  'Mensual',
+                );
 
                 return (
                 <button
@@ -656,8 +638,8 @@ export const Step3AffiliatesPlan: React.FC<Step3Props> = ({
             </div>
             <DateSelect
               id="affiliate-birth-date"
-              min={getMinimumBirthDate()}
-              max={new Date().toISOString().slice(0, 10)}
+              min={getMinimumDateYearsAgo(80)}
+              max={getLocalIsoDate()}
               value={currentMember?.birthDate || ''}
               onChange={(birthDate) => updateAffiliate(selectedMemberIndex, { birthDate })}
               onBlur={() => validateBirthDate(currentMember?.birthDate)}

@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/core/components/ui/Card';
 import { Input } from '@/core/components/ui/Input';
+import { DateSelect } from '@/core/components/ui/DateSelect';
 import { Badge } from '@/core/components/ui/Badge';
 import { completeCurrencyInput, formatCurrencyInput } from '@/core/utils/format.utils';
+import { getLocalIsoDate, getMinimumDateYearsAgo } from '@/core/utils/date.utils';
 import { isMinor } from '@/core/utils/age.utils';
 import {
   ContractorSection,
@@ -250,18 +252,24 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-4">
-                  <Input
-                    label={t('birthDate')}
-                    type="date"
-                    value={naturalPerson.birthDate}
-                    onChange={(e) => {
-                      updateNaturalPerson({ birthDate: e.target.value });
-                      handleBirthDateChange(e.target.value);
-                    }}
-                    onBlur={(e) => handleBirthDateBlur(e.target.value)}
-                    error={birthDateError}
-                    required
-                  />
+                  <div className="input-group">
+                    <label className="input-label" htmlFor="natural-person-birth-date">
+                      {t('birthDate')} *
+                    </label>
+                    <DateSelect
+                      id="natural-person-birth-date"
+                      min={getMinimumDateYearsAgo(80)}
+                      max={getLocalIsoDate()}
+                      value={naturalPerson.birthDate}
+                      onChange={(birthDate) => {
+                        updateNaturalPerson({ birthDate });
+                        handleBirthDateChange(birthDate);
+                      }}
+                      onBlur={() => handleBirthDateBlur(naturalPerson.birthDate)}
+                      error={birthDateError}
+                      required
+                    />
+                  </div>
                   <Input
                     label={t('profession')}
                     value={naturalPerson.profession}
@@ -398,13 +406,19 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                     onChange={(e) => updateLegalEntity({ volumeNumber: e.target.value })}
                     required
                   />
-                  <Input
-                    label={t('registrationDate')}
-                    type="date"
-                    value={legalEntity.registrationDate}
-                    onChange={(e) => updateLegalEntity({ registrationDate: e.target.value })}
-                    required
-                  />
+                  <div className="input-group">
+                    <label className="input-label" htmlFor="legal-entity-registration-date">
+                      {t('registrationDate')} *
+                    </label>
+                    <DateSelect
+                      id="legal-entity-registration-date"
+                      min={getMinimumDateYearsAgo(80)}
+                      max={getLocalIsoDate()}
+                      value={legalEntity.registrationDate}
+                      onChange={(registrationDate) => updateLegalEntity({ registrationDate })}
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4" style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
@@ -596,18 +610,24 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                   </div>
 
                   <div className="grid grid-cols-4 gap-4">
-                    <Input
-                      label={t('birthDate')}
-                      type="date"
-                      value={legalRepresentative.birthDate}
-                      onChange={(e) => {
-                        updateLegalRepresentative({ birthDate: e.target.value });
-                        handleBirthDateChange(e.target.value);
-                      }}
-                      onBlur={(e) => handleBirthDateBlur(e.target.value)}
-                      error={birthDateError}
-                      required
-                    />
+                    <div className="input-group">
+                      <label className="input-label" htmlFor="legal-representative-birth-date">
+                        {t('birthDate')} *
+                      </label>
+                      <DateSelect
+                        id="legal-representative-birth-date"
+                        min={getMinimumDateYearsAgo(80)}
+                        max={getLocalIsoDate()}
+                        value={legalRepresentative.birthDate}
+                        onChange={(birthDate) => {
+                          updateLegalRepresentative({ birthDate });
+                          handleBirthDateChange(birthDate);
+                        }}
+                        onBlur={() => handleBirthDateBlur(legalRepresentative.birthDate)}
+                        error={birthDateError}
+                        required
+                      />
+                    </div>
                     <Input
                       label={t('representativeProfession')}
                       value={legalRepresentative.profession}

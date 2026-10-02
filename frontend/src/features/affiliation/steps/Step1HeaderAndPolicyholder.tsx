@@ -19,6 +19,8 @@ import {
   normalizePhoneNumber,
 } from '@/core/utils/contact-validation.utils';
 import { completeCurrencyInput, formatCurrencyInput } from '@/core/utils/format.utils';
+import { getLocalIsoDate, getMinimumDateYearsAgo } from '@/core/utils/date.utils';
+import { DateSelect } from '@/core/components/ui';
 import { User, Shield, MapPin, Phone, Mail } from 'lucide-react';
 
 interface Step1Props {
@@ -163,14 +165,15 @@ export const Step1HeaderAndPolicyholder: React.FC<Step1Props> = ({
 
         <div className="step1-form-grid step1-identity-grid">
           <div className="previasis-input-group">
-            <label className="previasis-label">
+            <label className="previasis-label" htmlFor="application-date">
               {t('requestDate')} <span className="previasis-label-required">*</span>
             </label>
-            <input
-              type="date"
-              className="previasis-input"
+            <DateSelect
+              id="application-date"
+              min={getMinimumDateYearsAgo(1)}
+              max={getLocalIsoDate()}
               value={header.applicationDate}
-              onChange={(e) => updateHeader({ applicationDate: e.target.value })}
+              onChange={(applicationDate) => updateHeader({ applicationDate })}
               required
             />
           </div>
@@ -409,14 +412,15 @@ export const Step1HeaderAndPolicyholder: React.FC<Step1Props> = ({
           </div>
 
           <div className="previasis-input-group">
-            <label className="previasis-label">
+            <label className="previasis-label" htmlFor="policyholder-birth-date">
               {t('birthDate')} <span className="previasis-label-required">*</span>
             </label>
-            <input
-              type="date"
-              className="previasis-input"
+            <DateSelect
+              id="policyholder-birth-date"
+              min={getMinimumDateYearsAgo(80)}
+              max={getLocalIsoDate()}
               value={policyholder.birthDate}
-              onChange={(e) => updatePolicyholder({ birthDate: e.target.value })}
+              onChange={(birthDate) => updatePolicyholder({ birthDate })}
               required
             />
           </div>

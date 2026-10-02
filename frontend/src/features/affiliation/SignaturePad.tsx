@@ -21,6 +21,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
 }) => {
   const t = useTranslations('signaturePad');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const hasDrawnRef = useRef(!!initialSignature);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(!!initialSignature);
 
@@ -92,6 +93,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     const { x, y } = getCoordinates(e);
     ctx.lineTo(x, y);
     ctx.stroke();
+    hasDrawnRef.current = true;
     setHasDrawn(true);
   };
 
@@ -99,9 +101,11 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     if (!isDrawing) return;
     setIsDrawing(false);
     const canvas = canvasRef.current;
-    if (canvas) {
+    if (canvas && hasDrawnRef.current) {
       const dataUrl = canvas.toDataURL('image/png');
       onSave(dataUrl);
+    } else {
+      onSave(null);
     }
   };
 
@@ -111,6 +115,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasDrawnRef.current = false;
     setHasDrawn(false);
     onSave(null);
   };

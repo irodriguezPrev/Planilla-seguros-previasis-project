@@ -206,7 +206,7 @@ export function getAvailablePlans(age: number): PlanName[] {
   return [...new Set(plans)];
 }
 
-export type TierName = 'Oro' | 'Plata' | 'Bronce';
+export type TierName = 'Bronce' | 'Plata' | 'Oro' | 'Diamante';
 
 export interface PlanTier {
   tier: TierName;
@@ -215,22 +215,23 @@ export interface PlanTier {
 }
 
 /**
- * Niveles comerciales fijos (Oro/Plata/Bronce), independientes de las
+ * Niveles comerciales fijos, independientes de las
  * combinaciones (plan x cobertura) disponibles. Excluye el plan 24/7.
  */
 export function getPlanTiers(age: number): PlanTier[] {
-  if (age <= 60) {
+  if (age >= 0 && age <= 60) {
     return [
-      { tier: 'Oro', plan: 'Previasís', coverage: 40000 },
-      { tier: 'Plata', plan: 'Previasís', coverage: 25000 },
       { tier: 'Bronce', plan: 'Previasís', coverage: 10000 },
+      { tier: 'Plata', plan: 'Previasís', coverage: 15000 },
+      { tier: 'Oro', plan: 'Previasís', coverage: 25000 },
+      { tier: 'Diamante', plan: 'Previasís', coverage: 40000 },
     ];
   }
-  if (age <= 80) {
+  if (age >= 61 && age <= 80) {
     return [
-      { tier: 'Oro', plan: 'Abuelos', coverage: 10000 },
-      { tier: 'Plata', plan: 'Abuelos', coverage: 5000 },
       { tier: 'Bronce', plan: 'Abuelos', coverage: 3000 },
+      { tier: 'Plata', plan: 'Abuelos', coverage: 5000 },
+      { tier: 'Oro', plan: 'Abuelos', coverage: 10000 },
     ];
   }
   return [];
@@ -266,6 +267,11 @@ export function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/** Redondea una cuota al entero más cercano; desde .50 redondea hacia arriba. */
+export function roundInstallmentAmount(value: number): number {
+  return Math.round(value);
+}
+
 const FREQUENCY_MONTHS: Record<'Mensual' | 'Trimestral' | 'Semestral' | 'Anual', number> = {
   Mensual: 1,
   Trimestral: 3,
@@ -283,17 +289,12 @@ export function getPriceForFrequency(
   if (age < 0 || age > 80) return null;
 
   const annualPrice = getTariff(plan, cobertura, age, zone, 'anual');
-  const monthlyPrice = getTariff(plan, cobertura, age, zone, 'mensual');
+  if (annualPrice === null) return null;
+  if (frequency === 'Anual') return annualPrice;
 
-  if (monthlyPrice !== null) {
-    return roundMoney(monthlyPrice * FREQUENCY_MONTHS[frequency]);
-  }
-  if (annualPrice !== null) {
-    // Sin tarifa mensual (24/7): se usa el equivalente anual de la tarifa.
-    const monthlyBase = annualPrice / 12;
-    return roundMoney(monthlyBase * FREQUENCY_MONTHS[frequency]);
-  }
-  return null;
+  return roundInstallmentAmount(
+    (annualPrice / 12) * FREQUENCY_MONTHS[frequency],
+  );
 }
 
 export function hasMonthlyPrice(plan: PlanName): boolean {

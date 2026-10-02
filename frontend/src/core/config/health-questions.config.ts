@@ -94,7 +94,7 @@ export const HEALTH_QUESTIONS: HealthQuestionItem[] = [
   {
     id: 7,
     title: 'Enfermedades digestivas',
-    description: 'Enfermedades del estómago, esófago, gastritis, úlcera péptica, hemorragias digestivas, colon irritable, pancreatitis, colecistitis, hemorroides, litiasis vesicular, hernias umbilicales, inguinales o epigástricas.',
+    description: 'Colecistitis, hemorroides, litiasis vesicular, hernias umbilicales, inguinales o epigástricas, enfermedades del estómago, esófago, gastritis, úlcera péptica, hemorragias digestivas, colon irritable, pancreatitis.',
     clinicalDetailLevel: 'detailed',
   },
   {

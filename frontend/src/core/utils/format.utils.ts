@@ -53,10 +53,55 @@ export function monthInputValueToMonthYear(value: string): string {
   return `${month}/${year}`;
 }
 
-export function isValidMonthYear(value: string | undefined): boolean {
+export interface MonthYear {
+  year: number;
+  month: number;
+}
+
+/**
+ * Extrae año y mes de los formatos de fecha que admite la planilla: `MM/AAAA`,
+ * `AAAA-MM`, `AAAA-MM-DD` y `DD/MM/AAAA`. Devuelve `null` si el formato no es válido.
+ *
+ * Aceptar los mismos formatos que `formatPdfDate` evita invalidar borradores ya guardados
+ * con día completo (`DD/MM/AAAA`) o con ISO completo (`AAAA-MM-DD`).
+ */
+export function parseMonthYear(value: string | undefined): MonthYear | null {
   const normalized = value?.trim() || '';
-  return /^(0[1-9]|1[0-2])\/\d{4}$/.test(normalized) ||
-    /^\d{4}-(0[1-9]|1[0-2])$/.test(normalized);
+
+  const monthYearMatch = normalized.match(/^(0[1-9]|1[0-2])\/(\d{4})$/);
+  if (monthYearMatch) return { month: Number(monthYearMatch[1]), year: Number(monthYearMatch[2]) };
+
+  const inputMonthMatch = normalized.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
+  if (inputMonthMatch) return { year: Number(inputMonthMatch[1]), month: Number(inputMonthMatch[2]) };
+
+  const isoDateMatch = normalized.match(/^(\d{4})-(0[1-9]|1[0-2])-\d{2}$/);
+  if (isoDateMatch) return { year: Number(isoDateMatch[1]), month: Number(isoDateMatch[2]) };
+
+  const dayMonthYearMatch = normalized.match(/^\d{2}\/(0[1-9]|1[0-2])\/(\d{4})$/);
+  if (dayMonthYearMatch) return { month: Number(dayMonthYearMatch[1]), year: Number(dayMonthYearMatch[2]) };
+
+  return null;
+}
+
+export function isValidMonthYear(value: string | undefined): boolean {
+  return parseMonthYear(value) !== null;
+}
+
+/**
+ * `true` solo si la fecha tiene formato válido **y** su mes no es posterior al mes en curso.
+ *
+ * El mes en curso es válido; el mes siguiente ya cuenta como futuro. La comparación usa
+ * aritmética de mes (`year * 12 + month`) en lugar de `Date` para no sufrir off-by-one
+ * por zona horaria, igual que `calculateActuarialAge`.
+ */
+export function isValidPastMonthYear(
+  value: string | undefined,
+  now: Date = new Date(),
+): boolean {
+  const parsed = parseMonthYear(value);
+  if (!parsed) return false;
+
+  return parsed.year * 12 + parsed.month <= now.getFullYear() * 12 + (now.getMonth() + 1);
 }
 
 export function formatDate(date: string | Date | undefined, locale: Locale = defaultLocale): string {

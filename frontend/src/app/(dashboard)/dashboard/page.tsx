@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { envConfig } from '@/core/config/env.config';
 import { getMyReferral, MyReferralResponse } from '@/core/services/signing-request.service';
+import { SigningRequestsPanel } from '@/features/dashboard/SigningRequestsPanel';
 
 export default function DashboardOverviewPage() {
   const { user, isAuthenticated } = useAuth();
@@ -221,6 +222,8 @@ export default function DashboardOverviewPage() {
           </div>
         )}
       </div>
+
+      <SigningRequestsPanel enabled={isAuthenticated} />
 
       {/* Metrics & Status Cards */}
       <div className="grid grid-cols-3 gap-6">

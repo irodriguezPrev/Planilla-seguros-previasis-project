@@ -157,7 +157,6 @@ const t = useTranslations('pdfPreview');
         window.prompt(t('signingCopyPrompt'), shareText);
       }
     } catch (error) {
-      console.error('Error creando la solicitud de firma:', error);
       const message = error instanceof Error ? error.message : t('signingRequestError');
       alert(message);
     } finally {

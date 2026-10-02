@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { CheckCircle2, FileText, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileText, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { Button } from '@/core/components/ui/Button';
 import { AffiliationFormState } from '@/core/interfaces/affiliation.interfaces';
 import { PdfGeneratorService } from '@/core/services/pdf-generator.service';
@@ -39,6 +39,7 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [validationAttempted, setValidationAttempted] = useState(false);
 
   const contractorIsDifferent = Boolean(formData?.contractor.isDifferent);
   const requiresHolderDeclaration = access?.role === 'TITULAR';
@@ -89,6 +90,7 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
       setFormData(normalizedForm);
       setPlace(normalizedForm.signatures.place || suggestedPlace(normalizedForm));
       setCompleted(response.status === 'FIRMADO');
+      setValidationAttempted(false);
     } catch (requestError) {
       setError(requestError instanceof RemoteSigningError ? requestError.message : t('genericError'));
     } finally {
@@ -97,9 +99,10 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
   };
 
   const handleSign = async () => {
+    setValidationAttempted(true);
+    setError(null);
     if (!signature || !canSign) return;
     setSigning(true);
-    setError(null);
     try {
       const response = await signRemoteDocument(token, {
         lastFour,
@@ -199,9 +202,16 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
           </section>
 
           {!completed && (
-            <section className="client-signing-form previasis-card">
+            <section className={`client-signing-form previasis-card ${validationAttempted ? 'show-validation-errors' : ''}`}>
               <h2>{t('confirmTitle')}</h2>
               <p className="client-signing-muted">{t('confirmSubtitle')}</p>
+
+              {validationAttempted && !canSign && (
+                <div className="client-signing-validation-summary" role="alert">
+                  <AlertCircle size={18} />
+                  <span>{t('requiredFields')}</span>
+                </div>
+              )}
 
               {requiresHolderDeclaration && (
                 <label className="client-signing-checkbox">
@@ -209,8 +219,14 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
                     type="checkbox"
                     checked={acceptsHolder}
                     onChange={(event) => setAcceptsHolder(event.target.checked)}
+                    required
                   />
-                  <span>{t('acceptHolder')}</span>
+                  <span className="client-signing-checkbox-copy">
+                    <span>{t('acceptHolder')}</span>
+                    {validationAttempted && !acceptsHolder && (
+                      <span className="client-signing-field-error">{t('declarationRequired')}</span>
+                    )}
+                  </span>
                 </label>
               )}
 
@@ -220,8 +236,14 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
                     type="checkbox"
                     checked={acceptsFunds}
                     onChange={(event) => setAcceptsFunds(event.target.checked)}
+                    required
                   />
-                  <span>{t('acceptFunds')}</span>
+                  <span className="client-signing-checkbox-copy">
+                    <span>{t('acceptFunds')}</span>
+                    {validationAttempted && !acceptsFunds && (
+                      <span className="client-signing-field-error">{t('declarationRequired')}</span>
+                    )}
+                  </span>
                 </label>
               )}
 
@@ -247,7 +269,7 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
               <p className="client-signing-legal-note">
                 <ShieldCheck size={17} /> {t('legalNotice')}
               </p>
-              <Button onClick={handleSign} isLoading={signing} disabled={!canSign}>
+              <Button onClick={handleSign} isLoading={signing}>
                 {t('signDocument')}
               </Button>
             </section>

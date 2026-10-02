@@ -15,7 +15,12 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     const { params, requiresAuth = true, headers = {}, ...customConfig } = options;
 
-    let url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    const isAbsoluteUrl = /^https?:\/\//i.test(endpoint);
+    const isAlreadyBased = endpoint === this.baseUrl
+      || endpoint.startsWith(`${this.baseUrl}/`);
+    let url = isAbsoluteUrl || isAlreadyBased
+      ? endpoint
+      : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
     if (params) {
       const searchParams = new URLSearchParams();

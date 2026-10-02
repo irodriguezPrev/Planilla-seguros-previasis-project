@@ -4,7 +4,7 @@ import {
   MedicalConditionDetail,
   HealthDeclarationSection,
 } from '@/core/interfaces/affiliation.interfaces';
-import { isValidMonthYear } from '@/core/utils/format.utils';
+import { isValidPastMonthYear } from '@/core/utils/format.utils';
 
 export type HealthAnswer = 'SÍ' | 'NO';
 export type HealthCompletionStatus = 'pending' | 'incomplete' | 'complete';
@@ -53,9 +53,7 @@ export const isClinicalDetailComplete = (
 ): boolean =>
   Boolean(
     detail.condition.trim() &&
-    (question.clinicalDetailLevel === 'detailed'
-      ? detail.diagnosisDate.trim()
-      : isValidMonthYear(detail.diagnosisDate)) &&
+    isValidPastMonthYear(detail.diagnosisDate) &&
     (question.clinicalDetailLevel !== 'detailed' || detail.treatment.trim()),
   );
 
@@ -90,7 +88,7 @@ export const getAffiliateQuestionStatus = (
     const isMedicationQuestion = question.id === 21;
     return details.length > 0 && details.every((detail) => {
       if (question.includeInClinicalSummary) {
-        return detail.field1.trim() && isValidMonthYear(detail.field2);
+        return detail.field1.trim() && isValidPastMonthYear(detail.field2);
       }
       const doseOk = detail.field1.trim() && detail.field2.trim();
       if (!isMedicationQuestion) return doseOk;
