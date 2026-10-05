@@ -15,6 +15,7 @@ import {
   AffiliateRow,
   HealthDeclarationSection,
   AffiliationFormState,
+  ContractorSection,
   PaymentFrequency,
 } from '@/core/interfaces/affiliation.interfaces';
 import {
@@ -23,7 +24,7 @@ import {
 } from '@/core/config/health-questions.config';
 import { getCitiesByState } from '@/core/config/venezuela-locations.config';
 import { getZoneFromState, type Zone } from '@/core/config/zone-config';
-import { calculateActuarialAge } from '@/core/utils/age.utils';
+import { calculateActuarialAge, isMinor } from '@/core/utils/age.utils';
 import { getLocalIsoDate } from '@/core/utils/date.utils';
 import { applyAgeBasedPlan } from '@/core/utils/affiliate-plan.utils';
 import { AFFILIATION_POLICYHOLDER_ROW_ID } from '@/core/utils/constants';
@@ -55,6 +56,40 @@ const STORAGE_KEY = 'previasis_affiliation_draft_v3';
 type PreviewMode = 'draft' | 'final';
 
 const CELEBRATION_PROGRESS_STEPS = [1, 2, 3, 4] as const;
+
+const hasRequiredContractorData = (contractor: ContractorSection): boolean => {
+  if (!contractor.isDifferent) return true;
+
+  if (contractor.personType === 'Natural') {
+    return Boolean(
+      contractor.naturalPerson.firstNames.trim() &&
+      contractor.naturalPerson.lastNames.trim() &&
+      contractor.naturalPerson.documentNumber.trim() &&
+      contractor.naturalPerson.birthDate &&
+      !isMinor(contractor.naturalPerson.birthDate)
+    );
+  }
+
+  const entity = contractor.legalEntity;
+  const representative = entity.legalRepresentative;
+  return Boolean(
+    entity.legalName.trim() &&
+    entity.taxId.trim() &&
+    entity.commercialRegistryNumber.trim() &&
+    entity.volumeNumber.trim() &&
+    entity.registrationDate &&
+    entity.productsServices.trim() &&
+    entity.taxAddress.trim() &&
+    entity.phone.trim() &&
+    entity.mobilePhone.trim() &&
+    entity.email.trim() &&
+    entity.previousFiscalYearProfit.trim() &&
+    entity.netWorth.trim() &&
+    representative.firstNames.trim() &&
+    representative.lastNames.trim() &&
+    representative.documentNumber.trim()
+  );
+};
 
 interface CelebrationOverlayProps {
   eyebrow: string;
@@ -132,6 +167,7 @@ const INITIAL_STATE: AffiliationFormState = {
   },
   contractor: {
     isDifferent: false,
+    appliesForHealthPlan: null,
     personType: 'Natural',
     naturalPerson: {
       firstNames: '',
@@ -171,6 +207,8 @@ const INITIAL_STATE: AffiliationFormState = {
       productsServices: '',
       taxAddress: '',
       phone: '',
+      mobilePhone: '',
+      email: '',
       previousFiscalYearProfit: '',
       netWorth: '',
       legalRepresentative: {
@@ -764,13 +802,13 @@ export default function AffiliationPage() {
     }
 
     if (step === 2) {
-      if (!formData.contractor.isDifferent) return true;
-      const contractor = formData.contractor.naturalPerson;
-      return Boolean(
-        contractor.firstNames.trim() &&
-        contractor.lastNames.trim() &&
-        contractor.documentNumber.trim()
-      );
+      const contractorBirthDate = formData.contractor.isDifferent
+        ? formData.contractor.naturalPerson.birthDate
+        : formData.policyholder.birthDate;
+      return formData.contractor.appliesForHealthPlan !== null &&
+        Boolean(contractorBirthDate) &&
+        !isMinor(contractorBirthDate) &&
+        hasRequiredContractorData(formData.contractor);
     }
 
     if (step === 3) {
@@ -908,10 +946,22 @@ export default function AffiliationPage() {
         return false;
       }
     }
+    if (step === 2 && formData.contractor.appliesForHealthPlan === null) {
+      alert(tValidation('contractorPlanApplicationRequired'));
+      return false;
+    }
+    if (step === 2) {
+      const contractorBirthDate = formData.contractor.isDifferent
+        ? formData.contractor.naturalPerson.birthDate
+        : formData.policyholder.birthDate;
+      if (contractorBirthDate && isMinor(contractorBirthDate)) {
+        alert(tValidation('contractorMinor'));
+        return false;
+      }
+    }
     if (step === 2 && formData.contractor.isDifferent) {
-      const c = formData.contractor.naturalPerson;
-      if (!c.firstNames || !c.lastNames || !c.documentNumber) {
-         alert(tValidation('contractorRequired'));
+      if (!hasRequiredContractorData(formData.contractor)) {
+        alert(tValidation('contractorRequired'));
         return false;
       }
     }
@@ -1167,6 +1217,7 @@ export default function AffiliationPage() {
       },
       contractor: {
         isDifferent: false,
+        appliesForHealthPlan: true,
         personType: 'Natural',
         naturalPerson: { ...INITIAL_STATE.contractor.naturalPerson },
         legalEntity: { ...INITIAL_STATE.contractor.legalEntity },

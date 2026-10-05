@@ -71,6 +71,8 @@ export interface LegalEntityData {
   productsServices: string;
   taxAddress: string;
   phone: string;
+  mobilePhone: string;
+  email: string;
   previousFiscalYearProfit: string;
   netWorth: string;
   legalRepresentative: NaturalPersonData;
@@ -78,6 +80,7 @@ export interface LegalEntityData {
 
 export interface ContractorSection {
   isDifferent: boolean;
+  appliesForHealthPlan: boolean | null;
   personType: ContractorPersonType;
   naturalPerson: NaturalPersonData;
   legalEntity: LegalEntityData;

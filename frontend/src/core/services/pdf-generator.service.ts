@@ -5,55 +5,34 @@ import {
   LegalEntityData,
   NaturalPersonData,
 } from '@/core/interfaces/affiliation.interfaces';
+import type {
+  LegalEntityRowValues,
+  NaturalPersonRowValues,
+  PdfGenerationOptions,
+  PdfTableCell,
+} from '@/core/interfaces/pdf-generator.interfaces';
 import {
   HEALTH_QUESTIONS,
   OFFICIAL_DECLARATION_QUESTION_IDS,
 } from '@/core/config/health-questions.config';
+import {
+  LEGAL_ENTITY_NA_VALUES,
+  NATURAL_PERSON_NA_VALUES,
+  PDF_NOT_APPLICABLE,
+} from '@/core/config/pdf-generator.config';
 import { getMedicationTimeUnitLabel } from '@/core/utils/constants';
 import { formatAffiliateDocumentForPdf } from '@/core/utils/minor-document.utils';
 
-
-const NOT_APPLICABLE = 'N/A';
-
-type PdfTableCell = { label: string; value: string; x: number; w: number };
-
-type LegalEntityRowValues = {
-  razonSocial: string;
-  rif: string;
-  registroMercantil: string;
-  volumenTomo: string;
-  fechaRegistro: string;
-  actividadEconomica: string;
-  sector: string;
-  telefono: string;
-  utilidadEjercicioAnterior: string;
-  patrimonioNeto: string;
-  productosServicios: string;
-  direccionFiscal: string;
+const getMerchantBusinessSector = (person: {
+  occupation: string;
+  businessSector?: string;
+}): string => {
+  const normalizedOccupation = person.occupation.trim().toLocaleLowerCase('es-VE');
+  const isMerchant = normalizedOccupation.includes('comerciante') || normalizedOccupation.includes('merchant');
+  return isMerchant && person.businessSector?.trim()
+    ? person.businessSector.trim()
+    : PDF_NOT_APPLICABLE;
 };
-
-// Valores para imprimir el bloque jurídico en N/A cuando el contratante es
-// persona natural: el grid conserva las mismas columnas que el caso jurídico.
-const LEGAL_ENTITY_NA_VALUES: LegalEntityRowValues = {
-  razonSocial: NOT_APPLICABLE,
-  rif: NOT_APPLICABLE,
-  registroMercantil: NOT_APPLICABLE,
-  volumenTomo: NOT_APPLICABLE,
-  fechaRegistro: NOT_APPLICABLE,
-  actividadEconomica: NOT_APPLICABLE,
-  sector: NOT_APPLICABLE,
-  telefono: NOT_APPLICABLE,
-  utilidadEjercicioAnterior: NOT_APPLICABLE,
-  patrimonioNeto: NOT_APPLICABLE,
-  productosServicios: NOT_APPLICABLE,
-  direccionFiscal: NOT_APPLICABLE,
-};
-
-export type PdfGenerationMode = 'draft' | 'final';
-
-export interface PdfGenerationOptions {
-  mode?: PdfGenerationMode;
-}
 
 export class PdfGeneratorService {
 
@@ -95,6 +74,10 @@ export class PdfGeneratorService {
     // Límite inferior común para todo el contenido: deja margen libre sobre la
     // línea y los textos del pie de página (evita que los cuadros lo pisen).
     const contentBottomLimit = pageHeight - margin - 18;
+    // El bloque del contratante puede aprovechar el espacio adicional que queda
+    // sobre la línea del pie. Esto permite cerrar su última fila en la página 1
+    // sin acercar al footer las secciones que vienen después.
+    const contractorBottomLimit = pageHeight - margin - 8.5;
     const formatPdfDate = (value?: string | null): string => {
       if (!value) return '-';
       const normalized = String(value).trim();
@@ -393,9 +376,10 @@ export class PdfGeneratorService {
       { label: 'Ocupación', value: policyholderData.occupation, x: margin + secondRowWidth * 3, w: secondRowWidth },
     ]);
 
-    const incomeWidth = contentWidth * 0.25;
-    const politicallyExposedWidth = contentWidth * 0.40;
-    const classificationWidth = contentWidth - incomeWidth - politicallyExposedWidth;
+    const incomeWidth = contentWidth * 0.20;
+    const politicallyExposedWidth = contentWidth * 0.30;
+    const classificationWidth = contentWidth * 0.22;
+    const merchantSectorWidth = contentWidth - incomeWidth - politicallyExposedWidth - classificationWidth;
     drawRow([
       { label: 'Ingreso Anual / Mensual', value: policyholderData.annualIncomeBs, x: margin, w: incomeWidth },
       {
@@ -405,6 +389,12 @@ export class PdfGeneratorService {
         w: politicallyExposedWidth,
       },
       { label: 'Clasificación Actividad', value: policyholderData.activityClassification, x: margin + incomeWidth + politicallyExposedWidth, w: classificationWidth },
+      {
+        label: 'Si es Comerciante indicar Ramo',
+        value: getMerchantBusinessSector(policyholderData),
+        x: margin + incomeWidth + politicallyExposedWidth + classificationWidth,
+        w: merchantSectorWidth,
+      },
     ]);
 
     if (policyholderData.activityClassification === 'Dependiente' && policyholderData.company) {
@@ -440,7 +430,6 @@ export class PdfGeneratorService {
 
 
     const contractorData = data.contractor;
-    currentY = drawSectionTitle('Datos del Contratante', currentY);
 
     const isLegalEntityContractor =
       contractorData.isDifferent && contractorData.personType === 'Juridica';
@@ -451,21 +440,7 @@ export class PdfGeneratorService {
       ? contractorData.naturalPerson
       : data.policyholder;
 
-    const drawContractorSubTitle = (title: string) => {
-      ensureSpace(5);
-      doc.setFillColor(241, 245, 249);
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.18);
-      doc.rect(margin, currentY, contentWidth, 5, 'FD');
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(6.4);
-      doc.setTextColor(7, 62, 35);
-      doc.text(title.toUpperCase(), margin + 2.5, currentY + 3.4);
-      currentY += 5.5;
-    };
-
-    const buildNaturalPersonRows = (person: NaturalPersonData): PdfTableCell[][] => {
+    const buildNaturalPersonRows = (person: NaturalPersonRowValues): PdfTableCell[][] => {
       const contractorNationalityWidth = contentWidth * 0.17;
       const contractorMaritalStatusWidth = contentWidth * 0.17;
       const contractorSexWidth = contentWidth * 0.12;
@@ -477,12 +452,18 @@ export class PdfGeneratorService {
       const contractorIncomeWidth = contentWidth * 0.20;
       const contractorPoliticallyExposedWidth = contentWidth * 0.15;
       const contractorActivityWidth = contentWidth - contractorProfessionWidth - contractorOccupationWidth - contractorIncomeWidth - contractorPoliticallyExposedWidth;
+      const documentValue = person.documentNumber
+        ? `${person.documentType}-${person.documentNumber}`
+        : person.documentType;
+      const taxIdValue = person.taxId
+        ? `${person.taxIdType}-${person.taxId}`
+        : person.taxIdType;
 
       const rows: PdfTableCell[][] = [
         [
-          { label: 'Nombres y Apellidos Contratante', value: `${person.firstNames} ${person.lastNames}`, x: margin, w: halfW },
-          { label: 'C.I. / Pasaporte', value: `${person.documentType}-${person.documentNumber}`, x: margin + halfW, w: fourthW },
-          { label: 'R.I.F.', value: `${person.taxIdType}-${person.taxId}`, x: margin + halfW + fourthW, w: fourthW },
+          { label: 'Nombres y Apellidos Contratante', value: `${person.firstNames} ${person.lastNames}`.trim(), x: margin, w: halfW },
+          { label: 'C.I. / Pasaporte', value: documentValue, x: margin + halfW, w: fourthW },
+          { label: 'R.I.F.', value: taxIdValue, x: margin + halfW + fourthW, w: fourthW },
         ],
         [
           { label: 'Nacionalidad', value: person.nationality, x: margin, w: contractorNationalityWidth },
@@ -501,11 +482,15 @@ export class PdfGeneratorService {
       ];
 
       if (person.activityClassification === 'Dependiente' && person.company) {
+        const companyWidth = contentWidth * 0.30;
+        const merchantSectorWidth = contentWidth * 0.20;
+        const addressWidth = contentWidth * 0.25;
         rows.push(
           [
-            { label: 'Empresa donde labora', value: person.company, x: margin, w: halfW },
-            { label: 'Dirección de Habitación', value: person.homeAddress, x: margin + halfW, w: fourthW },
-            { label: 'Dirección de Oficina', value: person.officeAddress, x: margin + halfW + fourthW, w: fourthW },
+            { label: 'Empresa donde labora', value: person.company, x: margin, w: companyWidth },
+            { label: 'Si es Comerciante indicar Ramo', value: getMerchantBusinessSector(person), x: margin + companyWidth, w: merchantSectorWidth },
+            { label: 'Dirección de Habitación', value: person.homeAddress, x: margin + companyWidth + merchantSectorWidth, w: addressWidth },
+            { label: 'Dirección de Oficina', value: person.officeAddress, x: margin + companyWidth + merchantSectorWidth + addressWidth, w: addressWidth },
           ],
           [
             { label: 'Dirección de Cobro', value: person.billingAddress, x: margin, w: halfW },
@@ -517,11 +502,13 @@ export class PdfGeneratorService {
           ],
         );
       } else {
+        const addressWidth = contentWidth * 0.25;
         rows.push(
           [
-            { label: 'Dirección de Habitación', value: person.homeAddress, x: margin, w: halfW },
-            { label: 'Dirección de Oficina', value: person.officeAddress, x: margin + halfW, w: fourthW },
-            { label: 'Dirección de Cobro', value: person.billingAddress, x: margin + halfW + fourthW, w: fourthW },
+            { label: 'Si es Comerciante indicar Ramo', value: getMerchantBusinessSector(person), x: margin, w: addressWidth },
+            { label: 'Dirección de Habitación', value: person.homeAddress, x: margin + addressWidth, w: addressWidth },
+            { label: 'Dirección de Oficina', value: person.officeAddress, x: margin + addressWidth * 2, w: addressWidth },
+            { label: 'Dirección de Cobro', value: person.billingAddress, x: margin + addressWidth * 3, w: addressWidth },
           ],
           [
             { label: 'Teléfono Local', value: person.homePhone, x: margin, w: contentWidth * 0.20 },
@@ -543,11 +530,13 @@ export class PdfGeneratorService {
       const companyRegistrationDateWidth = contentWidth * 0.20;
       const companyActivityWidth = contentWidth * 0.22;
       const companySectorWidth = contentWidth * 0.20;
-      const companyPhoneWidth = contentWidth * 0.18;
-      const companyProfitWidth = contentWidth - companyRegistrationDateWidth - companyActivityWidth - companySectorWidth - companyPhoneWidth;
+      const companyProfitWidth = contentWidth - companyRegistrationDateWidth - companyActivityWidth - companySectorWidth;
 
       const companyNetWorthWidth = contentWidth * 0.25;
       const companyProductsWidth = contentWidth - companyNetWorthWidth;
+      const companyLocalPhoneWidth = contentWidth * 0.22;
+      const companyMobilePhoneWidth = contentWidth * 0.22;
+      const companyEmailWidth = contentWidth - companyLocalPhoneWidth - companyMobilePhoneWidth;
 
       const naNationalityWidth = contentWidth * 0.17;
       const naMaritalStatusWidth = contentWidth * 0.17;
@@ -567,8 +556,7 @@ export class PdfGeneratorService {
           { label: 'Fecha de Registro', value: values.fechaRegistro, x: margin, w: companyRegistrationDateWidth },
           { label: 'Actividad Económica', value: values.actividadEconomica, x: margin + companyRegistrationDateWidth, w: companyActivityWidth },
           { label: 'Sector', value: values.sector, x: margin + companyRegistrationDateWidth + companyActivityWidth, w: companySectorWidth },
-          { label: 'Teléfono', value: values.telefono, x: margin + companyRegistrationDateWidth + companyActivityWidth + companySectorWidth, w: companyPhoneWidth },
-          { label: 'Utilidad Ejercicio Anterior', value: values.utilidadEjercicioAnterior, x: margin + companyRegistrationDateWidth + companyActivityWidth + companySectorWidth + companyPhoneWidth, w: companyProfitWidth },
+          { label: 'Utilidad Ejercicio Anterior', value: values.utilidadEjercicioAnterior, x: margin + companyRegistrationDateWidth + companyActivityWidth + companySectorWidth, w: companyProfitWidth },
         ],
         [
           { label: 'Patrimonio Neto', value: values.patrimonioNeto, x: margin, w: companyNetWorthWidth },
@@ -578,12 +566,17 @@ export class PdfGeneratorService {
           { label: 'Dirección Fiscal', value: values.direccionFiscal, x: margin, w: contentWidth },
         ],
         [
-          { label: 'Nacionalidad', value: NOT_APPLICABLE, x: margin, w: naNationalityWidth },
-          { label: 'Estado Civil', value: NOT_APPLICABLE, x: margin + naNationalityWidth, w: naMaritalStatusWidth },
-          { label: 'Sexo', value: NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth, w: naSexWidth },
-          { label: 'Fecha de Nacimiento', value: NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth, w: naBirthDateWidth },
-          { label: 'Lugar de Nacimiento', value: NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth + naBirthDateWidth, w: naBirthPlaceWidth },
-          { label: 'Ingreso Anual (Bs.)', value: NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth + naBirthDateWidth + naBirthPlaceWidth, w: naIncomeWidth },
+          { label: 'Teléfono Local', value: values.telefono, x: margin, w: companyLocalPhoneWidth },
+          { label: 'Teléfono Móvil', value: values.telefonoMovil, x: margin + companyLocalPhoneWidth, w: companyMobilePhoneWidth },
+          { label: 'Correo Electrónico', value: values.correoElectronico, x: margin + companyLocalPhoneWidth + companyMobilePhoneWidth, w: companyEmailWidth },
+        ],
+        [
+          { label: 'Nacionalidad', value: PDF_NOT_APPLICABLE, x: margin, w: naNationalityWidth },
+          { label: 'Estado Civil', value: PDF_NOT_APPLICABLE, x: margin + naNationalityWidth, w: naMaritalStatusWidth },
+          { label: 'Sexo', value: PDF_NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth, w: naSexWidth },
+          { label: 'Fecha de Nacimiento', value: PDF_NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth, w: naBirthDateWidth },
+          { label: 'Lugar de Nacimiento', value: PDF_NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth + naBirthDateWidth, w: naBirthPlaceWidth },
+          { label: 'Ingreso Anual (Bs.)', value: PDF_NOT_APPLICABLE, x: margin + naNationalityWidth + naMaritalStatusWidth + naSexWidth + naBirthDateWidth + naBirthPlaceWidth, w: naIncomeWidth },
         ],
       ];
     };
@@ -596,52 +589,108 @@ export class PdfGeneratorService {
         volumenTomo: entity.volumeNumber,
         fechaRegistro: entity.registrationDate,
         actividadEconomica: entity.economicActivity,
-        sector: entity.businessSector || NOT_APPLICABLE,
+        sector: entity.businessSector || PDF_NOT_APPLICABLE,
         telefono: entity.phone,
+        telefonoMovil: entity.mobilePhone,
+        correoElectronico: entity.email,
         utilidadEjercicioAnterior: entity.previousFiscalYearProfit,
         patrimonioNeto: entity.netWorth,
         productosServicios: entity.productsServices,
         direccionFiscal: entity.taxAddress,
       });
 
-    const estimateRowsHeight = (rows: PdfTableCell[][]): number =>
-      rows.reduce(
-        (total, row) => total + Math.max(...row.map((cell) => computeCellHeight(cell.value, cell.w))),
-        0,
-      );
+    const computeRowHeight = (row: PdfTableCell[]): number =>
+      Math.max(8.5, ...row.map((cell) => computeCellHeight(cell.value, cell.w)));
+
+    const drawContractorSectionTitle = (continued = false) => {
+      currentY = drawSectionTitle(
+        continued ? 'Datos del Contratante (Continuación)' : 'Datos del Contratante',
+        currentY,
+      ) - 0.3;
+    };
+
+    const startContractorContinuationPage = () => {
+      startNewPage();
+      drawContractorSectionTitle(true);
+    };
+
+    const drawContractorRow = (row: PdfTableCell[]) => {
+      const rowHeight = computeRowHeight(row);
+      if (currentY + rowHeight > contractorBottomLimit) {
+        startContractorContinuationPage();
+      }
+      row.forEach((cell) => drawCell(cell.label, cell.value, cell.x, currentY, cell.w, rowHeight));
+      currentY += rowHeight;
+    };
+
+    const drawContractorRows = (rows: PdfTableCell[][]) => {
+      rows.forEach(drawContractorRow);
+    };
+
+    const drawContractorSubTitle = (title: string, firstRow: PdfTableCell[]) => {
+      const requiredHeight = 5 + computeRowHeight(firstRow);
+      if (currentY + requiredHeight > contractorBottomLimit) {
+        startContractorContinuationPage();
+      }
+
+      // Los subtítulos son filas blancas de la misma tabla, sin separación.
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.18);
+      doc.rect(margin, currentY, contentWidth, 5, 'FD');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.4);
+      doc.setTextColor(7, 62, 35);
+      doc.text(title.toUpperCase(), margin + 2.5, currentY + 3.4);
+      currentY += 5;
+    };
 
     const drawContractorNaturalPerson = (person: NaturalPersonData) => {
-      buildNaturalPersonRows(person).forEach((row) => drawRow(row));
-      currentY += 2;
+      drawContractorRows(buildNaturalPersonRows(person));
     };
 
     const drawContractorLegalEntity = (entity: LegalEntityData) => {
-      drawContractorSubTitle('Datos de la Empresa Contratante');
-      buildLegalEntityRowsFromEntity(entity).forEach((row) => drawRow(row));
-      currentY += 2;
-      drawContractorSubTitle('Datos del Representante Legal');
+      const entityRows = buildLegalEntityRowsFromEntity(entity);
+      const representativeRows = buildNaturalPersonRows(entity.legalRepresentative);
+      drawContractorSubTitle('En caso de ser Persona Jurídica', entityRows[0]);
+      drawContractorRows(entityRows);
+      drawContractorSubTitle('Datos del Representante Legal', representativeRows[0]);
       drawContractorNaturalPerson(entity.legalRepresentative);
     };
 
-    const estimatedContractorHeight = isLegalEntityContractor
-      ? 5.5
-        + estimateRowsHeight(buildLegalEntityRowsFromEntity(contractorData.legalEntity)) + 2
-        + 5.5
-        + estimateRowsHeight(buildNaturalPersonRows(contractorData.legalEntity.legalRepresentative)) + 2
-      : estimateRowsHeight(buildNaturalPersonRows(contractorPerson))
-        + 2
-        + estimateRowsHeight(buildLegalEntityRows(LEGAL_ENTITY_NA_VALUES))
-        + 2;
-
-    ensureSpace(estimatedContractorHeight);
+    const firstContractorRows = isLegalEntityContractor
+      ? buildLegalEntityRowsFromEntity(contractorData.legalEntity)
+      : buildNaturalPersonRows(contractorPerson);
+    const firstContractorBlockHeight = 5.2
+      + 8.5
+      + (isLegalEntityContractor ? 5 : 0)
+      + computeRowHeight(firstContractorRows[0]);
+    ensureSpace(firstContractorBlockHeight);
+    drawContractorSectionTitle();
+    drawContractorRow([
+      {
+        label: '¿El Contratante aplica para este plan de salud?',
+        value: contractorData.appliesForHealthPlan === null
+          ? PDF_NOT_APPLICABLE
+          : contractorData.appliesForHealthPlan ? 'Sí' : 'No',
+        x: margin,
+        w: contentWidth,
+      },
+    ]);
 
     if (isLegalEntityContractor) {
       drawContractorLegalEntity(contractorData.legalEntity);
     } else {
       drawContractorNaturalPerson(contractorPerson);
-      buildLegalEntityRows(LEGAL_ENTITY_NA_VALUES).forEach((row) => drawRow(row));
-      currentY += 2;
+      const legalEntityNaRows = buildLegalEntityRows(LEGAL_ENTITY_NA_VALUES);
+      const representativeNaRows = buildNaturalPersonRows(NATURAL_PERSON_NA_VALUES);
+      drawContractorSubTitle('En caso de ser Persona Jurídica', legalEntityNaRows[0]);
+      drawContractorRows(legalEntityNaRows);
+      drawContractorSubTitle('Datos del Representante Legal', representativeNaRows[0]);
+      drawContractorRows(representativeNaRows);
     }
+    currentY += 2;
 
     ensureSpace(52);
     currentY = drawSectionTitle('Personas a Afiliar y Plan Solicitado', currentY);
@@ -708,7 +757,10 @@ export class PdfGeneratorService {
       currentY += 6.5;
     });
 
-    startNewPage();
+    // La declaración de salud continúa debajo de la tabla de afiliados cuando
+    // hay espacio. Solo cambia de página si no caben su cabecera y primera fila.
+    currentY += 2;
+    ensureSpace(20);
 
     const colCodeW = 22;
     const colHealthW = pageWidth - margin * 2;
@@ -1266,34 +1318,33 @@ export class PdfGeneratorService {
     const refusalWidths = [31.9, 62, 48, 54];
     const dataRowHeight = 5.6;
 
-    // Encabezado de la caja
-    const boxHeaderHeight = 6.5;
-    if (currentY + boxHeaderHeight + 66 > pageHeight - margin - 15) {
-      doc.addPage();
-      currentY = margin + 22;
-    }
-    doc.setFillColor(241, 245, 249);
-    doc.setDrawColor(203, 213, 225);
-    doc.setLineWidth(0.4);
-    doc.rect(margin, currentY, contentWidth, boxHeaderHeight, 'FD');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(7, 62, 35);
-    doc.text('OTROS CONTRATOS DE SALUD', margin + 3, currentY + 4.6);
-    currentY += boxHeaderHeight;
+    const renderOtherHealthContracts = () => {
+      // Se reserva el conjunto completo para conservarlo como un solo cuadro.
+      const boxHeaderHeight = 6.5;
+      if (currentY + boxHeaderHeight + 66 > pageHeight - margin - 15) {
+        startNewPage();
+      }
+      doc.setFillColor(241, 245, 249);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.4);
+      doc.rect(margin, currentY, contentWidth, boxHeaderHeight, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(7, 62, 35);
+      doc.text('OTROS CONTRATOS DE SALUD', margin + 3, currentY + 4.6);
+      currentY += boxHeaderHeight;
 
-    const q25 = officialDeclarationQuestions.find((item) => item.id === 25);
-    const q26 = officialDeclarationQuestions.find((item) => item.id === 26);
+      const q25 = officialDeclarationQuestions.find((item) => item.id === 25);
+      const q26 = officialDeclarationQuestions.find((item) => item.id === 26);
 
-    if (q25) {
-      renderAntecedentQuestionWithTable(q25, getAntecedentEntries(25), contractColumns, contractWidths, dataRowHeight);
-      currentY += 4;
-    }
+      if (q25) {
+        renderAntecedentQuestionWithTable(q25, getAntecedentEntries(25), contractColumns, contractWidths, dataRowHeight);
+      }
 
-    if (q26) {
-      renderAntecedentQuestionWithTable(q26, getAntecedentEntries(26), refusalColumns, refusalWidths, dataRowHeight);
-      currentY += 4;
-    }
+      if (q26) {
+        renderAntecedentQuestionWithTable(q26, getAntecedentEntries(26), refusalColumns, refusalWidths, dataRowHeight);
+      }
+    };
 
     if (currentY + 26 > contentBottomLimit) {
       startNewPage();
@@ -1309,6 +1360,8 @@ export class PdfGeneratorService {
       { label: 'Modalidad de Pago', value: methodText, x: margin + thirdW * 2, w: thirdW },
     ]);
 
+    currentY += 2;
+    renderOtherHealthContracts();
     currentY += 3;
 
     if (currentY + 42 > pageHeight - margin - 15) {

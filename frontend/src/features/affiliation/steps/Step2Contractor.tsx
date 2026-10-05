@@ -17,6 +17,8 @@ import {
   TaxIdType,
   MaritalStatus,
   Sex,
+  ActivityClassification,
+  ContractorPersonType,
   LegalEconomicActivity,
 } from '@/core/interfaces/affiliation.interfaces';
 
@@ -57,6 +59,7 @@ export const Step2Contractor: React.FC<Step2Props> = ({
   const updateLegalEntity = (fields: Partial<LegalEntityData>) => {
     onContractorChange({
       ...contractor,
+      personType: 'Juridica',
       legalEntity: { ...contractor.legalEntity, ...fields },
     });
   };
@@ -64,6 +67,7 @@ export const Step2Contractor: React.FC<Step2Props> = ({
   const updateLegalRepresentative = (fields: Partial<NaturalPersonData>) => {
     onContractorChange({
       ...contractor,
+      personType: 'Juridica',
       legalEntity: {
         ...contractor.legalEntity,
         legalRepresentative: {
@@ -75,8 +79,77 @@ export const Step2Contractor: React.FC<Step2Props> = ({
   };
 
   const naturalPerson = contractor.naturalPerson;
+  const normalizedNaturalOccupation = naturalPerson.occupation.trim().toLocaleLowerCase('es-VE');
+  const isNaturalPersonMerchant = normalizedNaturalOccupation.includes('comerciante') || normalizedNaturalOccupation.includes('merchant');
   const legalEntity = contractor.legalEntity;
   const legalRepresentative = legalEntity.legalRepresentative;
+
+  const renderNotApplicableSection = (title: string, fields: string[]) => (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <h4
+        style={{
+          margin: '0.5rem 0 0',
+          padding: '0.75rem 1rem',
+          borderLeft: '4px solid var(--accent-primary)',
+          backgroundColor: 'var(--bg-secondary)',
+          borderRadius: 'var(--radius-sm)',
+          color: 'var(--accent-primary)',
+          fontSize: '1.0625rem',
+          fontWeight: 800,
+        }}
+      >
+        {title}
+      </h4>
+      <div className="grid grid-cols-3 gap-4">
+        {fields.map((label) => (
+          <Input key={label} label={label} value="N/A" disabled readOnly />
+        ))}
+      </div>
+    </section>
+  );
+
+  const renderNotApplicableLegalEntity = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {renderNotApplicableSection(t('legalEntityHeading'), [
+        t('businessName'),
+        t('businessRif'),
+        t('registryNumber'),
+        t('registryVolume'),
+        t('registrationDate'),
+        t('economicActivity'),
+        t('productsServices'),
+        t('businessSector'),
+        t('fiscalAddress'),
+        t('lastYearProfit'),
+        t('netWorth'),
+        t('companyLocalPhone'),
+        t('companyMobilePhone'),
+        t('companyEmail'),
+      ])}
+      {renderNotApplicableSection(t('legalRepresentativeHeading'), [
+        t('representativeDoc'),
+        t('representativeName'),
+        t('representativeLastName'),
+        t('representativeRif'),
+        t('nationality'),
+        t('civilStatus'),
+        t('gender'),
+        t('birthDate'),
+        t('birthPlace'),
+        t('representativeProfession'),
+        t('representativeOccupation'),
+        t('annualIncome'),
+        t('politicallyExposed'),
+        t('activityClassification'),
+        t('localPhone'),
+        t('mobilePhone'),
+        t('representativeEmail'),
+        t('homeAddress'),
+        t('officeAddress'),
+        t('paymentAddress'),
+      ])}
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -128,28 +201,99 @@ export const Step2Contractor: React.FC<Step2Props> = ({
           </div>
         </div>
 
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+            padding: '1rem',
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <label style={{ fontWeight: 600, fontSize: '0.9375rem' }}>
+            {t('appliesForHealthPlan')} *
+          </label>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.9375rem' }}>
+              <input
+                type="checkbox"
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                checked={contractor.appliesForHealthPlan === true}
+                onChange={() => updateContractor({ appliesForHealthPlan: true })}
+              />
+              {t('yes')}
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.9375rem' }}>
+              <input
+                type="checkbox"
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                checked={contractor.appliesForHealthPlan === false}
+                onChange={() => updateContractor({ appliesForHealthPlan: false })}
+              />
+              {t('no')}
+            </label>
+          </div>
+        </div>
+
         {!contractor.isDifferent ? (
-          <div
-            style={{
-              padding: '1.25rem',
-              backgroundColor: 'rgba(99, 102, 241, 0.08)',
-              border: '1px dashed var(--accent-primary)',
-              borderRadius: 'var(--radius-md)',
-              textAlign: 'center',
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div
+              style={{
+                padding: '1.25rem',
+                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                border: '1px dashed var(--accent-primary)',
+                borderRadius: 'var(--radius-md)',
+                textAlign: 'center',
+              }}
+            >
               <p style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--accent-primary)' }}>
-              {t('sameAsHolder')}
-            </p>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              {t('sameAsHolderDesc')}
-            </p>
+                {t('sameAsHolder')}
+              </p>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                {t('sameAsHolderDesc')}
+              </p>
+            </div>
           </div>
         ) : (
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-            {(
+            {false && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+                padding: '1rem',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              <label className="input-label">{t('personType')} *</label>
+              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                {(['Natural', 'Juridica'] as ContractorPersonType[]).map((personType) => (
+                  <label
+                    key={personType}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    <input
+                      type="radio"
+                      name="contractorPersonType"
+                      value={personType}
+                      checked={contractor.personType === personType}
+                      onChange={() => updateContractor({ personType })}
+                    />
+                    {personType === 'Natural' ? t('naturalPerson') : t('legalEntity')}
+                  </label>
+                ))}
+              </div>
+            </div>
+            )}
+
+            {contractor.personType === 'Natural' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="input-group">
@@ -259,7 +403,7 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                     <DateSelect
                       id="natural-person-birth-date"
                       min={getMinimumDateYearsAgo(80)}
-                      max={getLocalIsoDate()}
+                      max={getMinimumDateYearsAgo(18)}
                       value={naturalPerson.birthDate}
                       onChange={(birthDate) => {
                         updateNaturalPerson({ birthDate });
@@ -290,6 +434,73 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                     onBlur={(e) => updateNaturalPerson({ annualIncomeBs: completeCurrencyInput(e.target.value) })}
                     required
                   />
+                </div>
+
+                {isNaturalPersonMerchant && (
+                  <Input
+                    label={t('merchantBusinessSector')}
+                    value={naturalPerson.businessSector || ''}
+                    onChange={(e) => updateNaturalPerson({ businessSector: e.target.value })}
+                    required
+                  />
+                )}
+
+                <div
+                  className="grid grid-cols-2 gap-4"
+                  style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}
+                >
+                  <div className="input-group">
+                    <label className="input-label">{t('politicallyExposed')} *</label>
+                    <div style={{ display: 'flex', gap: '1rem', minHeight: '42px', alignItems: 'center' }}>
+                      {(['NO', 'SÍ'] as const).map((value) => (
+                        <label key={value} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="naturalPersonPoliticallyExposed"
+                            checked={naturalPerson.politicallyExposed === value}
+                            onChange={() => updateNaturalPerson({
+                              politicallyExposed: value,
+                              politicallyExposedDescription: value === 'NO' ? '' : naturalPerson.politicallyExposedDescription,
+                            })}
+                          />
+                          {value === 'SÍ' ? t('yes') : t('no')}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">{t('activityClassification')} *</label>
+                    <div style={{ display: 'flex', gap: '1rem', minHeight: '42px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      {(['Independiente', 'Dependiente', 'Societaria'] as ActivityClassification[]).map((activity) => (
+                        <label key={activity} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="naturalPersonActivityClassification"
+                            checked={naturalPerson.activityClassification === activity}
+                            onChange={() => updateNaturalPerson({ activityClassification: activity })}
+                          />
+                          {t(activity === 'Independiente' ? 'independent' : activity === 'Dependiente' ? 'dependent' : 'corporate')}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  {naturalPerson.politicallyExposed === 'SÍ' && (
+                    <Input
+                      label={t('pepDescription')}
+                      placeholder={t('pepDescriptionPlaceholder')}
+                      value={naturalPerson.politicallyExposedDescription || ''}
+                      onChange={(e) => updateNaturalPerson({ politicallyExposedDescription: e.target.value })}
+                      required
+                    />
+                  )}
+                  {naturalPerson.activityClassification === 'Dependiente' && (
+                    <Input
+                      label={t('companyWhereWorks')}
+                      value={naturalPerson.company || ''}
+                      onChange={(e) => updateNaturalPerson({ company: e.target.value })}
+                      required
+                    />
+                  )}
                 </div>
 
                 <div className="grid grid-cols-4 gap-4">
@@ -352,13 +563,22 @@ export const Step2Contractor: React.FC<Step2Props> = ({
               </div>
             )}
 
-
             {contractor.personType === 'Juridica' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <h4 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
-                  {t('companyData')}
+                <h4
+                  style={{
+                    margin: '0.5rem 0 0',
+                    padding: '0.75rem 1rem',
+                    borderLeft: '4px solid var(--accent-primary)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--accent-primary)',
+                    fontSize: '1.0625rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  {t('legalEntityHeading')}
                 </h4>
-
                 <div className="grid grid-cols-2 gap-4">
                   <Input
                     label={t('businessName')}
@@ -473,32 +693,63 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <Input
                     label={t('lastYearProfit')}
                     placeholder={t('productivityPlaceholder')}
                     value={legalEntity.previousFiscalYearProfit}
-                    onChange={(e) => updateLegalEntity({ previousFiscalYearProfit: e.target.value })}
+                    onChange={(e) => updateLegalEntity({ previousFiscalYearProfit: formatCurrencyInput(e.target.value) })}
+                    onBlur={(e) => updateLegalEntity({ previousFiscalYearProfit: completeCurrencyInput(e.target.value) })}
                     required
                   />
                   <Input
                     label={t('netWorth')}
                     placeholder={t('productivityPlaceholder')}
                     value={legalEntity.netWorth}
-                    onChange={(e) => updateLegalEntity({ netWorth: e.target.value })}
+                    onChange={(e) => updateLegalEntity({ netWorth: formatCurrencyInput(e.target.value) })}
+                    onBlur={(e) => updateLegalEntity({ netWorth: completeCurrencyInput(e.target.value) })}
                     required
                   />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
                   <Input
-                    label={t('companyPhone')}
+                    label={t('companyLocalPhone')}
                     placeholder={t('companyPhonePlaceholder')}
                     value={legalEntity.phone}
                     onChange={(e) => updateLegalEntity({ phone: e.target.value })}
                     required
                   />
+                  <Input
+                    label={t('companyMobilePhone')}
+                    value={legalEntity.mobilePhone}
+                    onChange={(e) => updateLegalEntity({ mobilePhone: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label={t('companyEmail')}
+                    type="email"
+                    value={legalEntity.email}
+                    onChange={(e) => updateLegalEntity({ email: e.target.value })}
+                    required
+                  />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <h4>{t('representativeData')}</h4>
+                  <h4
+                    style={{
+                      margin: '0.5rem 0 0',
+                      padding: '0.75rem 1rem',
+                      borderLeft: '4px solid var(--accent-primary)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--accent-primary)',
+                      fontSize: '1.0625rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {t('legalRepresentativeHeading')}
+                  </h4>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="input-group">
                       <label className="input-label">{t('representativeDoc')} *</label>
@@ -533,20 +784,6 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                       label={t('representativeLastName')}
                       value={legalRepresentative.lastNames}
                       onChange={(e) => updateLegalRepresentative({ lastNames: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="previasis-input-group step1-field-wide">
-                    <label className="previasis-label">
-                      {t('pepDescription')} <span className="previasis-label-required">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="previasis-input"
-                      placeholder={t('pepDescriptionPlaceholder')}
-                      value={legalRepresentative.politicallyExposedDescription || ''}
-                      onChange={(e) => updateLegalRepresentative({ politicallyExposedDescription: e.target.value })}
                       required
                     />
                   </div>
@@ -650,6 +887,64 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                     />
                   </div>
 
+                  <div
+                    className="grid grid-cols-2 gap-4"
+                    style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-md)' }}
+                  >
+                    <div className="input-group">
+                      <label className="input-label">{t('politicallyExposed')} *</label>
+                      <div style={{ display: 'flex', gap: '1rem', minHeight: '42px', alignItems: 'center' }}>
+                        {(['NO', 'SÍ'] as const).map((value) => (
+                          <label key={value} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="legalRepresentativePoliticallyExposed"
+                              checked={legalRepresentative.politicallyExposed === value}
+                              onChange={() => updateLegalRepresentative({
+                                politicallyExposed: value,
+                                politicallyExposedDescription: value === 'NO' ? '' : legalRepresentative.politicallyExposedDescription,
+                              })}
+                            />
+                            {value === 'SÍ' ? t('yes') : t('no')}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label">{t('activityClassification')} *</label>
+                      <div style={{ display: 'flex', gap: '1rem', minHeight: '42px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {(['Independiente', 'Dependiente', 'Societaria'] as ActivityClassification[]).map((activity) => (
+                          <label key={activity} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="legalRepresentativeActivityClassification"
+                              checked={legalRepresentative.activityClassification === activity}
+                              onChange={() => updateLegalRepresentative({ activityClassification: activity })}
+                            />
+                            {t(activity === 'Independiente' ? 'independent' : activity === 'Dependiente' ? 'dependent' : 'corporate')}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    {legalRepresentative.politicallyExposed === 'SÍ' && (
+                      <Input
+                        label={t('pepDescription')}
+                        placeholder={t('pepDescriptionPlaceholder')}
+                        value={legalRepresentative.politicallyExposedDescription || ''}
+                        onChange={(e) => updateLegalRepresentative({ politicallyExposedDescription: e.target.value })}
+                        required
+                      />
+                    )}
+                    {legalRepresentative.activityClassification === 'Dependiente' && (
+                      <Input
+                        label={t('companyWhereWorks')}
+                        value={legalRepresentative.company || ''}
+                        onChange={(e) => updateLegalRepresentative({ company: e.target.value })}
+                        required
+                      />
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-4 gap-4">
                     <Input
                       label={t('birthPlace')}
@@ -677,15 +972,35 @@ export const Step2Contractor: React.FC<Step2Props> = ({
                     />
                   </div>
 
-                  <div className="input-group">
-                    <label className="input-label">{t('homeAddress')} *</label>
-                    <textarea
-                      className="input-field"
-                      rows={2}
-                      value={legalRepresentative.homeAddress}
-                      onChange={(e) => updateLegalRepresentative({ homeAddress: e.target.value })}
-                      required
-                    />
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="input-group">
+                      <label className="input-label">{t('homeAddress')} *</label>
+                      <textarea
+                        className="input-field"
+                        rows={2}
+                        value={legalRepresentative.homeAddress}
+                        onChange={(e) => updateLegalRepresentative({ homeAddress: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label">{t('officeAddress')}</label>
+                      <textarea
+                        className="input-field"
+                        rows={2}
+                        value={legalRepresentative.officeAddress}
+                        onChange={(e) => updateLegalRepresentative({ officeAddress: e.target.value })}
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label">{t('paymentAddress')}</label>
+                      <textarea
+                        className="input-field"
+                        rows={2}
+                        value={legalRepresentative.billingAddress}
+                        onChange={(e) => updateLegalRepresentative({ billingAddress: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

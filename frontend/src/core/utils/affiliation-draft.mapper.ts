@@ -77,6 +77,8 @@ const deserializeLegalEntity = (value: unknown): LegalEntityData => {
     productsServices: String(source.productsServices ?? ''),
     taxAddress: String(source.taxAddress ?? ''),
     phone: String(source.phone ?? ''),
+    mobilePhone: String(source.mobilePhone ?? ''),
+    email: String(source.email ?? ''),
     previousFiscalYearProfit: String(source.previousFiscalYearProfit ?? ''),
     netWorth: String(source.netWorth ?? ''),
     legalRepresentative: deserializeNaturalPerson(source.legalRepresentative),
@@ -87,6 +89,9 @@ const deserializeContractor = (value: unknown): ContractorSection => {
   const source = asRecord(value);
   return {
     isDifferent: Boolean(source.isDifferent),
+    appliesForHealthPlan: typeof source.appliesForHealthPlan === 'boolean'
+      ? source.appliesForHealthPlan
+      : null,
     personType: (source.personType ?? 'Natural') as ContractorSection['personType'],
     naturalPerson: deserializeNaturalPerson(source.naturalPerson),
     legalEntity: deserializeLegalEntity(source.legalEntity),
