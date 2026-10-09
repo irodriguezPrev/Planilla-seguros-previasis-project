@@ -201,42 +201,6 @@ export const Step2Contractor: React.FC<Step2Props> = ({
           </div>
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            padding: '1rem',
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-subtle)',
-          }}
-        >
-          <label style={{ fontWeight: 600, fontSize: '0.9375rem' }}>
-            {t('appliesForHealthPlan')} *
-          </label>
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.9375rem' }}>
-              <input
-                type="checkbox"
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                checked={contractor.appliesForHealthPlan === true}
-                onChange={() => updateContractor({ appliesForHealthPlan: true })}
-              />
-              {t('yes')}
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.9375rem' }}>
-              <input
-                type="checkbox"
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                checked={contractor.appliesForHealthPlan === false}
-                onChange={() => updateContractor({ appliesForHealthPlan: false })}
-              />
-              {t('no')}
-            </label>
-          </div>
-        </div>
-
         {!contractor.isDifferent ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div

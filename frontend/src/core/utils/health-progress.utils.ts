@@ -53,6 +53,7 @@ export const isClinicalDetailComplete = (
 ): boolean =>
   Boolean(
     detail.condition.trim() &&
+    (question.id !== 7 || detail.condition !== 'Hernias' || detail.conditionSubtype) &&
     isValidPastMonthYear(detail.diagnosisDate) &&
     (question.clinicalDetailLevel !== 'detailed' || detail.treatment.trim()),
   );

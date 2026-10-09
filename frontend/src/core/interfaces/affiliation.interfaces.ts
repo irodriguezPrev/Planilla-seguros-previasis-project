@@ -8,6 +8,13 @@ export type ActivityClassification = 'Independiente' | 'Dependiente' | 'Societar
 export type ContractorPersonType = 'Natural' | 'Juridica';
 export type LegalEconomicActivity = 'Profesional' | 'Comercial' | 'Industrial';
 export type RequestedPlan = 'Previasís' | 'Abuelos' | '24/7';
+
+/** Valores concretos de `RequestedPlan`, para validar en runtime (URL, borradores). */
+export const REQUESTED_PLANS: readonly RequestedPlan[] = ['Previasís', 'Abuelos', '24/7'];
+
+/** `true` cuando `value` es un `RequestedPlan` válido. */
+export const isRequestedPlan = (value: string): value is RequestedPlan =>
+  (REQUESTED_PLANS as readonly string[]).includes(value);
 export type PaymentFrequency = 'Anual' | 'Semestral' | 'Trimestral' | 'Mensual';
 export type PaymentCurrency = 'Bolívares' | 'Dólares';
 export type PaymentMethod = 'Domiciliación de Pago' | 'Pago en Oficina' | 'Pagos en Divisas' | 'Zelle' | 'Otro';
@@ -80,7 +87,6 @@ export interface LegalEntityData {
 
 export interface ContractorSection {
   isDifferent: boolean;
-  appliesForHealthPlan: boolean | null;
   personType: ContractorPersonType;
   naturalPerson: NaturalPersonData;
   legalEntity: LegalEntityData;
@@ -110,6 +116,7 @@ export interface MedicalConditionDetail {
   questionId?: number;
   affiliateCode: number | string;
   condition: string;
+  conditionSubtype?: 'umbilical' | 'inguinal' | 'epigastric' | '';
   diagnosisDate: string;
   treatment: string;
   lastCheckupDate: string;
@@ -172,7 +179,19 @@ export interface PaymentSection {
   otherPaymentDetails?: string;
 }
 
+export interface SignatureEvidence {
+  id: string;
+  signedAt: string;
+  sentAt?: string | null;
+  viewedAt?: string | null;
+  ip?: string | null;
+  device: string;
+  authentication: 'link' | 'local';
+}
+
 export interface DeclarationsSignaturesSection {
+  policyholderEvidence?: SignatureEvidence | null;
+  contractorEvidence?: SignatureEvidence | null;
   place: string;
   date: string;
   policyholderSignatureBase64: string | null;

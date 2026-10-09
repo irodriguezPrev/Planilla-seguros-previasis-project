@@ -17,6 +17,7 @@ import {
   AffiliationFormState,
   ContractorSection,
   PaymentFrequency,
+  isRequestedPlan,
 } from '@/core/interfaces/affiliation.interfaces';
 import {
   HEALTH_QUESTION_FILLING_GROUPS,
@@ -167,7 +168,6 @@ const INITIAL_STATE: AffiliationFormState = {
   },
   contractor: {
     isDifferent: false,
-    appliesForHealthPlan: null,
     personType: 'Natural',
     naturalPerson: {
       firstNames: '',
@@ -621,6 +621,72 @@ export default function AffiliationPage() {
     }
   }, []);
 
+  /**
+   * Prellenado desde el cotizador (`/landing`):
+   * `?requestedPlan=&coverageLimit=&birthDate=`.
+   *
+   * Se lee `window.location.search` en un efecto de montaje en vez de usar
+   * `useSearchParams()`, porque ese hook exige que el componente esté dentro
+   * de un `<Suspense>` y rompería el build en Next 16.
+   *
+   * Va después del efecto que restaura el borrador para que la intención
+   * reciente del usuario (acaba de cotizar) pise lo guardado. `birthDate` se
+   * valida con `calculateActuarialAge` (rechaza fechas ilegibles y futuras) y
+   * `requestedPlan` solo se aplica junto a `coverageLimit`, porque Paso 3
+   * calcula la cuota por coincidencia exacta del par: aplicarlos por separado
+   * daría una cuota de 0. El par viaja como nombre de plan (`Previasís`) y
+   * cobertura en número (`10000`); cualquier otro formato —incluido el
+   * antiguo `Plan Bronce` + `$10.000`— se descarta en vez de intentar
+   * adivinarlo. No se importa nada del cotizador desde aquí: eso haría que la
+   * afiliación dependiera del módulo y dejara de ser desmontable.
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedPlan = params.get('requestedPlan')?.trim() ?? '';
+    const coverageLimit = params.get('coverageLimit')?.trim() ?? '';
+    const birthDate = params.get('birthDate')?.trim() ?? '';
+
+    if (!requestedPlan && !coverageLimit && !birthDate) return;
+
+    const validBirthDate =
+      birthDate && calculateActuarialAge(birthDate) !== null ? birthDate : '';
+    const validPlanPair =
+      isRequestedPlan(requestedPlan) && /^[1-9]\d*$/.test(coverageLimit)
+        ? { requestedPlan, coverageLimit: Number(coverageLimit) }
+        : null;
+
+    if (validBirthDate || validPlanPair) {
+      setFormData((prev) => {
+        if (prev.affiliates.length === 0) return prev;
+
+        const [titular, ...rest] = prev.affiliates;
+        return {
+          ...prev,
+          policyholder: validBirthDate
+            ? { ...prev.policyholder, birthDate: validBirthDate }
+            : prev.policyholder,
+          affiliates: [
+            {
+              ...titular,
+              ...(validBirthDate ? { birthDate: validBirthDate } : {}),
+              ...(validPlanPair ?? {}),
+            },
+            ...rest,
+          ],
+        };
+      });
+    }
+
+    // Se consumen los parámetros para que refrescar la página no sobrescriba
+    // los ajustes que el usuario haga después en el Paso 3. Se conservan los
+    // demás (p. ej. `ref`), de los que se ocupa el efecto siguiente.
+    const consumed = new URL(window.location.href);
+    consumed.searchParams.delete('requestedPlan');
+    consumed.searchParams.delete('coverageLimit');
+    consumed.searchParams.delete('birthDate');
+    window.history.replaceState(window.history.state, '', consumed.toString());
+  }, []);
+
   useEffect(() => {
     const referralCode = new URLSearchParams(window.location.search).get('ref')?.trim();
     if (!referralCode) return;
@@ -805,8 +871,7 @@ export default function AffiliationPage() {
       const contractorBirthDate = formData.contractor.isDifferent
         ? formData.contractor.naturalPerson.birthDate
         : formData.policyholder.birthDate;
-      return formData.contractor.appliesForHealthPlan !== null &&
-        Boolean(contractorBirthDate) &&
+      return Boolean(contractorBirthDate) &&
         !isMinor(contractorBirthDate) &&
         hasRequiredContractorData(formData.contractor);
     }
@@ -945,10 +1010,6 @@ export default function AffiliationPage() {
         alert(tValidation('invalidVenezuelanMobile'));
         return false;
       }
-    }
-    if (step === 2 && formData.contractor.appliesForHealthPlan === null) {
-      alert(tValidation('contractorPlanApplicationRequired'));
-      return false;
     }
     if (step === 2) {
       const contractorBirthDate = formData.contractor.isDifferent
@@ -1217,7 +1278,6 @@ export default function AffiliationPage() {
       },
       contractor: {
         isDifferent: false,
-        appliesForHealthPlan: true,
         personType: 'Natural',
         naturalPerson: { ...INITIAL_STATE.contractor.naturalPerson },
         legalEntity: { ...INITIAL_STATE.contractor.legalEntity },

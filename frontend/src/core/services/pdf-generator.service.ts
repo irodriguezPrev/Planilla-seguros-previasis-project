@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { appendSignatureCertificate } from './signature-certificate';
 import {
   AffiliationFormState,
   AntecedentDetail,
@@ -663,21 +664,10 @@ export class PdfGeneratorService {
       ? buildLegalEntityRowsFromEntity(contractorData.legalEntity)
       : buildNaturalPersonRows(contractorPerson);
     const firstContractorBlockHeight = 5.2
-      + 8.5
       + (isLegalEntityContractor ? 5 : 0)
       + computeRowHeight(firstContractorRows[0]);
     ensureSpace(firstContractorBlockHeight);
     drawContractorSectionTitle();
-    drawContractorRow([
-      {
-        label: '¿El Contratante aplica para este plan de salud?',
-        value: contractorData.appliesForHealthPlan === null
-          ? PDF_NOT_APPLICABLE
-          : contractorData.appliesForHealthPlan ? 'Sí' : 'No',
-        x: margin,
-        w: contentWidth,
-      },
-    ]);
 
     if (isLegalEntityContractor) {
       drawContractorLegalEntity(contractorData.legalEntity);
@@ -926,6 +916,11 @@ export class PdfGeneratorService {
       ...(data.healthDeclaration.medicalConditionDetails || []),
       ...beneficiaryConditions,
     ];
+    const herniaTypeLabels: Record<string, string> = {
+      umbilical: 'Hernia umbilical',
+      inguinal: 'Hernia inguinal',
+      epigastric: 'Hernia epigástrica',
+    };
 
     if (conditions.length > 0) {
       const rowHeight = 6.5;
@@ -989,7 +984,12 @@ export class PdfGeneratorService {
         rowX += conditionColumnWidths[0];
 
         doc.text(
-          doc.splitTextToSize(af.condition || '-', conditionColumnWidths[1] - 2)[0] || '-',
+          doc.splitTextToSize(
+            af.condition === 'Hernias' && 'conditionSubtype' in af && af.conditionSubtype
+              ? herniaTypeLabels[af.conditionSubtype] || af.condition
+              : af.condition || '-',
+            conditionColumnWidths[1] - 2,
+          )[0] || '-',
           rowX + 1.5,
           currentY + 4.2
         );
@@ -1517,6 +1517,8 @@ export class PdfGeneratorService {
       { label: 'Nº Credencial Sudeaseg', value: broker.credentialNumber, x: margin + thirdW * 1.2, w: thirdW * 0.8 },
       { label: 'C.I. / R.I.F. / Pasaporte', value: `${broker.documentType}-${broker.identityOrTaxNumber}`, x: margin + thirdW * 2, w: thirdW },
     ]);
+
+    if (!isDraft) appendSignatureCertificate(doc, data);
 
     const totalPages = doc.getNumberOfPages();
     for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {

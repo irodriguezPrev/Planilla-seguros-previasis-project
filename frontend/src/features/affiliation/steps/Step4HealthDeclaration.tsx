@@ -60,6 +60,14 @@ interface Step4Props {
 
 const makeId = () => Math.random().toString(36).substring(2, 10);
 
+const HERNIA_QUESTION_ID = 7;
+const HERNIA_CONDITION = 'Hernias';
+const HERNIA_TYPES: NonNullable<MedicalConditionDetail['conditionSubtype']>[] = [
+  'umbilical',
+  'inguinal',
+  'epigastric',
+];
+
 const statusMeta: Record<HealthCompletionStatus, { labelKey: string; color: string; background: string }> = {
   pending: { labelKey: 'pending', color: '#64748b', background: '#f1f5f9' },
   incomplete: { labelKey: 'incomplete', color: '#b45309', background: '#fff7ed' },
@@ -76,14 +84,26 @@ const capitalizeConditionText = (value: string): string =>
     `${separator}${letter.toLocaleUpperCase('es-VE')}`,
   );
 
-const getSuggestedConditions = (question: ResolvedHealthQuestionItem): string[] =>
-  question.clinicalDetailOptions?.length
+const getSuggestedConditions = (question: ResolvedHealthQuestionItem): string[] => {
+  const suggestions = question.clinicalDetailOptions?.length
     ? question.clinicalDetailOptions
     : question.description
     .replace(/\betc\.?$/i, '')
     .split(',')
     .map((condition) => capitalizeCondition(condition.replace(/[.?]+$/, '')))
     .filter((condition) => condition.length > 2 && condition.length < 65);
+
+  if (question.id !== HERNIA_QUESTION_ID) return suggestions;
+
+  const firstHerniaIndex = suggestions.findIndex((condition) => /hernia/i.test(condition));
+  if (firstHerniaIndex < 0) return suggestions;
+
+  return suggestions.reduce<string[]>((result, condition, index) => {
+    if (index === firstHerniaIndex) result.push(HERNIA_CONDITION);
+    if (!/hernia/i.test(condition)) result.push(condition);
+    return result;
+  }, []);
+};
 
 const selectedFirst = <T,>(items: T[], isSelected: (item: T) => boolean): T[] =>
   items
@@ -835,6 +855,7 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
         questionId: currentQuestion.id,
         affiliateCode,
         condition: conditionName,
+        conditionSubtype: conditionName === HERNIA_CONDITION ? '' : undefined,
         diagnosisDate: '',
         treatment: '',
         lastCheckupDate: '',
@@ -1102,7 +1123,25 @@ export const Step4HealthDeclaration: React.FC<Step4Props> = ({
             <div className="health-clinical-grid">
               <div className="previasis-input-group">
                 <label className="previasis-label">{t('clinicalType')}</label>
-                <input className="previasis-input" value={detail.condition} onChange={(event) => updateClinicalDetail(detail.id, { condition: event.target.value })} required />
+                {currentQuestion.id === HERNIA_QUESTION_ID && detail.condition === HERNIA_CONDITION ? (
+                  <select
+                    className="previasis-input"
+                    value={detail.conditionSubtype || ''}
+                    onChange={(event) => updateClinicalDetail(detail.id, {
+                      conditionSubtype: event.target.value as MedicalConditionDetail['conditionSubtype'],
+                    })}
+                    required
+                  >
+                    <option value="">{t('selectHerniaType')}</option>
+                    {HERNIA_TYPES.map((herniaType) => (
+                      <option key={herniaType} value={herniaType}>
+                        {t(`herniaTypes.${herniaType}`)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input className="previasis-input" value={detail.condition} onChange={(event) => updateClinicalDetail(detail.id, { condition: event.target.value })} required />
+                )}
               </div>
               <div className="previasis-input-group">
                 <label className="previasis-label">{t('clinicalDate')}</label>

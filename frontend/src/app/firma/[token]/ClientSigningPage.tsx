@@ -1,8 +1,8 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertCircle, CheckCircle2, FileText, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileText, ShieldCheck } from 'lucide-react';
 import { Button } from '@/core/components/ui/Button';
 import { AffiliationFormState } from '@/core/interfaces/affiliation.interfaces';
 import { PdfGeneratorService } from '@/core/services/pdf-generator.service';
@@ -27,7 +27,6 @@ const suggestedPlace = (formData: AffiliationFormState) =>
 
 export function ClientSigningPage({ token }: ClientSigningPageProps) {
   const t = useTranslations('clientSigning');
-  const [lastFour, setLastFour] = useState('');
   const [access, setAccess] = useState<SigningAccessResponse | null>(null);
   const [formData, setFormData] = useState<AffiliationFormState | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
@@ -35,7 +34,7 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
   const [acceptsFunds, setAcceptsFunds] = useState(false);
   const [place, setPlace] = useState('');
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
@@ -79,12 +78,14 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
     };
   }, [access?.status, completed, formData, t]);
 
-  const handleAccess = async (event: FormEvent) => {
-    event.preventDefault();
+  const loadSigningRequest = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setAccess(null);
+    setFormData(null);
+    setPdfUrl(null);
     try {
-      const response = await accessRemoteSigningRequest(token, lastFour);
+      const response = await accessRemoteSigningRequest(token);
       const normalizedForm = deserializeAffiliationDraft(response.formData);
       setAccess(response);
       setFormData(normalizedForm);
@@ -96,7 +97,11 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t, token]);
+
+  useEffect(() => {
+    void loadSigningRequest();
+  }, [loadSigningRequest]);
 
   const handleSign = async () => {
     setValidationAttempted(true);
@@ -105,7 +110,6 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
     setSigning(true);
     try {
       const response = await signRemoteDocument(token, {
-        lastFour,
         signatureDataUrl: signature,
         place: place.trim(),
         acceptsPolicyholderDeclaration: requiresHolderDeclaration && acceptsHolder,
@@ -136,33 +140,16 @@ export function ClientSigningPage({ token }: ClientSigningPageProps) {
     return (
       <div className="client-signing-page">
         <section className="client-signing-access previasis-card">
-          <div className="client-signing-icon"><LockKeyhole size={28} /></div>
+          <div className="client-signing-icon"><FileText size={28} /></div>
           <span className="client-signing-eyebrow">PREVIASIS</span>
-          <h1>{t('accessTitle')}</h1>
-          <p>{t('accessSubtitle')}</p>
-          <form onSubmit={handleAccess} className="client-signing-access-form">
-            <label className="previasis-label" htmlFor="document-last-four">
-              {t('lastFourLabel')}
-            </label>
-            <input
-              id="document-last-four"
-              className="previasis-input client-signing-code-input"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={4}
-              value={lastFour}
-              onChange={(event) => setLastFour(event.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())}
-              placeholder="••••"
-              required
-            />
-            <p className="client-signing-security-note">
-              <ShieldCheck size={16} /> {t('securityHint')}
-            </p>
-            {error && <div className="client-signing-error" role="alert">{error}</div>}
-            <Button type="submit" isLoading={loading} disabled={lastFour.length !== 4}>
-              {t('openDocument')}
+          <h1>{loading ? t('loadingTitle') : t('loadErrorTitle')}</h1>
+          <p>{loading ? t('loadingSubtitle') : t('loadErrorSubtitle')}</p>
+          {error && <div className="client-signing-error" role="alert">{error}</div>}
+          {!loading && (
+            <Button onClick={() => void loadSigningRequest()}>
+              {t('retry')}
             </Button>
-          </form>
+          )}
         </section>
       </div>
     );

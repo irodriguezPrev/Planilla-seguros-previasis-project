@@ -11,10 +11,20 @@ import {
 
 /** Fecha de nacimiento que produce exactamente `edad` años a la referencia fijada. */
 function nacimientoConEdad(edad: number, referencia = new Date(2026, 9, 1)): string {
-  const anio = referencia.getFullYear() - edad;
-  return `${anio}-${String(referencia.getMonth() + 1).padStart(2, '0')}-${String(
-    referencia.getDate(),
-  ).padStart(2, '0')}`;
+  // Nace UN DÍA ANTES del día de referencia: con la referencia a medianoche,
+  // la regla actuarial histórica redondea hacia arriba el mismo día del
+  // cumpleaños ("faltan 0 meses"), así que nacer justo el día de la referencia
+  // devolvería `edad + 1`. Naciendo el día anterior, la referencia cae el día
+  // después del cumpleaños y la edad resultante es exactamente `edad`.
+  const nacimiento = new Date(
+    referencia.getFullYear() - edad,
+    referencia.getMonth(),
+    referencia.getDate() - 1,
+  );
+  const anio = nacimiento.getFullYear();
+  const mes = String(nacimiento.getMonth() + 1).padStart(2, '0');
+  const dia = String(nacimiento.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
 }
 
 function fila(overrides: Partial<AffiliateRow> = {}): AffiliateRow {

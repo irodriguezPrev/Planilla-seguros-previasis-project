@@ -1,0 +1,1027 @@
+/* ==========================================================================
+   Cotizador público — módulo desprendible `src/features/quote/`
+   --------------------------------------------------------------------------
+   Todo va prefijado con `.q-` y no se modifica nada en globals.css: para
+   retirar el cotizador basta con borrar esta carpeta. Los tokens
+   (--previasis-*, --grad-*, --radius-*, --shadow-*) y las clases base
+   (.container, .btn-pill, .pill-switch, .plan-gradient-card) son del design
+   system compartido y se reutilizan tal cual.
+   ========================================================================== */
+
+/* ---------- Hero ---------------------------------------------------------- */
+
+.q-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--grad-hero);
+  color: #fff;
+  padding: 4.5rem 0 7rem;
+}
+
+.q-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.q-hero-title {
+  margin: 1.15rem 0 0;
+  font-size: clamp(1.9rem, 4.2vw, 3.1rem);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  max-width: 18ch;
+}
+
+.q-hero-title em {
+  color: var(--previasis-lime);
+  font-style: normal;
+}
+
+.q-hero-sub {
+  margin: 1rem 0 0;
+  max-width: 58ch;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.q-hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+}
+
+.q-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* ---------- Secciones ---------------------------------------------------- */
+
+.q-section {
+  padding: 3.5rem 0;
+}
+
+.q-section--alt {
+  background: var(--bg-card-alt);
+  border-top: 1px solid var(--border-card);
+  border-bottom: 1px solid var(--border-card);
+}
+
+.q-section-head {
+  max-width: 62ch;
+  margin-bottom: 2rem;
+}
+
+.q-section-kicker {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--previasis-green);
+}
+
+.q-section-title {
+  margin: 0.5rem 0 0;
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  font-weight: 800;
+  color: var(--previasis-dark-green);
+  letter-spacing: -0.01em;
+}
+
+.q-section-sub {
+  margin: 0.65rem 0 0;
+  color: var(--text-body);
+  line-height: 1.65;
+}
+
+/* ---------- Calculadora: rejilla de dos columnas ------------------------- */
+
+.q-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: -5.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.q-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* ---------- Pasos del formulario ----------------------------------------- */
+
+.q-step {
+  padding: 1.6rem;
+}
+
+.q-step-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.q-step-index {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--previasis-green-light);
+  color: var(--previasis-dark-green);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.q-step-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--previasis-dark-green);
+}
+
+.q-step-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.q-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+}
+
+.q-field-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+.q-field-note {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.q-field-error {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--status-error);
+}
+
+/* Inputs heredados del design system. */
+.q-input,
+.q-select {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  outline: none;
+  transition: var(--transition);
+}
+
+.q-input:focus,
+.q-select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--previasis-green-light);
+}
+
+.q-input[aria-invalid='true'],
+.q-select[aria-invalid='true'] {
+  border-color: var(--status-error);
+}
+
+.q-select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% + 2px), calc(100% - 12px) calc(50% + 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 2.25rem;
+}
+
+/* Zona tarifaria: informada, nunca editable. */
+.q-zone-readonly {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.375rem;
+  padding: 0.65rem 0.85rem;
+  min-height: 42px;
+  border: 1px dashed var(--border-card);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-alt);
+}
+
+.q-zone-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-body);
+}
+
+.q-zone-auto {
+  flex-shrink: 0;
+  padding: 0.18rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+/* ---------- Selector de plan --------------------------------------------- */
+
+.q-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 1rem;
+}
+
+.q-plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  font: inherit;
+  min-width: 0;
+}
+
+.q-plan-card[disabled] {
+  cursor: not-allowed;
+  opacity: 0.42;
+  filter: grayscale(0.55);
+}
+
+.q-plan-card[disabled]:hover {
+  transform: none;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.q-plan-card-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.q-plan-card-ages {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.85;
+}
+
+.q-plan-card-desc {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  opacity: 0.92;
+}
+
+.q-see-plans {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.95rem;
+  color: var(--previasis-green);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: var(--transition);
+}
+.q-see-plans:hover {
+  color: var(--previasis-dark-green);
+  text-decoration: underline;
+}
+
+/* ---------- Coberturas ---------------------------------------------------- */
+
+.q-coverage-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}
+
+.q-coverage-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.5rem 1.05rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-card);
+  background: var(--bg-card);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.q-coverage-tier {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tier-color, var(--text-muted));
+}
+
+.q-coverage-amount {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text-body);
+}
+
+/* Paleta de niveles: única fuente de verdad. La comparten los chips del
+   cotizador y las etiquetas del catálogo de /planes; el sufijo va con la
+   clase `q-tier--<nivel>`. Sin nivel se cae al verde de la marca. */
+.q-tier--bronce {
+  --tier-color: #9a5b2d;
+  --tier-soft: #f7efe7;
+}
+
+.q-tier--plata {
+  --tier-color: #67717f;
+  --tier-soft: #eef1f4;
+}
+
+.q-tier--oro {
+  --tier-color: #8a6a12;
+  --tier-soft: #f8f2dd;
+}
+
+.q-tier--diamante {
+  --tier-color: #1f6e96;
+  --tier-soft: #e6f2f8;
+}
+
+.q-coverage-chip:hover {
+  border-color: var(--tier-color, var(--border-card));
+  background: var(--tier-soft, var(--bg-card-alt));
+}
+
+.q-coverage-chip:hover .q-coverage-amount {
+  color: var(--tier-color, var(--text-body));
+}
+
+.q-coverage-chip.selected {
+  background: var(--tier-color, var(--previasis-dark-green));
+  border-color: var(--tier-color, var(--previasis-dark-green));
+}
+
+.q-coverage-chip.selected .q-coverage-tier,
+.q-coverage-chip.selected .q-coverage-amount {
+  color: #fff;
+}
+
+.q-coverage-chip.selected:hover {
+  background: var(--tier-color, var(--previasis-dark-green));
+}
+
+.q-coverage-chip.selected:hover .q-coverage-amount {
+  color: #fff;
+}
+
+.q-empty-note {
+  margin: 0.9rem 0 0;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-alt);
+  border: 1px dashed var(--border-card);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* ---------- Acciones ------------------------------------------------------ */
+
+.q-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.q-actions .btn-pill {
+  padding: 0.8rem 1.75rem;
+  font-size: 0.95rem;
+}
+
+.q-calc-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Indicador de datos desactualizados --------------------------- */
+
+.q-stale {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-full);
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.q-stale button {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 800;
+  color: #b45309;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---------- Resultados ---------------------------------------------------- */
+
+.q-results-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.q-results-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--previasis-dark-green);
+}
+
+.q-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 0.75rem;
+}
+
+.q-result-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem 0.9rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  min-width: 0;
+}
+
+.q-result-card--contado {
+  border-color: var(--previasis-green);
+  background: var(--previasis-green-light);
+}
+
+.q-result-term {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.q-result-amount {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--previasis-dark-green);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.q-result-meta {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.q-result-total {
+  margin-top: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--border-card);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+/* Barra de coherencia anual: demuestra que las cinco suman lo mismo. */
+.q-year-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: var(--previasis-dark-green);
+  color: #fff;
+}
+
+.q-year-bar-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 700;
+}
+
+.q-year-bar-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.q-year-bar-note {
+  flex-basis: 100%;
+  font-size: 0.73rem;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.5;
+}
+
+.q-disclaimer {
+  margin: 0.9rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* ---------- Riel de resumen (columna derecha, sticky) --------------------- */
+
+.q-rail {
+  position: sticky;
+  top: 88px; /* navbar 64px + 24px de aire */
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.q-rail-card {
+  padding: 1.35rem;
+}
+
+.q-rail-title {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.q-rail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-card);
+  font-size: 0.87rem;
+}
+
+.q-rail-row:last-of-type {
+  border-bottom: none;
+}
+
+.q-rail-key {
+  color: var(--text-muted);
+}
+
+.q-rail-val {
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.q-rail-total {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px solid var(--previasis-green-light);
+}
+
+.q-rail-total-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.q-rail-total-value {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--previasis-dark-green);
+  letter-spacing: -0.02em;
+}
+
+.q-rail-empty {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.q-rail-cta {
+  width: 100%;
+  padding: 0.9rem 1.25rem;
+  font-size: 0.95rem;
+}
+
+.q-rail-cta[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.q-rail-note {
+  margin: 0.65rem 0 0;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ---------- Moneda y tasa ------------------------------------------------- */
+
+.q-currency-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.q-rate {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.q-rate strong {
+  color: var(--text-body);
+  font-weight: 700;
+}
+
+.q-rate--warning {
+  color: #b45309;
+  font-weight: 600;
+}
+
+/* ---------- Catálogo ------------------------------------------------------ */
+
+.q-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.q-catalog-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.q-catalog-band {
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  color: #fff;
+}
+
+.q-catalog-name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.q-catalog-ages {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  opacity: 0.88;
+}
+
+.q-catalog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.q-catalog-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-alt);
+  font-size: 0.87rem;
+}
+
+.q-catalog-coverage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  color: var(--previasis-dark-green);
+}
+
+/* Etiqueta de nivel (Bronce → Diamante) dentro del catálogo. */
+.q-catalog-tier {
+  flex-shrink: 0;
+  padding: 0.12rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--tier-soft, var(--bg-card));
+  border: 1px solid var(--tier-color, var(--border-card));
+  color: var(--tier-color, var(--text-muted));
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.q-catalog-from {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.q-catalog-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ---------- FAQ ----------------------------------------------------------- */
+
+.q-faq {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 1rem;
+}
+
+.q-faq-item {
+  padding: 1.35rem;
+}
+
+.q-faq-q {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--previasis-dark-green);
+}
+
+.q-faq-a {
+  margin: 0.55rem 0 0;
+  font-size: 0.87rem;
+  color: var(--text-body);
+  line-height: 1.6;
+}
+
+/* ---------- CTA final ----------------------------------------------------- */
+
+.q-cta {
+  background: var(--grad-hero);
+  color: #fff;
+  border-radius: var(--radius-xl);
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.q-cta-title {
+  margin: 0;
+  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
+  font-weight: 800;
+}
+
+.q-cta-sub {
+  margin: 0.7rem auto 1.5rem;
+  max-width: 55ch;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.6;
+}
+
+/* ---------- Página de planes (/planes) ------------------------------------ */
+
+/* Empuja el contenido sobre el hero, igual que hace `.q-layout` en el
+   cotizador, para que las dos páginas compartan el mismo ritmo visual. */
+.q-page-body {
+  position: relative;
+  z-index: 2;
+  margin-top: -5.5rem;
+  padding-bottom: 2.5rem;
+}
+
+.q-filter {
+  display: grid;
+  gap: 1rem;
+}
+
+.q-filter-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.q-filter-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-card);
+  color: var(--previasis-green);
+}
+
+.q-filter-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-body);
+}
+
+.q-filter-hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.q-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.q-plans-body {
+  margin-top: 1.75rem;
+}
+
+/* ---------- Z-index -------------------------------------------------------
+   navbar 50 · barra inferior del cotizador 40 · riel sticky 2 · drawer 100
+   ------------------------------------------------------------------------ */
+
+/* ---------- Breakpoints --------------------------------------------------- */
+
+@media (max-width: 1050px) {
+  .q-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+
+@media (max-width: 900px) {
+  .q-hero {
+    padding: 3.5rem 0 5rem;
+  }
+
+  .q-layout {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: -4rem;
+  }
+
+  /* El riel pasa a barra inferior fija, como en el formulario de afiliación. */
+  .q-rail {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border-card);
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .q-rail-card {
+    flex: 1;
+    min-width: 0;
+    padding: 0.35rem 0;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .q-rail-title,
+  .q-rail-row,
+  .q-rail-note,
+  .q-rate {
+    display: none;
+  }
+
+  .q-rail-total {
+    margin: 0;
+    padding: 0;
+    border: none;
+    flex: none;
+  }
+
+  .q-rail-total-label {
+    font-size: 0.66rem;
+  }
+
+  .q-rail-total-value {
+    font-size: 1.15rem;
+    margin: 0;
+  }
+
+  .q-rail-cta {
+    width: auto;
+    flex: none;
+    padding: 0.7rem 1.15rem;
+  }
+
+  /* Deja espacio para que la barra no tape el contenido. */
+  .q-cta,
+  .q-section--last {
+    padding-bottom: 6rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .q-results-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .q-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .q-step {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .q-hero-title {
+    font-size: 1.75rem;
+  }
+
+  .q-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .q-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

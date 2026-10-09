@@ -9,6 +9,8 @@ export const siteConfig = {
     swagger: 'http://localhost:3004/swagger/#',
   },
   navigation: [
+    { label: 'Cotizar', href: '/landing' },
+    { label: 'Planes', href: '/planes' },
     { label: 'Afiliación', href: '/' },
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Usuarios', href: '/dashboard/users' },

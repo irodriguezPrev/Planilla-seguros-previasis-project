@@ -64,8 +64,9 @@ export function calculateActuarialAge(
     return null;
   }
 
-  // Compare date-only values to avoid off-by-one errors caused by the
-  // reference time-of-day (new Date()) vs. midnight construction of birthdays.
+  // Compare date-only values for the chronological age, to avoid off-by-one
+  // errors caused by the reference time-of-day (new Date()) vs. the midnight
+  // construction of birthdays.
   const birth = new Date(
     dateOfBirth.getFullYear(),
     dateOfBirth.getMonth(),
@@ -89,13 +90,20 @@ export function calculateActuarialAge(
     chronologicalAge--;
   }
 
-  // Determine the next birthday (strictly after the reference date).
+  // Determine the next birthday.
+  //
+  // Esta comparación usa la referencia SIN normalizar y es deliberada: es la
+  // regla que el formulario ya tiene por negocio. Con la referencia a
+  // medianoche (una fecha parseada) el cumpleaños de hoy cuenta como "faltan
+  // 0 meses" y el redondeo sube un entero; con `new Date()` —con hora— el
+  // cumpleaños de hoy ya pasó y no redondea. Normalizar aquí cambiaría la
+  // edad actuarial justo en el día del cumpleaños.
   const nextBirthday = new Date(
     reference.getFullYear(),
     birth.getMonth(),
     birth.getDate(),
   );
-  if (nextBirthday <= reference) {
+  if (nextBirthday < referenceDate) {
     nextBirthday.setFullYear(nextBirthday.getFullYear() + 1);
   }
 

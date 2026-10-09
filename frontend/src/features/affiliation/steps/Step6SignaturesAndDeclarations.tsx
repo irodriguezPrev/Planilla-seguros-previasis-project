@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { SignaturePad } from '../SignaturePad';
+import { captureSignatureEvidence } from '@/core/utils/signature-evidence.utils';
 import {
   DeclarationsSignaturesSection,
   BrokerSection,
@@ -229,7 +230,10 @@ export const Step6SignaturesAndDeclarations: React.FC<Step6Props> = ({
           <SignaturePad
             label={t('policyholderSignature', { name: policyholderFullName })}
             initialSignature={signatures.policyholderSignatureBase64}
-            onSave={(b64) => updateSignatures({ policyholderSignatureBase64: b64 })}
+            onSave={(b64) => updateSignatures({
+              policyholderSignatureBase64: b64,
+              policyholderEvidence: b64 ? captureSignatureEvidence(signatures.policyholderEvidence) : null,
+            })}
             required
           />
 
@@ -239,7 +243,10 @@ export const Step6SignaturesAndDeclarations: React.FC<Step6Props> = ({
               <SignaturePad
                 label={t('contractorSignature', { name: contractorFullName })}
                 initialSignature={signatures.contractorSignatureBase64}
-                onSave={(b64) => updateSignatures({ contractorSignatureBase64: b64 })}
+                onSave={(b64) => updateSignatures({
+                  contractorSignatureBase64: b64,
+                  contractorEvidence: b64 ? captureSignatureEvidence(signatures.contractorEvidence) : null,
+                })}
                 required
               />
             </div>

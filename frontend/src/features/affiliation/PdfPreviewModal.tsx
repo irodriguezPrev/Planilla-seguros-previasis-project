@@ -7,6 +7,7 @@ import { Card } from '@/core/components/ui/Card';
 import { AffiliationFormState } from '@/core/interfaces/affiliation.interfaces';
 import { PdfGeneratorService } from '@/core/services/pdf-generator.service';
 import { createRemoteSigningRequest } from '@/core/services/signing-request.service';
+import { useAuth } from '@/core/hooks/useAuth';
 import { Download, Share2, X, FileText, Link2 } from 'lucide-react';
 
 type PdfPreviewMode = 'draft' | 'final';
@@ -28,12 +29,14 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
   onApprove,
   formData,
 }) => {
-   const isDraft = mode === 'draft';
+  const { user } = useAuth();
+  const isDraft = mode === 'draft';
+  const isSeller = user?.role?.trim().toLowerCase() === 'vendedor';
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isCreatingSigningLink, setIsCreatingSigningLink] = useState(false);
   const isGenerating = !pdfUrl;
-const t = useTranslations('pdfPreview');
+  const t = useTranslations('pdfPreview');
   const tValidation = useTranslations('validation');
 
   useEffect(() => {
@@ -265,17 +268,19 @@ const t = useTranslations('pdfPreview');
             {isDraft ? (
               <>
 
-                <Button
-                  className="pdf-preview-action"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleSendForSignature}
-                  isLoading={isCreatingSigningLink}
-                  disabled={isGenerating}
-                  leftIcon={<Link2 size={16} />}
-                >
-                  {t('sendForSignature')}
-                </Button>
+                {isSeller && (
+                  <Button
+                    className="pdf-preview-action"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleSendForSignature}
+                    isLoading={isCreatingSigningLink}
+                    disabled={isGenerating}
+                    leftIcon={<Link2 size={16} />}
+                  >
+                    {t('sendForSignature')}
+                  </Button>
+                )}
 
                 {onBack && (
                   <Button

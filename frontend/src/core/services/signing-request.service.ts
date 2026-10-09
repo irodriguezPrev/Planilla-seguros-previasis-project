@@ -30,7 +30,6 @@ export interface SigningAccessResponse {
 }
 
 export interface SignDocumentPayload {
-  lastFour: string;
   signatureDataUrl: string;
   place: string;
   acceptsPolicyholderDeclaration: boolean;
@@ -139,11 +138,9 @@ export const createRemoteSigningRequest = async (
 
 export const accessRemoteSigningRequest = (
   token: string,
-  lastFour: string,
 ): Promise<SigningAccessResponse> => requestJson(`${signingApiBase}/signing-requests/${encodeURIComponent(token)}/access`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ lastFour }),
 });
 
 export const signRemoteDocument = (

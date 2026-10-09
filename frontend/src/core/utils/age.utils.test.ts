@@ -16,9 +16,11 @@ describe('calculateActuarialAge', () => {
     ['1997-11-15', '2026-05-14', 28],
     ['1997-11-15', '2026-04-01', 28],
     ['1997-11-15', '2026-09-30', 29],
-    // El día del cumpleaños no debe saltar todavía al siguiente entero.
+    // Días alrededor del cumpleaños: la regla redondea cuando el próximo
+    // cumpleaños está a seis meses o menos, y el día exacto cuenta como
+    // "faltan 0 meses" con la referencia a medianoche, así que sube un entero.
     ['1997-11-15', '2026-11-14', 29],
-    ['1997-11-15', '2026-11-15', 29],
+    ['1997-11-15', '2026-11-15', 30],
     ['1997-11-15', '2026-11-16', 29],
     ['1997-11-15', '2026-12-01', 29],
     // Independencia de la hora del día: la regla opera sobre fechas, no horas.
@@ -90,8 +92,10 @@ describe('calculateActuarialAge', () => {
     expect(calculateActuarialAge('2000-02-29', '2027-08-15')).toBe(27);
   });
 
-  it('no redondea el 29 de febrero el mismo día de cumpleaños en año bisiesto', () => {
-    expect(calculateActuarialAge('2000-02-29', '2024-02-29')).toBe(24);
+  it('redondea el 29 de febrero el mismo día de cumpleaños en año bisiesto', () => {
+    // 24 años cumplidos y el próximo cumpleaños cuenta como "faltan 0 meses":
+    // la regla sube a 25.
+    expect(calculateActuarialAge('2000-02-29', '2024-02-29')).toBe(25);
   });
 });
 

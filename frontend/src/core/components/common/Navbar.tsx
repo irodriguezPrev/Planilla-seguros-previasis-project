@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { PreviasisLogo } from './PreviasisLogo';
 import { StatusIndicator } from './StatusIndicator';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
-import { LogOut, User as UserIcon, LayoutDashboard, FileCheck2, Menu, X } from 'lucide-react';
+import { LogOut, User as UserIcon, LayoutDashboard, FileCheck2, Calculator, Layers, Menu, X } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
@@ -232,6 +232,22 @@ export const Navbar: React.FC = () => {
             {/* Desktop Navigation Links */}
             <nav className="navbar-nav">
               <Link
+                href="/landing"
+                className={`navbar-nav-link`}
+              >
+                <Calculator size={16} />
+                <span>{t('cotizar')}</span>
+              </Link>
+
+              <Link
+                href="/planes"
+                className={`navbar-nav-link`}
+              >
+                <Layers size={16} />
+                <span>{t('planes')}</span>
+              </Link>
+
+              <Link
                 href="/"
                 className={`navbar-nav-link`}
               >
@@ -329,6 +345,24 @@ export const Navbar: React.FC = () => {
         </div>
 
         <div className="navbar-mobile-drawer-body">
+          <Link
+            href="/landing"
+            className={`navbar-mobile-link`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Calculator size={20} />
+            {t('cotizar')}
+          </Link>
+
+          <Link
+            href="/planes"
+            className={`navbar-mobile-link`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Layers size={20} />
+            {t('planes')}
+          </Link>
+
           <Link
             href="/"
             className={`navbar-mobile-link`}

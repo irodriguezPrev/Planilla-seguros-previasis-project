@@ -83,8 +83,22 @@ describe('divergencia de edad', () => {
   });
 
   it('a los 80 años el plan sigue siendo elegible y no hay caso de menor', () => {
-    const nacimiento = '1946-10-01';
+    // Nace el 2/10: mañana cumple 80, hoy tiene 79 cronológicos y el redondeo
+    // actuarial ya lo deja en 80, todavía dentro del rango tarifario 61-80.
+    const nacimiento = '1946-10-02';
     expect(calculateActuarialAge(nacimiento)).toBe(80);
+    expect(isMinor(nacimiento)).toBe(false);
+    expect(requiresMinorDocumentChoice(fila({ birthDate: nacimiento }))).toBe(false);
+  });
+
+  it('el día exacto del cumpleaños de los 80 la edad actuarial sube a 81', () => {
+    // DIVERGENCIA: con la referencia a medianoche el próximo cumpleaños de
+    // hoy cuenta como "faltan 0 meses" y la regla sube un entero, así que la
+    // edad que usa el plan ese día es 81 (fuera del rango 61-80). Con
+    // `new Date()` —con hora, como en la aplicación— el cumpleaños de hoy ya
+    // pasó y no salta: el caso solo aparece con fechas parseadas.
+    const nacimiento = '1946-10-01';
+    expect(calculateActuarialAge(nacimiento)).toBe(81);
     expect(isMinor(nacimiento)).toBe(false);
     expect(requiresMinorDocumentChoice(fila({ birthDate: nacimiento }))).toBe(false);
   });

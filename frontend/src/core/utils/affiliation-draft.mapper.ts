@@ -7,6 +7,7 @@ import {
   HeaderSection,
   HealthDeclarationSection,
   LegalEntityData,
+  MedicalConditionDetail,
   NaturalPersonData,
   PaymentSection,
   RequestedPlan,
@@ -89,9 +90,6 @@ const deserializeContractor = (value: unknown): ContractorSection => {
   const source = asRecord(value);
   return {
     isDifferent: Boolean(source.isDifferent),
-    appliesForHealthPlan: typeof source.appliesForHealthPlan === 'boolean'
-      ? source.appliesForHealthPlan
-      : null,
     personType: (source.personType ?? 'Natural') as ContractorSection['personType'],
     naturalPerson: deserializeNaturalPerson(source.naturalPerson),
     legalEntity: deserializeLegalEntity(source.legalEntity),
@@ -111,6 +109,8 @@ const deserializePayment = (value: unknown): PaymentSection => {
 const deserializeSignatures = (value: unknown): DeclarationsSignaturesSection => {
   const source = asRecord(value);
   return {
+    policyholderEvidence: (source.policyholderEvidence as DeclarationsSignaturesSection['policyholderEvidence']) ?? null,
+    contractorEvidence: (source.contractorEvidence as DeclarationsSignaturesSection['contractorEvidence']) ?? null,
     place: String(source.place ?? ''),
     date: String(source.date ?? ''),
     policyholderSignatureBase64: (source.policyholderSignatureBase64 as string | null | undefined) ?? null,
@@ -209,10 +209,14 @@ const deserializeHealthDeclaration = (value: unknown): HealthDeclarationSection 
             field4: String(detail.field4 ?? ''),
           };
         }),
-        ...legacyAntecedent,
       ];
-      const hasAntecedents = antecedentList.length > 0;
-      const firstAntecedent = antecedentList[0];
+      // El campo legado (`antecedentDetail`, de un solo antecedente) solo se
+      // promueve a lista cuando la lista nueva no existe. Si el borrador ya
+      // trae `antecedentDetails`, concatenar clonaría cada antecedente en el
+      // ciclo serialize -> deserialize.
+      const antecedents = antecedentList.length > 0 ? antecedentList : legacyAntecedent;
+      const hasAntecedents = antecedents.length > 0;
+      const firstAntecedent = antecedents[0];
       return [questionId, {
         answer: (question.answer ?? 'NO') as 'SÍ' | 'NO',
         extraDetails: question.extraDetails as string | undefined,
@@ -220,7 +224,7 @@ const deserializeHealthDeclaration = (value: unknown): HealthDeclarationSection 
         extraDetailsByAffiliate: question.extraDetailsByAffiliate as HealthDeclarationSection['questions'][number]['extraDetailsByAffiliate'],
         affiliateCodes: question.affiliateCodes as number[] | undefined,
         antecedentDetail: hasAntecedents ? firstAntecedent : undefined,
-        antecedentDetails: hasAntecedents ? antecedentList : undefined,
+        antecedentDetails: hasAntecedents ? antecedents : undefined,
       }];
     }),
   ) as HealthDeclarationSection['questions'];
@@ -259,11 +263,31 @@ const deserializeHealthDeclaration = (value: unknown): HealthDeclarationSection 
     Array.isArray(source.medicalConditionDetails) ? source.medicalConditionDetails : []
   ).map((value) => {
     const detail = asRecord(value);
+    const rawCondition = String(detail.condition ?? '');
+    const normalizedCondition = rawCondition.trim().toLocaleLowerCase('es-VE');
+    const mentionsInguinal = normalizedCondition.includes('inguinal');
+    const mentionsEpigastric = normalizedCondition.includes('epigastr');
+    const legacyHerniaSubtype = normalizedCondition.includes('umbilical')
+      ? 'umbilical'
+      : mentionsInguinal && !mentionsEpigastric
+        ? 'inguinal'
+        : mentionsEpigastric && !mentionsInguinal
+          ? 'epigastric'
+          : undefined;
+    const isHernia = Number(detail.questionId) === 7 && (
+      normalizedCondition.includes('hernia') ||
+      normalizedCondition.includes('umbilical') ||
+      mentionsInguinal ||
+      mentionsEpigastric
+    );
     return {
       id: String(detail.id ?? ''),
       questionId: Number(detail.questionId) || undefined,
       affiliateCode: detail.affiliateCode as number | string,
-      condition: String(detail.condition ?? ''),
+      condition: isHernia ? 'Hernias' : rawCondition,
+      conditionSubtype: isHernia
+        ? String(detail.conditionSubtype || legacyHerniaSubtype || '') as MedicalConditionDetail['conditionSubtype']
+        : undefined,
       diagnosisDate: String(detail.diagnosisDate ?? ''),
       treatment: String(detail.treatment ?? ''),
       lastCheckupDate: String(detail.lastCheckupDate ?? ''),

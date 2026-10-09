@@ -1,5 +1,75 @@
 import { describe, expect, it } from 'vitest';
-import { isValidMonthYear, isValidPastMonthYear, parseMonthYear } from './format.utils';
+import {
+  completeCurrencyInput,
+  formatCurrencyInput,
+  formatDate,
+  formatErrorMessage,
+  isValidMonthYear,
+  isValidPastMonthYear,
+  monthInputValueToMonthYear,
+  monthYearToInputValue,
+  parseMonthYear,
+} from './format.utils';
+
+describe('formatCurrencyInput', () => {
+  it.each([
+    ['', ''],
+    ['texto', ''],
+    ['1234', '1.234'],
+    ['001234', '1.234'],
+    ['1234,5', '1.234,5'],
+    ['1234,567', '1.234,56'],
+    ['1.234,56', '1.234,56'],
+    ['1234.56', '1.234,56'],
+    ['1.234', '1.234'],
+    ['12.345.67', '12.345,67'],
+    ['Bs. 1.234,56', '1.234,56'],
+    [',5', '0,5'],
+    ['.', '0,'],
+  ])('formatea %j como %j', (value, expected) => {
+    expect(formatCurrencyInput(value)).toBe(expected);
+  });
+});
+
+describe('completeCurrencyInput', () => {
+  it.each([
+    ['', ''],
+    ['1234', '1.234,00'],
+    ['1234,5', '1.234,50'],
+    ['1234,56', '1.234,56'],
+    ['1234,567', '1.234,56'],
+  ])('completa los decimales de %j como %j', (value, expected) => {
+    expect(completeCurrencyInput(value)).toBe(expected);
+  });
+});
+
+describe('monthYearToInputValue', () => {
+  it.each([
+    ['2021-05', '2021-05'],
+    ['05/2021', '2021-05'],
+    [' 05/2021 ', '2021-05'],
+    ['2021-05-15', '2021-05'],
+    ['2021-13', ''],
+    ['13/2021', ''],
+    ['texto', ''],
+    ['', ''],
+    [undefined, ''],
+  ])('convierte %j al valor mensual %j', (value, expected) => {
+    expect(monthYearToInputValue(value)).toBe(expected);
+  });
+});
+
+describe('monthInputValueToMonthYear', () => {
+  it.each([
+    ['2021-05', '05/2021'],
+    ['1999-12', '12/1999'],
+    ['2021-13', ''],
+    ['05/2021', ''],
+    ['', ''],
+  ])('convierte %j al formato de planilla %j', (value, expected) => {
+    expect(monthInputValueToMonthYear(value)).toBe(expected);
+  });
+});
 
 /**
  * Fechas de diagnóstico del Step 4. El campo es de granularidad mensual (`MM/AAAA`), pero
@@ -96,5 +166,46 @@ describe('isValidPastMonthYear', () => {
 
   it('usa el mes en curso cuando no se pasa una fecha de referencia', () => {
     expect(isValidPastMonthYear('05/2021')).toBe(true);
+  });
+});
+
+describe('formatDate', () => {
+  const date = new Date('2026-05-10T12:00:00.000Z');
+
+  it('devuelve un guion para valores ausentes o fechas inválidas', () => {
+    expect(formatDate(undefined)).toBe('-');
+    expect(formatDate('fecha inválida')).toBe('-');
+  });
+
+  it('formatea objetos Date con la configuración regional en español por defecto', () => {
+    const formatted = formatDate(date);
+
+    expect(formatted).not.toBe('-');
+    expect(formatted).toContain('2026');
+    expect(formatted).toMatch(/10.*05|05.*10/);
+  });
+
+  it('formatea cadenas de fecha con la configuración regional en inglés', () => {
+    const formatted = formatDate(date.toISOString(), 'en');
+
+    expect(formatted).not.toBe('-');
+    expect(formatted).toContain('2026');
+    expect(formatted).toMatch(/05.*10/);
+  });
+});
+
+describe('formatErrorMessage', () => {
+  it('conserva los mensajes que ya son cadenas', () => {
+    expect(formatErrorMessage('Error conocido')).toBe('Error conocido');
+  });
+
+  it('extrae y convierte la propiedad message de objetos de error', () => {
+    expect(formatErrorMessage(new Error('Falló la solicitud'))).toBe('Falló la solicitud');
+    expect(formatErrorMessage({ message: 404 })).toBe('404');
+  });
+
+  it('usa el mensaje genérico del idioma solicitado para otros valores', () => {
+    expect(formatErrorMessage(null)).toBe('Ha ocurrido un error inesperado');
+    expect(formatErrorMessage(42, 'en')).toBe('An unexpected error occurred');
   });
 });
